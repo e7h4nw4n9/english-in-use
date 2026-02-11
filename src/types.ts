@@ -1,5 +1,5 @@
 export type BookSourceType = 'Local' | 'CloudflareR2';
-export type DatabaseType = 'PostgreSQL';
+export type DatabaseType = 'SQLite' | 'CloudflareD1';
 
 export interface LocalBookSource {
   type: 'Local';
@@ -21,27 +21,44 @@ export interface CloudflareR2BookSource {
 
 export type BookSource = LocalBookSource | CloudflareR2BookSource;
 
-export interface PostgreSQLDatabase {
-  type: 'PostgreSQL';
+export interface SQLiteDatabase {
+  type: 'SQLite';
   details: {
-    host: string;
-    port: number;
-    user: string;
-    password?: string;
-    database: string;
-    ssl: boolean;
+    path: string;
   };
 }
 
-export type DatabaseConnection = PostgreSQLDatabase;
+export interface CloudflareD1Database {
+  type: 'CloudflareD1';
+  details: {
+    account_id: string;
+    database_id: string;
+    api_token: string;
+  };
+}
+
+export type DatabaseConnection = SQLiteDatabase | CloudflareD1Database;
 
 export interface SystemConfig {
   language: string;
   theme: 'system' | 'light' | 'dark';
+  enable_auto_check: boolean;
+  check_interval_mins: number;
 }
 
 export interface AppConfig {
   system: SystemConfig;
   book_source: BookSource | null;
   database: DatabaseConnection | null;
+}
+
+export type ServiceStatusType = 
+  | { status: 'Connected' }
+  | { status: 'Disconnected', message: string }
+  | { status: 'NotConfigured' }
+  | { status: 'Testing' };
+
+export interface ConnectionStatus {
+  r2: ServiceStatusType;
+  d1: ServiceStatusType;
 }

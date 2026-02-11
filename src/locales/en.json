@@ -9,6 +9,8 @@
     "themeSystem": "System Default",
     "themeLight": "Light",
     "themeDark": "Dark",
+    "enableAutoCheck": "Auto Connection Test",
+    "checkInterval": "Test Interval (mins)",
     "sourceType": "Source Type",
     "databaseType": "Database Type",
     "localFolder": "Local Folder",
@@ -39,12 +41,15 @@
     "importError": "Error importing config: {error}",
     "testing": "Testing connection...",
     "testSuccess": "Connection test successful!",
+    "testSuccessWithFolders": "Connection test successful! Found the following folders:",
     "connectionFailed": "Connection failed: {error}",
     "restartNotice": "Application needs to restart to apply configuration changes. Click OK to restart now."
   },
   "common": {
     "ok": "OK",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "copy": "Copy",
+    "copied": "Copied to clipboard"
   },
   "app": {
     "title": "English In Use",
@@ -57,5 +62,15 @@
     "editConfig": "Edit Configuration",
     "loading": "Loading...",
     "switchLang": "中文"
+  },
+  "footer": {
+    "r2Status": "R2",
+    "d1Status": "D1",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "notConfigured": "Not Configured",
+    "testing": "Testing...",
+    "connectionError": "Connection Error",
+    "recheck": "Recheck"
   }
 }

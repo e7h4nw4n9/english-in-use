@@ -54,6 +54,24 @@ pub async fn list_objects(client: &Client, bucket: &str) -> Result<Vec<String>, 
     Ok(objects)
 }
 
+pub async fn list_folders(client: &Client, bucket: &str) -> Result<Vec<String>, String> {
+    let resp = client
+        .list_objects_v2()
+        .bucket(bucket)
+        .delimiter("/")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to list folders: {}", e))?;
+
+    let folders = resp
+        .common_prefixes()
+        .iter()
+        .filter_map(|p| p.prefix().map(|s| s.trim_end_matches('/').to_string()))
+        .collect();
+
+    Ok(folders)
+}
+
 pub async fn get_object(client: &Client, bucket: &str, key: &str) -> Result<Vec<u8>, String> {
     let resp = client
         .get_object()

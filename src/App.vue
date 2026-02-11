@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import AppHeader from "./components/AppHeader.vue";
+import AppFooter from "./components/AppFooter.vue";
 import ConfigPage from "./components/ConfigPage.vue";
 import type { AppConfig } from "./types";
 import { useI18n } from 'vue-i18n';
@@ -10,7 +11,7 @@ import { useTheme } from './composables/useTheme';
 import { theme } from 'ant-design-vue';
 
 const { t, locale } = useI18n();
-const { currentTheme, isDark, setTheme } = useTheme();
+const { isDark, setTheme } = useTheme();
 
 const isLoading = ref(true);
 const showConfig = ref(false);
@@ -26,11 +27,45 @@ const algorithm = computed(() => {
   return isDark.value ? theme.darkAlgorithm : theme.defaultAlgorithm;
 });
 
+// Compute padding for main container based on footer visibility
+const containerStyle = computed(() => {
+  const hasCloud = appConfig.value?.book_source?.type === 'CloudflareR2' || 
+                   appConfig.value?.database?.type === 'CloudflareD1';
+  const showFooter = appConfig.value?.system.enable_auto_check && hasCloud;
+  return {
+    paddingBottom: showFooter ? '24px' : '0'
+  };
+});
+
 // Compute current title for the custom header
 const currentTitle = computed(() => {
   const titleKey = showConfig.value ? 'config.title' : 'app.title';
   return t(titleKey);
 });
+
+function isConfigValid(config: AppConfig | null): boolean {
+  if (!config) return false;
+
+  // Check book source
+  if (!config.book_source) return false;
+  if (config.book_source.type === 'Local') {
+    if (!config.book_source.details.path) return false;
+  } else if (config.book_source.type === 'CloudflareR2') {
+    const d = config.book_source.details;
+    if (!d.account_id || !d.bucket_name || !d.access_key_id || !d.secret_access_key) return false;
+  }
+
+  // Check database
+  if (!config.database) return false;
+  if (config.database.type === 'SQLite') {
+    if (!config.database.details.path) return false;
+  } else if (config.database.type === 'CloudflareD1') {
+    const d = config.database.details;
+    if (!d.account_id || !d.database_id || !d.api_token) return false;
+  }
+
+  return true;
+}
 
 async function loadConfiguration() {
   try {
@@ -47,7 +82,7 @@ async function loadConfiguration() {
       setTheme(config.system.theme as any);
     }
 
-    if (!config.book_source) {
+    if (!isConfigValid(config)) {
       showConfig.value = true;
     } else {
       showConfig.value = false;
@@ -95,7 +130,7 @@ onUnmounted(() => {
     <div class="app-layout">
       <AppHeader :title="currentTitle" />
       
-      <main class="container">
+      <main class="container" :style="containerStyle">
         <div v-if="isLoading" class="loading-container">
           <a-spin size="large" :tip="t('app.loading')" />
         </div>
@@ -103,6 +138,7 @@ onUnmounted(() => {
         <ConfigPage 
           v-else-if="showConfig" 
           :initial-config="appConfig || undefined"
+          :allow-back="isConfigValid(appConfig)"
           @config-saved="onConfigSaved" 
           @back="showConfig = false"
         />
@@ -152,6 +188,8 @@ onUnmounted(() => {
           </a-typography-title>
         </div>
       </main>
+
+      <AppFooter v-show="appConfig && appConfig.system.enable_auto_check" />
     </div>
   </a-config-provider>
 </template>
@@ -170,6 +208,7 @@ onUnmounted(() => {
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
+  overflow-y: auto;
 }
 
 .loading-container {

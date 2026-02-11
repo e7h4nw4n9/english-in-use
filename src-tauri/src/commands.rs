@@ -33,20 +33,11 @@ pub fn import_config(path: String) -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
-pub async fn test_r2_connection(source: BookSource) -> Result<String, String> {
+pub async fn test_r2_connection(source: BookSource) -> Result<Vec<String>, String> {
     match &source {
         BookSource::CloudflareR2 { bucket_name, .. } => {
             let client = crate::r2::create_r2_client(&source).await?;
-            // Try to list 1 object to verify connection
-            client
-                .list_objects_v2()
-                .bucket(bucket_name)
-                .max_keys(1)
-                .send()
-                .await
-                .map_err(|e| format!("R2 connection failed: {}", e))?;
-            
-            Ok("Connection successful".to_string())
+            crate::r2::list_folders(&client, bucket_name).await
         }
         _ => Err("Invalid config type for R2 test".to_string()),
     }
@@ -75,41 +66,51 @@ pub async fn read_r2_object(source: BookSource, key: String) -> Result<Vec<u8>, 
 }
 
 #[tauri::command]
-pub async fn test_postgresql_connection(connection: DatabaseConnection) -> Result<String, String> {
+pub fn get_default_sqlite_path(app: AppHandle) -> Result<String, String> {
+    let path = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("english-in-use.db");
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub async fn test_database_connection(connection: DatabaseConnection) -> Result<String, String> {
     match connection {
-        DatabaseConnection::PostgreSQL {
-            host,
-            port,
-            user,
-            password,
-            database,
-            ssl,
+        DatabaseConnection::SQLite { path } => {
+            let path = std::path::Path::new(&path);
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            // Just try to open/create the file to verify path is writable
+            rusqlite::Connection::open(path)
+                .map_err(|e| format!("SQLite connection failed: {}", e))?;
+            Ok("SQLite connection successful".to_string())
+        }
+        DatabaseConnection::CloudflareD1 {
+            account_id,
+            database_id,
+            api_token,
         } => {
-            let mut config = postgres::Config::new();
-            config
-                .host(&host)
-                .port(port)
-                .user(&user)
-                .dbname(&database);
+            let url = format!(
+                "https://api.cloudflare.com/client/v4/accounts/{}/d1/database/{}",
+                account_id, database_id
+            );
+            
+            let client = reqwest::Client::new();
+            let response = client
+                .get(&url)
+                .bearer_auth(api_token)
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
 
-            if let Some(pwd) = password {
-                config.password(&pwd);
-            }
-
-            if ssl {
-                let connector = native_tls::TlsConnector::new()
-                    .map_err(|e| format!("Failed to create TLS connector: {}", e))?;
-                let connector = postgres_native_tls::MakeTlsConnector::new(connector);
-                config
-                    .connect(connector)
-                    .map_err(|e| format!("PostgreSQL connection failed: {}", e))?;
+            if response.status().is_success() {
+                Ok("Cloudflare D1 connection successful".to_string())
             } else {
-                config
-                    .connect(postgres::NoTls)
-                    .map_err(|e| format!("PostgreSQL connection failed: {}", e))?;
+                let status = response.status();
+                let text = response.text().await.unwrap_or_default();
+                Err(format!("D1 connection failed ({}): {}", status, text))
             }
-
-            Ok("Database connection successful".to_string())
         }
     }
 }

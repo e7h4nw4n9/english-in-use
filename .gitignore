@@ -1,0 +1,13 @@
+# 操作系统文件
+.DS_Store
+
+# 前端依赖文件
+node_modules
+
+# 编译文件
+dist
+
+# IDE文件
+GEMINI.md
+
+

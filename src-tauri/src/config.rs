@@ -21,13 +21,13 @@ pub enum BookSource {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(tag = "type", content = "details")]
 pub enum DatabaseConnection {
-    PostgreSQL {
-        host: String,
-        port: u16,
-        user: String,
-        password: Option<String>,
-        database: String,
-        ssl: bool,
+    SQLite {
+        path: String,
+    },
+    CloudflareD1 {
+        account_id: String,
+        database_id: String,
+        api_token: String,
     },
 }
 
@@ -35,13 +35,22 @@ pub enum DatabaseConnection {
 pub struct SystemConfig {
     pub language: String,
     pub theme: String,
+    #[serde(default = "default_enable_auto_check")]
+    pub enable_auto_check: bool,
+    #[serde(default = "default_check_interval")]
+    pub check_interval_mins: u32,
 }
+
+fn default_enable_auto_check() -> bool { true }
+fn default_check_interval() -> u32 { 5 }
 
 impl Default for SystemConfig {
     fn default() -> Self {
         Self {
             language: "en".to_string(),
             theme: "system".to_string(),
+            enable_auto_check: true,
+            check_interval_mins: 5,
         }
     }
 }
@@ -115,17 +124,22 @@ mod tests {
         let path = file.path();
 
         let mut config = AppConfig::new();
-        config.database = Some(DatabaseConnection::PostgreSQL {
-            host: "localhost".to_string(),
-            port: 5432,
-            user: "postgres".to_string(),
-            password: Some("password".to_string()),
-            database: "english_in_use".to_string(),
-            ssl: false,
+
+        // Test SQLite
+        config.database = Some(DatabaseConnection::SQLite {
+            path: "/path/to/db.sqlite".to_string(),
         });
-
         config.save_to_path(path).expect("Failed to save config");
+        let loaded_config = AppConfig::load_from_path(path).expect("Failed to load config");
+        assert_eq!(config, loaded_config);
 
+        // Test Cloudflare D1
+        config.database = Some(DatabaseConnection::CloudflareD1 {
+            account_id: "acc_id".to_string(),
+            database_id: "db_id".to_string(),
+            api_token: "token".to_string(),
+        });
+        config.save_to_path(path).expect("Failed to save config");
         let loaded_config = AppConfig::load_from_path(path).expect("Failed to load config");
         assert_eq!(config, loaded_config);
     }

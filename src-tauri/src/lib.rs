@@ -1,14 +1,21 @@
 pub mod config;
 pub mod commands;
 pub mod r2;
+pub mod status;
 
 use tauri::menu::{Menu, MenuItem, Submenu, PredefinedMenuItem};
 use tauri::Emitter;
+use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[tauri::command]
+async fn check_connection_status(app: tauri::AppHandle) -> Result<status::ConnectionStatus, String> {
+    Ok(status::run_check(&app).await)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -17,6 +24,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                status::monitor_connections(handle).await;
+            });
+
             let handle = app.handle();
             
             let settings_item = MenuItem::with_id(handle, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?;
@@ -61,11 +73,13 @@ pub fn run() {
             commands::save_config,
             commands::export_config,
             commands::import_config,
+            commands::get_default_sqlite_path,
             commands::test_r2_connection,
             commands::list_r2_objects,
             commands::read_r2_object,
-            commands::test_postgresql_connection,
-            commands::restart
+            commands::test_database_connection,
+            commands::restart,
+            check_connection_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
