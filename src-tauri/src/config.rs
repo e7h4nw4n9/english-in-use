@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use std::io::Write;
+use log::{info, debug};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(tag = "type", content = "details")]
@@ -35,12 +36,15 @@ pub enum DatabaseConnection {
 pub struct SystemConfig {
     pub language: String,
     pub theme: String,
+    #[serde(default = "default_log_level")]
+    pub log_level: String,
     #[serde(default = "default_enable_auto_check")]
     pub enable_auto_check: bool,
     #[serde(default = "default_check_interval")]
     pub check_interval_mins: u32,
 }
 
+fn default_log_level() -> String { "info".to_string() }
 fn default_enable_auto_check() -> bool { true }
 fn default_check_interval() -> u32 { 5 }
 
@@ -49,6 +53,7 @@ impl Default for SystemConfig {
         Self {
             language: "en".to_string(),
             theme: "system".to_string(),
+            log_level: "info".to_string(),
             enable_auto_check: true,
             check_interval_mins: 5,
         }
@@ -69,20 +74,29 @@ impl AppConfig {
     }
 
     pub fn load_from_path(path: &Path) -> Result<Self, String> {
+        debug!("尝试从路径加载配置: {:?}", path);
         if !path.exists() {
+            debug!("配置文件不存在，返回默认配置");
             return Ok(Self::default());
         }
         let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
-        toml::from_str(&content).map_err(|e| e.to_string())
+        let config: Self = toml::from_str(&content).map_err(|e| e.to_string())?;
+        info!("成功从路径加载配置: {:?}", path);
+        Ok(config)
     }
 
     pub fn save_to_path(&self, path: &Path) -> Result<(), String> {
+        debug!("尝试保存配置到路径: {:?}", path);
         let content = toml::to_string_pretty(self).map_err(|e| e.to_string())?;
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            if !parent.exists() {
+                debug!("创建配置目录: {:?}", parent);
+                fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
         }
         let mut file = fs::File::create(path).map_err(|e| e.to_string())?;
         file.write_all(content.as_bytes()).map_err(|e| e.to_string())?;
+        info!("成功保存配置到路径: {:?}", path);
         Ok(())
     }
 }

@@ -2,10 +2,11 @@
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { info, error, debug, warn } from "@tauri-apps/plugin-log";
 import AppHeader from "./components/AppHeader.vue";
 import AppFooter from "./components/AppFooter.vue";
 import ConfigPage from "./components/ConfigPage.vue";
-import type { AppConfig } from "./types";
+import type { AppConfig, AppInitProgress } from "./types";
 import { useI18n } from 'vue-i18n';
 import { useTheme } from './composables/useTheme';
 import { theme } from 'ant-design-vue';
@@ -14,6 +15,7 @@ const { t, locale } = useI18n();
 const { isDark, setTheme } = useTheme();
 
 const isLoading = ref(true);
+const loadingMessage = ref("");
 const showConfig = ref(false);
 const appConfig = ref<AppConfig | null>(null);
 
@@ -21,6 +23,7 @@ const greetMsg = ref("");
 const name = ref("");
 
 let unlistenOpenSettings: UnlistenFn | null = null;
+let unlistenProgress: UnlistenFn | null = null;
 
 // Ant Design theme configuration
 const algorithm = computed(() => {
@@ -68,9 +71,14 @@ function isConfigValid(config: AppConfig | null): boolean {
 }
 
 async function loadConfiguration() {
+  isLoading.value = true;
+  loadingMessage.value = t('app.loading');
+  info("正在启动应用并加载配置...");
+  
   try {
     const config = await invoke<AppConfig>("load_config");
     appConfig.value = config;
+    debug("配置加载完成");
     
     // Set language from config if available
     if (config.system && config.system.language) {
@@ -83,19 +91,32 @@ async function loadConfiguration() {
     }
 
     if (!isConfigValid(config)) {
+      info("检测到配置不完整，跳转至配置页面");
       showConfig.value = true;
+      isLoading.value = false;
     } else {
+      info("配置验证通过，开始初始化数据库...");
       showConfig.value = false;
+      // Initialize DB if config is valid
+      try {
+        await invoke("initialize_database");
+        info("数据库初始化完成");
+      } catch (dbError) {
+        error(`数据库初始化失败: ${dbError}`);
+        // We still show the app but maybe we should show an error?
+      } finally {
+        isLoading.value = false;
+      }
     }
   } catch (e) {
-    console.error("Failed to load config:", e);
+    error(`加载配置失败: ${e}`);
     showConfig.value = true;
-  } finally {
     isLoading.value = false;
   }
 }
 
 function onConfigSaved(newConfig: AppConfig) {
+  info("收到配置保存事件");
   appConfig.value = newConfig;
   if (newConfig.system && newConfig.system.language) {
     locale.value = newConfig.system.language;
@@ -103,14 +124,27 @@ function onConfigSaved(newConfig: AppConfig) {
   if (newConfig.system && newConfig.system.theme) {
     setTheme(newConfig.system.theme as any);
   }
-  showConfig.value = false;
+  
+  // Re-run initialization if config is now valid
+  if (isConfigValid(newConfig)) {
+    info("保存的配置有效，重新运行初始化");
+    loadConfiguration();
+  } else {
+    warn("保存的配置仍不完整");
+    showConfig.value = true;
+  }
 }
 
 async function greet() {
+  debug(`用户触发 Greet 操作, name: ${name.value}`);
   greetMsg.value = await invoke("greet", { name: name.value });
 }
 
 onMounted(async () => {
+  unlistenProgress = await listen<AppInitProgress>("init-progress", (event) => {
+    loadingMessage.value = event.payload.message;
+  });
+
   loadConfiguration();
   
   unlistenOpenSettings = await listen("open-settings", () => {
@@ -122,6 +156,9 @@ onUnmounted(() => {
   if (unlistenOpenSettings) {
     unlistenOpenSettings();
   }
+  if (unlistenProgress) {
+    unlistenProgress();
+  }
 });
 </script>
 
@@ -132,7 +169,7 @@ onUnmounted(() => {
       
       <main class="container" :style="containerStyle">
         <div v-if="isLoading" class="loading-container">
-          <a-spin size="large" :tip="t('app.loading')" />
+          <a-spin size="large" :tip="loadingMessage" />
         </div>
 
         <ConfigPage 

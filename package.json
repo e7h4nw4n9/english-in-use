@@ -13,6 +13,7 @@
     "@ant-design/icons-vue": "^7.0.1",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-log": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "ant-design-vue": "4.0.0-rc.6",
     "tailwindcss-animate": "^1.0.7",

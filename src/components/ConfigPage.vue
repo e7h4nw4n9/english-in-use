@@ -2,6 +2,7 @@
 import { ref, reactive, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { info, error, debug, warn } from "@tauri-apps/plugin-log";
 import type {
   AppConfig,
   BookSource,
@@ -51,6 +52,7 @@ const currentTab = computed(() => activeTab.value[0]);
 // System Config
 const language = ref(props.initialConfig?.system?.language || "en");
 const themeMode = ref(props.initialConfig?.system?.theme || "system");
+const logLevel = ref(props.initialConfig?.system?.log_level || "info");
 const isCloudConfigured = computed(() => sourceType.value === 'CloudflareR2' || dbType.value === 'CloudflareD1');
 const enableAutoCheck = ref(props.initialConfig?.system?.enable_auto_check ?? true);
 const checkIntervalMins = ref(props.initialConfig?.system?.check_interval_mins || 5);
@@ -160,6 +162,7 @@ function updateFormFromConfig(config: AppConfig) {
   if (config.system) {
     language.value = config.system.language;
     themeMode.value = config.system.theme as "system" | "light" | "dark";
+    logLevel.value = config.system.log_level;
     enableAutoCheck.value = config.system.enable_auto_check;
     checkIntervalMins.value = config.system.check_interval_mins;
   }
@@ -200,11 +203,13 @@ function updateFormFromConfig(config: AppConfig) {
 
 async function handleSave() {
   isSaving.value = true;
+  info("用户触发了保存配置操作");
   try {
     const config: AppConfig = {
       system: {
         language: language.value,
         theme: themeMode.value as "system" | "light" | "dark",
+        log_level: logLevel.value as any,
         enable_auto_check: enableAutoCheck.value,
         check_interval_mins: checkIntervalMins.value,
       },
@@ -213,6 +218,7 @@ async function handleSave() {
     };
 
     await invoke("save_config", { config });
+    info("配置保存成功");
 
     locale.value = language.value;
     setTheme(themeMode.value as any);
@@ -222,10 +228,12 @@ async function handleSave() {
       content: t("config.restartNotice" as any),
       okText: t("common.ok" as any) || "OK",
       onOk: () => {
+        info("用户点击重启应用");
         invoke("restart");
       },
     });
   } catch (err) {
+    error(`保存配置失败: ${err}`);
     antMessage.error(t("config.saveError", { error: err }));
   } finally {
     isSaving.value = false;
@@ -234,11 +242,13 @@ async function handleSave() {
 
 async function handleExport() {
   isExporting.value = true;
+  info("用户触发了导出配置操作");
   try {
     const config: AppConfig = {
       system: {
         language: language.value,
         theme: themeMode.value as "system" | "light" | "dark",
+        log_level: logLevel.value as any,
         enable_auto_check: enableAutoCheck.value,
         check_interval_mins: checkIntervalMins.value,
       },
@@ -257,14 +267,19 @@ async function handleExport() {
     });
 
     if (filePath) {
+      debug(`导出目标路径: ${filePath}`);
       // Ensure the file has .toml extension
       if (!filePath.toLowerCase().endsWith(".toml")) {
         filePath += ".toml";
       }
       await invoke("export_config", { path: filePath, config });
+      info("配置文件导出成功");
       antMessage.success(t("config.exportSuccess"));
+    } else {
+      debug("用户取消了导出操作");
     }
   } catch (err) {
+    error(`导出配置失败: ${err}`);
     antMessage.error(t("config.exportError", { error: err }));
   } finally {
     isExporting.value = false;
@@ -273,6 +288,7 @@ async function handleExport() {
 
 async function handleImport() {
   isImporting.value = true;
+  info("用户触发了导入配置操作");
   try {
     const selected = await open({
       multiple: false,
@@ -285,12 +301,14 @@ async function handleImport() {
     });
 
     if (selected && typeof selected === "string") {
+      debug(`选择导入的文件: ${selected}`);
       const config: AppConfig = await invoke("import_config", {
         path: selected,
       });
 
       // Save to application config immediately (overwrite current config.toml)
       await invoke("save_config", { config });
+      info("配置文件导入并保存成功");
 
       // Update form fields
       updateFormFromConfig(config);
@@ -304,11 +322,15 @@ async function handleImport() {
         content: t("config.restartNotice" as any),
         okText: t("common.ok" as any) || "OK",
         onOk: () => {
+          info("用户点击重启应用 (导入后)");
           invoke("restart");
         },
       });
+    } else {
+      debug("用户取消了导入操作");
     }
   } catch (err) {
+    error(`导入配置失败: ${err}`);
     antMessage.error(t("config.importError", { error: err }));
   } finally {
     isImporting.value = false;
@@ -317,19 +339,29 @@ async function handleImport() {
 
 async function testConnection() {
   isTesting.value = true;
+  info(`正在测试连接, 当前标签页: ${currentTab.value}`);
   try {
     if (currentTab.value === "books") {
       const source = getCurrentBookSource();
-      if (source?.type !== "CloudflareR2") return;
+      if (source?.type !== "CloudflareR2") {
+        warn("尝试测试非 R2 类型的图书源连接");
+        return;
+      }
       await invoke<string[]>("test_r2_connection", { source });
+      info("R2 连接测试成功 (前端反馈)");
       antMessage.success(t("config.testSuccess"));
     } else if (currentTab.value === "database") {
       const connection = getCurrentDatabase();
-      if (!connection) return;
+      if (!connection) {
+        warn("尝试测试未配置的数据库连接");
+        return;
+      }
       await invoke("test_database_connection", { connection });
+      info("数据库连接测试成功 (前端反馈)");
       antMessage.success(t("config.testSuccess"));
     }
   } catch (err) {
+    error(`连接测试失败: ${err}`);
     antMessage.error(t("config.connectionFailed", { error: err }));
   } finally {
     isTesting.value = false;
@@ -510,6 +542,15 @@ function getCurrentDatabase(): DatabaseConnection | null {
               <a-select-option value="dark">{{
                 t("config.themeDark")
               }}</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item :label="t('config.logLevel')">
+            <a-select v-model:value="logLevel">
+              <a-select-option value="trace">Trace</a-select-option>
+              <a-select-option value="debug">Debug</a-select-option>
+              <a-select-option value="info">Info</a-select-option>
+              <a-select-option value="warn">Warn</a-select-option>
+              <a-select-option value="error">Error</a-select-option>
             </a-select>
           </a-form-item>
           <a-form-item :label="t('config.enableAutoCheck')">

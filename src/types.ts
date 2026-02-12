@@ -42,6 +42,7 @@ export type DatabaseConnection = SQLiteDatabase | CloudflareD1Database;
 export interface SystemConfig {
   language: string;
   theme: 'system' | 'light' | 'dark';
+  log_level: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   enable_auto_check: boolean;
   check_interval_mins: number;
 }
@@ -61,4 +62,9 @@ export type ServiceStatusType =
 export interface ConnectionStatus {
   r2: ServiceStatusType;
   d1: ServiceStatusType;
+}
+
+export interface AppInitProgress {
+  message: string;
+  progress: number;
 }

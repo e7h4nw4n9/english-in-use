@@ -9,6 +9,7 @@
     "themeSystem": "System Default",
     "themeLight": "Light",
     "themeDark": "Dark",
+    "logLevel": "Log Level",
     "enableAutoCheck": "Auto Connection Test",
     "checkInterval": "Test Interval (mins)",
     "sourceType": "Source Type",

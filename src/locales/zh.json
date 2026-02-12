@@ -9,6 +9,7 @@
     "themeSystem": "跟随系统",
     "themeLight": "浅色",
     "themeDark": "深色",
+    "logLevel": "日志等级",
     "enableAutoCheck": "自动测试网络连接",
     "checkInterval": "测试频率 (分钟)",
     "sourceType": "资源类型",
