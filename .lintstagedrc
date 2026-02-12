@@ -1,4 +1,6 @@
 {
   "*.{js,ts,vue,json,md}": ["prettier --write"],
-  "src-tauri/**/*.rs": ["rustfmt --edition 2021"]
+    "src-tauri/**/*.rs": [
+      "rustfmt --edition 2024"
+    ]
 }

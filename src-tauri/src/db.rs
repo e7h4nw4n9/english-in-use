@@ -5,7 +5,7 @@ use reqwest::Client;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
+use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 
 #[derive(Debug, Deserialize)]
 struct D1Response {
@@ -99,15 +99,13 @@ impl Database for SqliteDatabase {
                 .await?;
 
             let version = match row {
-                Some(r) => {
-                    if let Ok(s) = r.try_get::<String, _>(0) {
-                        s
-                    } else if let Ok(i) = r.try_get::<i64, _>(0) {
-                        i.to_string()
-                    } else {
-                        "0.0.0".to_string()
-                    }
-                }
+                Some(r) => match r.try_get::<String, _>(0) {
+                    Ok(s) => s,
+                    _ => match r.try_get::<i64, _>(0) {
+                        Ok(i) => i.to_string(),
+                        _ => "0.0.0".to_string(),
+                    },
+                },
                 None => "0.0.0".to_string(),
             };
 
