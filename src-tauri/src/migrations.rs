@@ -4,9 +4,7 @@ pub struct Migration {
 }
 
 // NOTE: MIGRATIONS must be sorted by version in ascending order.
-pub const MIGRATIONS: &[Migration] = &[
-    Migration {
-        version: "0.1.0",
-        sql: include_str!("../migrations/0.1.0/up.sql"),
-    },
-];
+pub const MIGRATIONS: &[Migration] = &[Migration {
+    version: "0.1.0",
+    sql: include_str!("../migrations/0.1.0/up.sql"),
+}];

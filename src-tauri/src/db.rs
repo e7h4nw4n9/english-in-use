@@ -1,11 +1,11 @@
+use crate::config::DatabaseConnection;
 use anyhow::{Context, Result};
+use log::{debug, error, info};
 use reqwest::Client;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
-use crate::config::DatabaseConnection;
-use log::{info, error, debug};
-use semver::Version;
 
 #[derive(Debug, Deserialize)]
 struct D1Response {
@@ -25,9 +25,17 @@ struct D1Error {
 }
 
 pub trait Database: Send + Sync {
-    fn execute(&self, sql: String) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>>;
-    fn get_version(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String>> + Send + '_>>;
-    fn set_version(&self, version: &str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>>;
+    fn execute(
+        &self,
+        sql: String,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>>;
+    fn get_version(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String>> + Send + '_>>;
+    fn set_version(
+        &self,
+        version: &str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>>;
 }
 
 pub struct SqliteDatabase {
@@ -55,7 +63,10 @@ impl SqliteDatabase {
 }
 
 impl Database for SqliteDatabase {
-    fn execute(&self, sql: String) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+    fn execute(
+        &self,
+        sql: String,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
         Box::pin(async move {
             debug!("执行 SQL (SQLite): {}", sql);
             sqlx::query(&sql).execute(&self.pool).await.map_err(|e| {
@@ -66,11 +77,13 @@ impl Database for SqliteDatabase {
         })
     }
 
-    fn get_version(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String>> + Send + '_>> {
+    fn get_version(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String>> + Send + '_>> {
         use sqlx::Row;
         Box::pin(async move {
             let exists: bool = sqlx::query_scalar(
-                "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='_app_meta'"
+                "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='_app_meta'",
             )
             .fetch_one(&self.pool)
             .await
@@ -84,7 +97,7 @@ impl Database for SqliteDatabase {
             let row = sqlx::query("SELECT version FROM _app_meta LIMIT 1")
                 .fetch_optional(&self.pool)
                 .await?;
-            
+
             let version = match row {
                 Some(r) => {
                     if let Ok(s) = r.try_get::<String, _>(0) {
@@ -94,16 +107,19 @@ impl Database for SqliteDatabase {
                     } else {
                         "0.0.0".to_string()
                     }
-                },
+                }
                 None => "0.0.0".to_string(),
             };
-            
+
             debug!("当前数据库版本 (SQLite): {}", version);
             Ok(version)
         })
     }
 
-    fn set_version(&self, version: &str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+    fn set_version(
+        &self,
+        version: &str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
         let version = version.to_string();
         Box::pin(async move {
             debug!("设置数据库版本 (SQLite): {}", version);
@@ -141,7 +157,9 @@ impl D1Database {
             self.account_id, self.database_id
         );
 
-        let res = self.client.post(&url)
+        let res = self
+            .client
+            .post(&url)
             .bearer_auth(&self.api_token)
             .json(&serde_json::json!({ "sql": sql }))
             .send()
@@ -156,7 +174,9 @@ impl D1Database {
 
         let d1_res: D1Response = res.json().await?;
         if !d1_res.success {
-            let msg = d1_res.errors.as_ref()
+            let msg = d1_res
+                .errors
+                .as_ref()
                 .and_then(|e| e.first())
                 .map(|e| e.message.clone())
                 .unwrap_or_else(|| "Unknown D1 error".to_string());
@@ -169,20 +189,27 @@ impl D1Database {
 }
 
 impl Database for D1Database {
-    fn execute(&self, sql: String) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+    fn execute(
+        &self,
+        sql: String,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
         Box::pin(async move {
             self.raw_query(&sql).await?;
             Ok(())
         })
     }
 
-    fn get_version(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String>> + Send + '_>> {
+    fn get_version(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String>> + Send + '_>> {
         Box::pin(async move {
             // Check if table exists
             let sql = "SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name='_app_meta'";
             let res = self.raw_query(sql).await?;
-            
-            let count = res.result.as_ref()
+
+            let count = res
+                .result
+                .as_ref()
                 .and_then(|r| r.first())
                 .and_then(|r| r.results.first())
                 .and_then(|v| v.get("count"))
@@ -194,8 +221,12 @@ impl Database for D1Database {
                 return Ok("0.0.0".to_string());
             }
 
-            let res = self.raw_query("SELECT version FROM _app_meta LIMIT 1").await?;
-            let version_val = res.result.as_ref()
+            let res = self
+                .raw_query("SELECT version FROM _app_meta LIMIT 1")
+                .await?;
+            let version_val = res
+                .result
+                .as_ref()
                 .and_then(|r| r.first())
                 .and_then(|r| r.results.first())
                 .and_then(|v| v.get("version"));
@@ -211,7 +242,10 @@ impl Database for D1Database {
         })
     }
 
-    fn set_version(&self, version: &str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+    fn set_version(
+        &self,
+        version: &str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
         let version = version.to_string();
         Box::pin(async move {
             debug!("设置数据库版本 (D1): {}", version);
@@ -237,42 +271,55 @@ fn normalize_version(v: &str) -> String {
     }
 }
 
-pub async fn init<R: tauri::Runtime>(handle: &tauri::AppHandle<R>, config: &DatabaseConnection) -> Result<Box<dyn Database>> {
-    use tauri::Emitter;
+pub async fn init<R: tauri::Runtime>(
+    handle: &tauri::AppHandle<R>,
+    config: &DatabaseConnection,
+) -> Result<Box<dyn Database>> {
     use crate::migrations::MIGRATIONS;
-    
+    use tauri::Emitter;
+
     let emit_progress = |msg: &str, p: f32| {
         info!("初始化进度: {} ({}%)", msg, (p * 100.0) as u32);
-        let _ = handle.emit("init-progress", AppInitProgress {
-            message: msg.to_string(),
-            progress: p,
-        });
+        let _ = handle.emit(
+            "init-progress",
+            AppInitProgress {
+                message: msg.to_string(),
+                progress: p,
+            },
+        );
     };
 
     emit_progress("正在连接数据库...", 0.1);
-    
+
     let db: Box<dyn Database> = match config {
-        DatabaseConnection::SQLite { path } => {
-            Box::new(SqliteDatabase::new(path).await?)
-        }
-        DatabaseConnection::CloudflareD1 { account_id, database_id, api_token } => {
-            Box::new(D1Database::new(account_id.clone(), database_id.clone(), api_token.clone()))
-        }
+        DatabaseConnection::SQLite { path } => Box::new(SqliteDatabase::new(path).await?),
+        DatabaseConnection::CloudflareD1 {
+            account_id,
+            database_id,
+            api_token,
+        } => Box::new(D1Database::new(
+            account_id.clone(),
+            database_id.clone(),
+            api_token.clone(),
+        )),
     };
 
     emit_progress("正在检查数据库版本...", 0.3);
     let current_db_version_str = db.get_version().await?;
     let normalized_db_version = normalize_version(&current_db_version_str);
-    let current_db_version = Version::parse(&normalized_db_version)
-        .unwrap_or_else(|_| Version::parse("0.0.0").unwrap());
-    
-    info!("当前数据库版本: {} (原始: {})", current_db_version, current_db_version_str);
-    
+    let current_db_version =
+        Version::parse(&normalized_db_version).unwrap_or_else(|_| Version::parse("0.0.0").unwrap());
+
+    info!(
+        "当前数据库版本: {} (原始: {})",
+        current_db_version, current_db_version_str
+    );
+
     let total_migrations = MIGRATIONS.len() as f32;
     for (i, migration) in MIGRATIONS.iter().enumerate() {
         let migration_version = Version::parse(migration.version)
             .with_context(|| format!("Failed to parse migration version: {}", migration.version))?;
-            
+
         if migration_version > current_db_version {
             let p = 0.3 + (i as f32 / total_migrations) * 0.6;
             emit_progress(&format!("正在应用迁移至版本 {}...", migration.version), p);
@@ -289,28 +336,34 @@ pub async fn init<R: tauri::Runtime>(handle: &tauri::AppHandle<R>, config: &Data
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
     use crate::migrations::MIGRATIONS;
+    use tempfile::NamedTempFile;
 
     #[tokio::test]
     async fn test_sqlite_init() {
         let file = NamedTempFile::new().unwrap();
         let path = file.path().to_str().unwrap().to_string();
-        
-        let db = SqliteDatabase::new(&path).await.expect("Failed to create db");
-        
+
+        let db = SqliteDatabase::new(&path)
+            .await
+            .expect("Failed to create db");
+
         // Manual migration 1
         let v = db.get_version().await.expect("Failed to get version");
         assert_eq!(v, "0.0.0");
 
-        db.execute(MIGRATIONS[0].sql.to_string()).await.expect("Migration failed");
+        db.execute(MIGRATIONS[0].sql.to_string())
+            .await
+            .expect("Migration failed");
         db.set_version("0.1.0").await.expect("Set version failed");
 
         let v = db.get_version().await.expect("Failed to get version");
         assert_eq!(v, "0.1.0");
 
         // Verify table exists
-        db.execute("SELECT * FROM _app_meta".to_string()).await.expect("Table should exist");
+        db.execute("SELECT * FROM _app_meta".to_string())
+            .await
+            .expect("Table should exist");
     }
 
     #[test]

@@ -1,8 +1,8 @@
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
 use std::io::Write;
-use log::{info, debug};
+use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(tag = "type", content = "details")]
@@ -44,9 +44,15 @@ pub struct SystemConfig {
     pub check_interval_mins: u32,
 }
 
-fn default_log_level() -> String { "info".to_string() }
-fn default_enable_auto_check() -> bool { true }
-fn default_check_interval() -> u32 { 5 }
+fn default_log_level() -> String {
+    "info".to_string()
+}
+fn default_enable_auto_check() -> bool {
+    true
+}
+fn default_check_interval() -> u32 {
+    5
+}
 
 impl Default for SystemConfig {
     fn default() -> Self {
@@ -95,7 +101,8 @@ impl AppConfig {
             }
         }
         let mut file = fs::File::create(path).map_err(|e| e.to_string())?;
-        file.write_all(content.as_bytes()).map_err(|e| e.to_string())?;
+        file.write_all(content.as_bytes())
+            .map_err(|e| e.to_string())?;
         info!("成功保存配置到路径: {:?}", path);
         Ok(())
     }

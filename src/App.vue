@@ -1,182 +1,183 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue";
-import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { info, error, debug, warn } from "@tauri-apps/plugin-log";
-import AppHeader from "./components/AppHeader.vue";
-import AppFooter from "./components/AppFooter.vue";
-import ConfigPage from "./components/ConfigPage.vue";
-import type { AppConfig, AppInitProgress } from "./types";
-import { useI18n } from 'vue-i18n';
-import { useTheme } from './composables/useTheme';
-import { theme } from 'ant-design-vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { info, error, debug, warn } from '@tauri-apps/plugin-log'
+import AppHeader from './components/AppHeader.vue'
+import AppFooter from './components/AppFooter.vue'
+import ConfigPage from './components/ConfigPage.vue'
+import type { AppConfig, AppInitProgress } from './types'
+import { useI18n } from 'vue-i18n'
+import { useTheme } from './composables/useTheme'
+import { theme } from 'ant-design-vue'
 
-const { t, locale } = useI18n();
-const { isDark, setTheme } = useTheme();
+const { t, locale } = useI18n()
+const { isDark, setTheme } = useTheme()
 
-const isLoading = ref(true);
-const loadingMessage = ref("");
-const showConfig = ref(false);
-const appConfig = ref<AppConfig | null>(null);
+const isLoading = ref(true)
+const loadingMessage = ref('')
+const showConfig = ref(false)
+const appConfig = ref<AppConfig | null>(null)
 
-const greetMsg = ref("");
-const name = ref("");
+const greetMsg = ref('')
+const name = ref('')
 
-let unlistenOpenSettings: UnlistenFn | null = null;
-let unlistenProgress: UnlistenFn | null = null;
+let unlistenOpenSettings: UnlistenFn | null = null
+let unlistenProgress: UnlistenFn | null = null
 
 // Ant Design theme configuration
 const algorithm = computed(() => {
-  return isDark.value ? theme.darkAlgorithm : theme.defaultAlgorithm;
-});
+  return isDark.value ? theme.darkAlgorithm : theme.defaultAlgorithm
+})
 
 // Compute padding for main container based on footer visibility
 const containerStyle = computed(() => {
-  const hasCloud = appConfig.value?.book_source?.type === 'CloudflareR2' || 
-                   appConfig.value?.database?.type === 'CloudflareD1';
-  const showFooter = appConfig.value?.system.enable_auto_check && hasCloud;
+  const hasCloud =
+    appConfig.value?.book_source?.type === 'CloudflareR2' ||
+    appConfig.value?.database?.type === 'CloudflareD1'
+  const showFooter = appConfig.value?.system.enable_auto_check && hasCloud
   return {
-    paddingBottom: showFooter ? '24px' : '0'
-  };
-});
+    paddingBottom: showFooter ? '24px' : '0',
+  }
+})
 
 // Compute current title for the custom header
 const currentTitle = computed(() => {
-  const titleKey = showConfig.value ? 'config.title' : 'app.title';
-  return t(titleKey);
-});
+  const titleKey = showConfig.value ? 'config.title' : 'app.title'
+  return t(titleKey)
+})
 
 function isConfigValid(config: AppConfig | null): boolean {
-  if (!config) return false;
+  if (!config) return false
 
   // Check book source
-  if (!config.book_source) return false;
+  if (!config.book_source) return false
   if (config.book_source.type === 'Local') {
-    if (!config.book_source.details.path) return false;
+    if (!config.book_source.details.path) return false
   } else if (config.book_source.type === 'CloudflareR2') {
-    const d = config.book_source.details;
-    if (!d.account_id || !d.bucket_name || !d.access_key_id || !d.secret_access_key) return false;
+    const d = config.book_source.details
+    if (!d.account_id || !d.bucket_name || !d.access_key_id || !d.secret_access_key) return false
   }
 
   // Check database
-  if (!config.database) return false;
+  if (!config.database) return false
   if (config.database.type === 'SQLite') {
-    if (!config.database.details.path) return false;
+    if (!config.database.details.path) return false
   } else if (config.database.type === 'CloudflareD1') {
-    const d = config.database.details;
-    if (!d.account_id || !d.database_id || !d.api_token) return false;
+    const d = config.database.details
+    if (!d.account_id || !d.database_id || !d.api_token) return false
   }
 
-  return true;
+  return true
 }
 
 async function loadConfiguration() {
-  isLoading.value = true;
-  loadingMessage.value = t('app.loading');
-  info("正在启动应用并加载配置...");
-  
+  isLoading.value = true
+  loadingMessage.value = t('app.loading')
+  info('正在启动应用并加载配置...')
+
   try {
-    const config = await invoke<AppConfig>("load_config");
-    appConfig.value = config;
-    debug("配置加载完成");
-    
+    const config = await invoke<AppConfig>('load_config')
+    appConfig.value = config
+    debug('配置加载完成')
+
     // Set language from config if available
     if (config.system && config.system.language) {
-      locale.value = config.system.language;
+      locale.value = config.system.language
     }
-    
+
     // Set theme from config
     if (config.system && config.system.theme) {
-      setTheme(config.system.theme as any);
+      setTheme(config.system.theme as any)
     }
 
     if (!isConfigValid(config)) {
-      info("检测到配置不完整，跳转至配置页面");
-      showConfig.value = true;
-      isLoading.value = false;
+      info('检测到配置不完整，跳转至配置页面')
+      showConfig.value = true
+      isLoading.value = false
     } else {
-      info("配置验证通过，开始初始化数据库...");
-      showConfig.value = false;
+      info('配置验证通过，开始初始化数据库...')
+      showConfig.value = false
       // Initialize DB if config is valid
       try {
-        await invoke("initialize_database");
-        info("数据库初始化完成");
+        await invoke('initialize_database')
+        info('数据库初始化完成')
       } catch (dbError) {
-        error(`数据库初始化失败: ${dbError}`);
+        error(`数据库初始化失败: ${dbError}`)
         // We still show the app but maybe we should show an error?
       } finally {
-        isLoading.value = false;
+        isLoading.value = false
       }
     }
   } catch (e) {
-    error(`加载配置失败: ${e}`);
-    showConfig.value = true;
-    isLoading.value = false;
+    error(`加载配置失败: ${e}`)
+    showConfig.value = true
+    isLoading.value = false
   }
 }
 
 function onConfigSaved(newConfig: AppConfig) {
-  info("收到配置保存事件");
-  appConfig.value = newConfig;
+  info('收到配置保存事件')
+  appConfig.value = newConfig
   if (newConfig.system && newConfig.system.language) {
-    locale.value = newConfig.system.language;
+    locale.value = newConfig.system.language
   }
   if (newConfig.system && newConfig.system.theme) {
-    setTheme(newConfig.system.theme as any);
+    setTheme(newConfig.system.theme as any)
   }
-  
+
   // Re-run initialization if config is now valid
   if (isConfigValid(newConfig)) {
-    info("保存的配置有效，重新运行初始化");
-    loadConfiguration();
+    info('保存的配置有效，重新运行初始化')
+    loadConfiguration()
   } else {
-    warn("保存的配置仍不完整");
-    showConfig.value = true;
+    warn('保存的配置仍不完整')
+    showConfig.value = true
   }
 }
 
 async function greet() {
-  debug(`用户触发 Greet 操作, name: ${name.value}`);
-  greetMsg.value = await invoke("greet", { name: name.value });
+  debug(`用户触发 Greet 操作, name: ${name.value}`)
+  greetMsg.value = await invoke('greet', { name: name.value })
 }
 
 onMounted(async () => {
-  unlistenProgress = await listen<AppInitProgress>("init-progress", (event) => {
-    loadingMessage.value = event.payload.message;
-  });
+  unlistenProgress = await listen<AppInitProgress>('init-progress', (event) => {
+    loadingMessage.value = event.payload.message
+  })
 
-  loadConfiguration();
-  
-  unlistenOpenSettings = await listen("open-settings", () => {
-    showConfig.value = true;
-  });
-});
+  loadConfiguration()
+
+  unlistenOpenSettings = await listen('open-settings', () => {
+    showConfig.value = true
+  })
+})
 
 onUnmounted(() => {
   if (unlistenOpenSettings) {
-    unlistenOpenSettings();
+    unlistenOpenSettings()
   }
   if (unlistenProgress) {
-    unlistenProgress();
+    unlistenProgress()
   }
-});
+})
 </script>
 
 <template>
   <a-config-provider :theme="{ algorithm }">
     <div class="app-layout">
       <AppHeader :title="currentTitle" />
-      
+
       <main class="container" :style="containerStyle">
         <div v-if="isLoading" class="loading-container">
           <a-spin size="large" :tip="loadingMessage" />
         </div>
 
-        <ConfigPage 
-          v-else-if="showConfig" 
+        <ConfigPage
+          v-else-if="showConfig"
           :initial-config="appConfig || undefined"
           :allow-back="isConfigValid(appConfig)"
-          @config-saved="onConfigSaved" 
+          @config-saved="onConfigSaved"
           @back="showConfig = false"
         />
 
@@ -184,14 +185,16 @@ onUnmounted(() => {
           <a-typography-paragraph>
             {{ t('app.bookSourceConfigured', { type: appConfig?.book_source?.type }) }}
           </a-typography-paragraph>
-          
+
           <div v-if="appConfig?.book_source?.type === 'Local'" class="info-item">
             <a-tag color="blue">{{ t('app.path') }}</a-tag>
             <a-typography-text code>{{ appConfig.book_source.details.path }}</a-typography-text>
           </div>
           <div v-else-if="appConfig?.book_source?.type === 'CloudflareR2'" class="info-item">
             <a-tag color="orange">{{ t('app.bucket') }}</a-tag>
-            <a-typography-text code>{{ appConfig.book_source.details.bucket_name }}</a-typography-text>
+            <a-typography-text code>{{
+              appConfig.book_source.details.bucket_name
+            }}</a-typography-text>
           </div>
 
           <div class="logo-row">
@@ -205,7 +208,7 @@ onUnmounted(() => {
               <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
             </a>
           </div>
-          
+
           <div class="greet-row">
             <a-input-search
               v-model:value="name"
@@ -219,7 +222,7 @@ onUnmounted(() => {
               </template>
             </a-input-search>
           </div>
-          
+
           <a-typography-title v-if="greetMsg" :level="4" class="greet-msg">
             {{ greetMsg }}
           </a-typography-title>
@@ -240,7 +243,7 @@ onUnmounted(() => {
 
 .container {
   margin: 0;
-  padding-top: 28px; 
+  padding-top: 28px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -316,7 +319,9 @@ body {
 }
 
 /* Ensure background color transition */
-html, body, #app {
+html,
+body,
+#app {
   height: 100%;
 }
 

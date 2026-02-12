@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { theme } from 'ant-design-vue';
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { theme } from 'ant-design-vue'
 
-const { useToken } = theme;
-const { token } = useToken();
+const { useToken } = theme
+const { token } = useToken()
 
 defineProps<{
-  title: string;
-}>();
+  title: string
+}>()
 
 function startDrag() {
-  getCurrentWindow().startDragging();
+  getCurrentWindow().startDragging()
 }
 </script>
 
 <template>
-  <div 
-    data-tauri-drag-region 
-    class="titlebar" 
+  <div
+    data-tauri-drag-region
+    class="titlebar"
     @mousedown="startDrag"
     :style="{ backgroundColor: token.colorBgContainer }"
   >

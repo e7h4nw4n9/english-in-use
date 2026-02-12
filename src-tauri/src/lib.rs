@@ -1,18 +1,18 @@
-pub mod config;
 pub mod commands;
+pub mod config;
 pub mod db;
+pub mod migrations;
 pub mod r2;
 pub mod status;
-pub mod migrations;
 
-use tauri::menu::{Menu, MenuItem, Submenu, PredefinedMenuItem};
-use tauri::Emitter;
 use std::str::FromStr;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::Config;
+use tauri::Emitter;
 
 fn get_log_level(config: &Config) -> log::LevelFilter {
     let identifier = &config.identifier;
-    
+
     // Resolve config directory based on platform rules
     let config_dir = {
         #[cfg(target_os = "macos")]
@@ -55,12 +55,13 @@ fn get_log_level(config: &Config) -> log::LevelFilter {
         if path.exists() {
             if let Ok(content) = std::fs::read_to_string(&path) {
                 if let Ok(config) = toml::from_str::<crate::config::AppConfig>(&content) {
-                    return log::LevelFilter::from_str(&config.system.log_level).unwrap_or(log::LevelFilter::Info);
+                    return log::LevelFilter::from_str(&config.system.log_level)
+                        .unwrap_or(log::LevelFilter::Info);
                 }
             }
         }
     }
-    
+
     log::LevelFilter::Info
 }
 
@@ -71,7 +72,9 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-async fn check_connection_status(app: tauri::AppHandle) -> Result<status::ConnectionStatus, String> {
+async fn check_connection_status(
+    app: tauri::AppHandle,
+) -> Result<status::ConnectionStatus, String> {
     Ok(status::run_check(&app).await)
 }
 
@@ -81,16 +84,18 @@ pub fn run() {
     let log_level = get_log_level(context.config());
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::new()
-            .targets([
-                tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
-                tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
-                    file_name: Some("app".to_string()),
-                }),
-                tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
-            ])
-            .level(log_level)
-            .build())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("app".to_string()),
+                    }),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
+                ])
+                .level(log_level)
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -100,15 +105,20 @@ pub fn run() {
             });
 
             let handle = app.handle();
-            
-            let settings_item = MenuItem::with_id(handle, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?;
+
+            let settings_item =
+                MenuItem::with_id(handle, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?;
             let quit_item = PredefinedMenuItem::quit(handle, None)?;
-            
+
             let app_submenu = Submenu::with_items(
                 handle,
                 "App",
                 true,
-                &[&settings_item, &PredefinedMenuItem::separator(handle)?, &quit_item],
+                &[
+                    &settings_item,
+                    &PredefinedMenuItem::separator(handle)?,
+                    &quit_item,
+                ],
             )?;
 
             let edit_submenu = Submenu::with_items(

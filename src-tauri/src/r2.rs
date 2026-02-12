@@ -1,8 +1,8 @@
+use crate::config::BookSource;
 use aws_config::Region;
 use aws_sdk_s3::config::{Credentials, SharedCredentialsProvider};
 use aws_sdk_s3::Client;
-use crate::config::BookSource;
-use log::{info, error, debug};
+use log::{debug, error, info};
 
 pub async fn create_r2_client(source: &BookSource) -> Result<Client, String> {
     if let BookSource::CloudflareR2 {
@@ -99,14 +99,10 @@ pub async fn get_object(client: &Client, bucket: &str, key: &str) -> Result<Vec<
             format!("Failed to get object: {}", e)
         })?;
 
-    let data = resp
-        .body
-        .collect()
-        .await
-        .map_err(|e| {
-            error!("收集 R2 对象数据失败: {}", e);
-            format!("Failed to collect body: {}", e)
-        })?;
+    let data = resp.body.collect().await.map_err(|e| {
+        error!("收集 R2 对象数据失败: {}", e);
+        format!("Failed to collect body: {}", e)
+    })?;
 
     let bytes = data.into_bytes().to_vec();
     debug!("成功获取对象，大小: {} 字节", bytes.len());

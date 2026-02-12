@@ -1,12 +1,15 @@
 use crate::config::{AppConfig, BookSource, DatabaseConnection};
+use log::{error, info};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
-use log::{info, error};
 
 fn get_config_path(app: &AppHandle) -> PathBuf {
     // In a real app, you might want to handle errors better than unwrap
     // but for now, we assume the app config dir is always available.
-    app.path().app_config_dir().expect("Could not resolve app config dir").join("config.toml")
+    app.path()
+        .app_config_dir()
+        .expect("Could not resolve app config dir")
+        .join("config.toml")
 }
 
 #[tauri::command]
@@ -65,7 +68,7 @@ pub async fn test_r2_connection(source: BookSource) -> Result<Vec<String>, Strin
         _ => {
             error!("无效的 R2 配置类型");
             Err("Invalid config type for R2 test".to_string())
-        },
+        }
     }
 }
 
@@ -84,7 +87,7 @@ pub async fn list_r2_objects(source: BookSource) -> Result<Vec<String>, String> 
         _ => {
             error!("无效的 R2 配置类型");
             Err("Invalid config type for R2 list".to_string())
-        },
+        }
     }
 }
 
@@ -103,14 +106,16 @@ pub async fn read_r2_object(source: BookSource, key: String) -> Result<Vec<u8>, 
         _ => {
             error!("无效的 R2 配置类型");
             Err("Invalid config type for R2 read".to_string())
-        },
+        }
     }
 }
 
 #[tauri::command]
 pub fn get_default_sqlite_path(app: AppHandle) -> Result<String, String> {
     info!("正在获取默认 SQLite 路径");
-    let path = app.path().app_data_dir()
+    let path = app
+        .path()
+        .app_data_dir()
         .map_err(|e| {
             error!("获取应用数据目录失败: {}", e);
             e.to_string()
@@ -127,7 +132,7 @@ pub async fn initialize_database(app: AppHandle) -> Result<(), String> {
         error!("加载配置以初始化数据库失败: {}", e);
         e
     })?;
-    
+
     if let Some(db_config) = config.database {
         let result = crate::db::init(&app, &db_config)
             .await
@@ -136,11 +141,11 @@ pub async fn initialize_database(app: AppHandle) -> Result<(), String> {
             Ok(_) => {
                 info!("数据库初始化成功");
                 Ok(())
-            },
+            }
             Err(e) => {
                 error!("数据库初始化失败: {}", e);
                 Err(e.clone())
-            },
+            }
         }
     } else {
         error!("数据库未配置");
@@ -182,7 +187,7 @@ pub async fn test_database_connection(connection: DatabaseConnection) -> Result<
                 "https://api.cloudflare.com/client/v4/accounts/{}/d1/database/{}",
                 account_id, database_id
             );
-            
+
             let client = reqwest::Client::new();
             let response = client
                 .get(&url)
@@ -204,7 +209,7 @@ pub async fn test_database_connection(connection: DatabaseConnection) -> Result<
             }
         }
     };
-    
+
     if result.is_ok() {
         info!("数据库连接测试成功");
     }
