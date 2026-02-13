@@ -1,15 +1,34 @@
 use crate::models::{Book, BookGroup, BookSource};
+use crate::utils::cache::CacheKey;
 use log::info;
 use tauri::{AppHandle, State};
+
+pub struct BookCacheState {
+    pub cache: moka::future::Cache<String, Vec<Book>>,
+}
 
 #[tauri::command]
 pub async fn get_books(
     state: State<'_, crate::database::DbState>,
+    cache_state: State<'_, BookCacheState>,
     group: Option<BookGroup>,
 ) -> Result<Vec<Book>, String> {
+    let key = CacheKey::book_list(group);
+
+    // 尝试从缓存中获取
+    if let Some(books) = cache_state.cache.get(&key).await {
+        info!("从缓存获取书籍列表 (key: {})", key);
+        return Ok(books);
+    }
+
     let db_guard = state.db.read().await;
     let db = db_guard.as_ref().ok_or("Database not initialized")?;
-    get_books_logic(db.as_ref(), group).await
+    let books = get_books_logic(db.as_ref(), group).await?;
+
+    // 存入缓存
+    cache_state.cache.insert(key, books.clone()).await;
+
+    Ok(books)
 }
 
 #[tauri::command]

@@ -82,8 +82,15 @@ pub fn run() {
     let context = tauri::generate_context!();
     let log_level = get_log_level(context.config());
 
+    let book_cache = commands::books::BookCacheState {
+        cache: moka::future::Cache::builder()
+            .time_to_idle(std::time::Duration::from_secs(5 * 60)) // 5分钟滑动窗口
+            .build(),
+    };
+
     tauri::Builder::default()
         .manage(database::DbState::default())
+        .manage(book_cache)
         .plugin(
             tauri_plugin_log::Builder::new()
                 .targets([

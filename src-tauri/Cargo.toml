@@ -34,6 +34,7 @@ sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio"] }
 anyhow = "1.0.101"
 dirs = "5.0"
 semver = "1.0"
+moka = { version = "0.12", features = ["future"] }
 
 [dev-dependencies]
 tempfile = "3.24.0"
