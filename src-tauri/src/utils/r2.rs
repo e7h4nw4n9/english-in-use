@@ -1,4 +1,5 @@
 use crate::models::{BookSource, ServiceStatus};
+use crate::utils::local;
 use aws_config::Region;
 use aws_sdk_s3::Client;
 use aws_sdk_s3::config::{Credentials, SharedCredentialsProvider};
@@ -103,7 +104,33 @@ pub async fn list_folders(client: &Client, bucket: &str) -> Result<Vec<String>, 
 }
 
 pub async fn get_object(client: &Client, bucket: &str, key: &str) -> Result<Vec<u8>, String> {
-    info!("正在从存储桶 {} 获取对象: {}", bucket, key);
+    // 1. 优先尝试从本地读取
+    if let Some(bytes) = read_from_local(key).await {
+        return Ok(bytes);
+    }
+
+    // 2. 本地不存在，从 R2 获取
+    let bytes = fetch_from_r2(client, bucket, key).await?;
+
+    // 3. 获取成功后保存到本地
+    let _ = save_to_local(key, &bytes).await;
+
+    Ok(bytes)
+}
+
+/// 私有方法：从本地读取文件
+async fn read_from_local(key: &str) -> Option<Vec<u8>> {
+    local::read_app_file(key).await
+}
+
+/// 私有方法：将文件保存到本地
+async fn save_to_local(key: &str, data: &[u8]) -> Result<String, String> {
+    local::save_app_file(key, data).await
+}
+
+/// 私有方法：从 R2 远程获取对象内容
+async fn fetch_from_r2(client: &Client, bucket: &str, key: &str) -> Result<Vec<u8>, String> {
+    info!("正在从存储桶 {} 远程获取对象: {}", bucket, key);
     let resp = client
         .get_object()
         .bucket(bucket)
@@ -111,17 +138,17 @@ pub async fn get_object(client: &Client, bucket: &str, key: &str) -> Result<Vec<
         .send()
         .await
         .map_err(|e| {
-            error!("获取 R2 对象失败: {}", e);
+            error!("获取 R2 对象失败 (key: {}): {}", key, e);
             format!("Failed to get object: {}", e)
         })?;
 
     let data = resp.body.collect().await.map_err(|e| {
-        error!("收集 R2 对象数据失败: {}", e);
+        error!("收集 R2 对象数据失败 (key: {}): {}", key, e);
         format!("Failed to collect body: {}", e)
     })?;
 
     let bytes = data.into_bytes().to_vec();
-    debug!("成功获取对象，大小: {} 字节", bytes.len());
+    debug!("成功从远程获取对象 {}, 大小: {} 字节", key, bytes.len());
     Ok(bytes)
 }
 

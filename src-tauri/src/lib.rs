@@ -5,9 +5,9 @@ pub mod services;
 pub mod utils;
 
 use std::str::FromStr;
-use tauri::Config;
 use tauri::Emitter;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::{Config, Manager};
 
 fn get_log_level(config: &Config) -> log::LevelFilter {
     let identifier = &config.identifier;
@@ -99,6 +99,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // 初始化全局应用数据目录常量
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("Failed to resolve app data directory");
+            crate::utils::local::init_app_data_dir(app_data_dir);
+
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 services::status::monitor_connections(handle).await;
@@ -160,6 +167,7 @@ pub fn run() {
             commands::db::test_database_connection,
             commands::db::initialize_database,
             commands::books::get_books,
+            commands::books::get_book_cover,
             commands::system::restart,
             check_connection_status
         ])

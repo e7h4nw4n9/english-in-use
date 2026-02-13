@@ -4,6 +4,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import AppHeader from './components/AppHeader.vue'
 import AppFooter from './components/AppFooter.vue'
 import ConfigPage from './components/ConfigPage.vue'
+import BookList from './components/BookList.vue'
 import type { AppInitProgress } from './types'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from './composables/useTheme'
@@ -108,7 +109,7 @@ onUnmounted(() => {
         />
 
         <div v-else class="main-content">
-          <a-empty :description="t('app.welcome')" />
+          <BookList />
         </div>
       </main>
 
@@ -146,8 +147,8 @@ onUnmounted(() => {
 }
 
 .main-content {
-  padding: 1rem;
-  text-align: center;
+  padding: 0;
+  width: 100%;
 }
 </style>
 

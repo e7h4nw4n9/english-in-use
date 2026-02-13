@@ -62,7 +62,11 @@
     "greetPlaceholder": "Enter a name...",
     "editConfig": "Edit Configuration",
     "loading": "Loading...",
-    "switchLang": "中文"
+    "switchLang": "中文",
+    "bookGroups": {
+      "vocabulary": "Vocabulary in Use",
+      "grammar": "Grammar in Use"
+    }
   },
   "footer": {
     "r2Status": "R2",

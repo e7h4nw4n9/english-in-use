@@ -1,19 +1,12 @@
 use crate::models::DatabaseConnection;
 use crate::services::config;
 use log::{error, info};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 
 #[tauri::command]
-pub fn get_default_sqlite_path(app: AppHandle) -> Result<String, String> {
+pub fn get_default_sqlite_path() -> Result<String, String> {
     info!("正在获取默认 SQLite 路径");
-    let path = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| {
-            error!("获取应用数据目录失败: {}", e);
-            e.to_string()
-        })?
-        .join("english-in-use.db");
+    let path = crate::utils::local::get_app_data_dir()?.join("english-in-use.db");
     Ok(path.to_string_lossy().to_string())
 }
 

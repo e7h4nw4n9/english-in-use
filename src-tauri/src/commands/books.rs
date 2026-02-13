@@ -1,6 +1,6 @@
-use crate::models::{Book, BookGroup};
+use crate::models::{Book, BookGroup, BookSource};
 use log::info;
-use tauri::State;
+use tauri::{AppHandle, State};
 
 #[tauri::command]
 pub async fn get_books(
@@ -10,6 +10,35 @@ pub async fn get_books(
     let db_guard = state.db.read().await;
     let db = db_guard.as_ref().ok_or("Database not initialized")?;
     get_books_logic(db.as_ref(), group).await
+}
+
+#[tauri::command]
+pub async fn get_book_cover(app: AppHandle, book: Book) -> Result<Vec<u8>, String> {
+    let config = crate::services::config::load(&app);
+    let source = config.book_source.ok_or("Book source not configured")?;
+
+    let cover_name = book.cover.as_ref().ok_or("Book cover not defined")?;
+    let relative_path = format!("{}/assets/{}", book.product_code, cover_name);
+
+    match source {
+        BookSource::Local { path } => {
+            info!("正在从本地读取封面: {}/{}", path, relative_path);
+            crate::utils::local::read_file(&path, &relative_path).await
+        }
+        BookSource::CloudflareR2 { .. } => {
+            let client = crate::utils::r2::create_r2_client(&source).await?;
+            let bucket = match &source {
+                BookSource::CloudflareR2 { bucket_name, .. } => bucket_name,
+                _ => unreachable!(),
+            };
+
+            info!(
+                "正在从 R2 读取封面: bucket={}, key={}",
+                bucket, relative_path
+            );
+            crate::utils::r2::get_object(&client, bucket, &relative_path).await
+        }
+    }
 }
 
 pub async fn get_books_logic(
