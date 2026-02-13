@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { AppConfig, ConnectionStatus } from '../types'
-import { loadConfig, saveConfig, checkConnectionStatus, initializeDatabase } from '../lib/api'
+import { loadConfig, checkConnectionStatus, initializeDatabase } from '../lib/api'
 import { info, error, debug } from '@tauri-apps/plugin-log'
 import i18n from '../i18n'
 
@@ -52,8 +52,16 @@ export const useAppStore = defineStore('app', () => {
 
       if (isConfigValid.value) {
         info('配置有效，正在初始化数据库...')
-        await initializeDatabase()
-        info('数据库初始化成功')
+        const newlyInitialized = await initializeDatabase()
+        info(`数据库初始化完成，是否为新初始化: ${newlyInitialized}`)
+
+        // If using Cloudflare D1 and it was newly initialized, wait a couple of seconds
+        // for the database to be fully ready on the network
+        if (newlyInitialized && config.value?.database?.type === 'CloudflareD1') {
+          debug('检测到 Cloudflare D1 首次初始化，等待 2 秒以确保连接就绪...')
+          loadingMessage.value = i18n.global.t('config.waitingForDatabase')
+          await new Promise((resolve) => setTimeout(resolve, 2000))
+        }
 
         // Initial status check
         if (config.value.system.enable_auto_check) {

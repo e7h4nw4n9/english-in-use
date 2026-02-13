@@ -115,6 +115,11 @@ pub fn run() {
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
+                // 初始化数据库
+                if let Err(e) = services::db_init::init_database(&handle).await {
+                    log::error!("数据库初始化失败: {}", e);
+                }
+
                 services::status::monitor_connections(handle).await;
             });
 
@@ -173,6 +178,10 @@ pub fn run() {
             commands::r2::read_r2_object,
             commands::db::test_database_connection,
             commands::db::initialize_database,
+            commands::db::get_migration_versions,
+            commands::db::get_current_db_version,
+            commands::db::execute_migration_up,
+            commands::db::execute_migration_down,
             commands::books::get_books,
             commands::books::get_book_cover,
             commands::system::restart,

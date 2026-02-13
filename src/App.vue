@@ -149,6 +149,7 @@ onUnmounted(() => {
 .main-content {
   padding: 0;
   width: 100%;
+  flex: 1;
 }
 </style>
 

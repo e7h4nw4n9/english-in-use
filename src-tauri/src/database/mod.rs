@@ -1,5 +1,5 @@
 use crate::models::{DatabaseConnection, ServiceStatus};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use log::info;
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -46,25 +46,9 @@ fn normalize_version(v: &str) -> String {
 }
 
 pub async fn init<R: tauri::Runtime>(
-    handle: &tauri::AppHandle<R>,
+    _handle: &tauri::AppHandle<R>,
     config: &DatabaseConnection,
 ) -> Result<Box<dyn Database>> {
-    use self::migrations::MIGRATIONS;
-    use tauri::Emitter;
-
-    let emit_progress = |msg: &str, p: f32| {
-        info!("初始化进度: {} ({}%)", msg, (p * 100.0) as u32);
-        let _ = handle.emit(
-            "init-progress",
-            AppInitProgress {
-                message: msg.to_string(),
-                progress: p,
-            },
-        );
-    };
-
-    emit_progress("正在连接数据库...", 0.1);
-
     let db: Box<dyn Database> = match config {
         DatabaseConnection::SQLite { path } => Box::new(SqliteDatabase::new(path).await?),
         DatabaseConnection::CloudflareD1 {
@@ -78,33 +62,87 @@ pub async fn init<R: tauri::Runtime>(
         )),
     };
 
-    emit_progress("正在检查数据库版本...", 0.3);
+    Ok(db)
+}
+
+pub async fn migrate_up(db: &dyn Database, target_version: Option<&str>) -> Result<()> {
+    use self::migrations::MIGRATIONS;
+
     let current_db_version_str = db.get_version().await?;
     let normalized_db_version = normalize_version(&current_db_version_str);
     let current_db_version =
         Version::parse(&normalized_db_version).unwrap_or_else(|_| Version::parse("0.0.0").unwrap());
 
-    info!(
-        "当前数据库版本: {} (原始: {})",
-        current_db_version, current_db_version_str
-    );
+    let target_v = if let Some(v) = target_version {
+        Some(Version::parse(&normalize_version(v))?)
+    } else {
+        None
+    };
 
-    let total_migrations = MIGRATIONS.len() as f32;
-    for (i, migration) in MIGRATIONS.iter().enumerate() {
-        let migration_version = Version::parse(migration.version)
-            .with_context(|| format!("Failed to parse migration version: {}", migration.version))?;
+    for migration in MIGRATIONS {
+        let migration_version = Version::parse(&normalize_version(migration.version))?;
 
         if migration_version > current_db_version {
-            let p = 0.3 + (i as f32 / total_migrations) * 0.6;
-            emit_progress(&format!("正在应用迁移至版本 {}...", migration.version), p);
-            db.execute(migration.sql.to_string()).await?;
+            if let Some(ref tv) = target_v {
+                if migration_version > *tv {
+                    break;
+                }
+            }
+
+            info!("正在应用升级迁移至版本 {}...", migration.version);
+            db.execute(migration.up.to_string()).await?;
             db.set_version(migration.version).await?;
-            info!("已成功应用迁移至版本 {}", migration.version);
         }
     }
+    Ok(())
+}
 
-    emit_progress("数据库初始化完成", 1.0);
-    Ok(db)
+pub async fn migrate_down(db: &dyn Database, target_version: Option<&str>) -> Result<()> {
+    use self::migrations::MIGRATIONS;
+
+    let current_db_version_str = db.get_version().await?;
+    let normalized_db_version = normalize_version(&current_db_version_str);
+    let current_db_version =
+        Version::parse(&normalized_db_version).unwrap_or_else(|_| Version::parse("0.0.0").unwrap());
+
+    let target_v = if let Some(v) = target_version {
+        Version::parse(&normalize_version(v))?
+    } else {
+        // Default to one version down
+        let mut prev_version = Version::parse("0.0.0").unwrap();
+        for migration in MIGRATIONS {
+            let mv = Version::parse(&normalize_version(migration.version))?;
+            if mv < current_db_version && mv > prev_version {
+                prev_version = mv;
+            }
+        }
+        prev_version
+    };
+
+    // Migrations are sorted ascending, so we need to iterate in reverse for downgrade
+    for migration in MIGRATIONS.iter().rev() {
+        let migration_version = Version::parse(&normalize_version(migration.version))?;
+
+        if migration_version <= current_db_version && migration_version > target_v {
+            info!("正在应用降级迁移至版本 {}...", migration.version);
+            if !migration.down.is_empty() {
+                db.execute(migration.down.to_string()).await?;
+            }
+
+            // Set version to the one BEFORE this migration
+            let mut prev_v = "0.0.0".to_string();
+            for m in MIGRATIONS {
+                let mv = Version::parse(&normalize_version(m.version))?;
+                if mv < migration_version {
+                    prev_v = m.version.to_string();
+                } else {
+                    break;
+                }
+            }
+            db.set_version(&prev_v).await?;
+        }
+    }
+    Ok(())
 }
 
 pub struct DbState {

@@ -44,7 +44,17 @@
     "testSuccess": "Connection test successful!",
     "testSuccessWithFolders": "Connection test successful! Found the following folders:",
     "connectionFailed": "Connection failed: {error}",
-    "restartNotice": "Application needs to restart to apply configuration changes. Click OK to restart now."
+    "restartNotice": "Application needs to restart to apply configuration changes. Click OK to restart now.",
+    "dbMigration": "DB Migration",
+    "currentVersion": "Current Version",
+    "targetVersion": "Target Version",
+    "upgrade": "Upgrade",
+    "downgrade": "Downgrade",
+    "latestVersion": "Latest",
+    "prevVersion": "Previous",
+    "migrationSuccess": "Migration successful",
+    "migrationError": "Migration failed: {error}",
+    "waitingForDatabase": "Waiting for database to be ready..."
   },
   "common": {
     "ok": "OK",

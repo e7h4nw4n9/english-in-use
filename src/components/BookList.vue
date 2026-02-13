@@ -1,17 +1,23 @@
 <template>
-  <div class="book-list-container p-4">
-    <div v-if="loading" class="flex items-center justify-center py-20">
+  <div class="book-list-container h-full">
+    <div v-if="loading" class="flex h-full min-h-[400px] items-center justify-center">
       <a-spin :tip="$t('app.loading')" />
     </div>
 
     <div
       v-else-if="groupedBooks.length === 0"
-      class="flex items-center justify-center py-20 text-gray-400"
+      class="flex h-full min-h-[400px] items-center justify-center text-gray-400"
     >
       暂无书籍数据
     </div>
 
-    <a-collapse v-else v-model:activeKey="activeKeys" ghost expand-icon-position="right">
+    <a-collapse
+      v-else
+      v-model:activeKey="activeKeys"
+      class="p-4"
+      ghost
+      expand-icon-position="right"
+    >
       <a-collapse-panel
         v-for="group in groupedBooks"
         :key="group.id"
@@ -72,11 +78,6 @@ const loading = ref(true)
 const books = ref<Book[]>([])
 const covers = ref<Record<number, string>>({})
 const activeKeys = ref<number[]>([BookGroup.Vocabulary, BookGroup.Grammar])
-
-interface GroupedBook {
-  id: BookGroup
-  books: Book[]
-}
 
 const groupedBooks = computed(() => {
   const groups: Record<number, Book[]> = {}

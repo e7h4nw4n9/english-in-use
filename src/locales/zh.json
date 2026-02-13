@@ -44,7 +44,17 @@
     "testSuccess": "连接测试成功！",
     "testSuccessWithFolders": "连接测试成功！发现以下文件夹：",
     "connectionFailed": "连接失败: {error}",
-    "restartNotice": "配置更改需要重启应用才能生效。点击确定立即重启。"
+    "restartNotice": "配置更改需要重启应用才能生效。点击确定立即重启。",
+    "dbMigration": "数据库迁移",
+    "currentVersion": "当前版本",
+    "targetVersion": "目标版本",
+    "upgrade": "升级",
+    "downgrade": "降级",
+    "latestVersion": "最新版本",
+    "prevVersion": "上一版本",
+    "migrationSuccess": "迁移执行成功",
+    "migrationError": "迁移执行失败: {error}",
+    "waitingForDatabase": "正在等待数据库就绪..."
   },
   "common": {
     "ok": "确定",

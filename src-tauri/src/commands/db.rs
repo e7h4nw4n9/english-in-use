@@ -1,5 +1,4 @@
 use crate::models::DatabaseConnection;
-use crate::services::config;
 use log::{error, info};
 use tauri::{AppHandle, State};
 
@@ -11,27 +10,9 @@ pub fn get_default_sqlite_path() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn initialize_database(
-    app: AppHandle,
-    state: State<'_, crate::database::DbState>,
-) -> Result<(), String> {
-    info!("正在初始化数据库...");
-    let config = config::load(&app);
-
-    if let Some(db_config) = config.database {
-        let db = crate::database::init(&app, &db_config)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let mut db_state = state.db.write().await;
-        *db_state = Some(db);
-
-        info!("数据库初始化成功并已存入状态");
-        Ok(())
-    } else {
-        error!("数据库未配置");
-        Err("Database not configured".to_string())
-    }
+pub async fn initialize_database(app: AppHandle) -> Result<bool, String> {
+    info!("正在通过命令初始化数据库...");
+    crate::services::db_init::init_database(&app).await
 }
 
 #[tauri::command]
@@ -58,6 +39,59 @@ pub async fn test_database_connection(connection: DatabaseConnection) -> Result<
         }
 
         ServiceStatus::Testing => Ok("Connection test in progress".to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn get_migration_versions() -> Result<Vec<String>, String> {
+    use crate::database::migrations::MIGRATIONS;
+    Ok(MIGRATIONS.iter().map(|m| m.version.to_string()).collect())
+}
+
+#[tauri::command]
+pub async fn get_current_db_version(
+    state: State<'_, crate::database::DbState>,
+) -> Result<String, String> {
+    let db_guard = state.db.read().await;
+    if let Some(db) = db_guard.as_ref() {
+        db.get_version().await.map_err(|e| e.to_string())
+    } else {
+        Err("Database not initialized".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn execute_migration_up(
+    app: AppHandle,
+    state: State<'_, crate::database::DbState>,
+    target_version: Option<String>,
+) -> Result<(), String> {
+    let db_guard = state.db.read().await;
+    if let Some(db) = db_guard.as_ref() {
+        crate::database::migrate_up(db.as_ref(), target_version.as_deref())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // 迁移成功后确保标记为已初始化
+        let _ = crate::services::db_init::mark_as_initialized(&app);
+        Ok(())
+    } else {
+        Err("Database not initialized".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn execute_migration_down(
+    state: State<'_, crate::database::DbState>,
+    target_version: Option<String>,
+) -> Result<(), String> {
+    let db_guard = state.db.read().await;
+    if let Some(db) = db_guard.as_ref() {
+        crate::database::migrate_down(db.as_ref(), target_version.as_deref())
+            .await
+            .map_err(|e| e.to_string())
+    } else {
+        Err("Database not initialized".to_string())
     }
 }
 
