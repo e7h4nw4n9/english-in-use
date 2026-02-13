@@ -1,14 +1,13 @@
 pub mod commands;
-pub mod config;
-pub mod db;
-pub mod migrations;
-pub mod r2;
-pub mod status;
+pub mod database;
+pub mod models;
+pub mod services;
+pub mod utils;
 
 use std::str::FromStr;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::Config;
 use tauri::Emitter;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 
 fn get_log_level(config: &Config) -> log::LevelFilter {
     let identifier = &config.identifier;
@@ -54,7 +53,7 @@ fn get_log_level(config: &Config) -> log::LevelFilter {
         path.push("config.toml");
         if path.exists() {
             if let Ok(content) = std::fs::read_to_string(&path) {
-                if let Ok(config) = toml::from_str::<crate::config::AppConfig>(&content) {
+                if let Ok(config) = toml::from_str::<crate::models::AppConfig>(&content) {
                     return log::LevelFilter::from_str(&config.system.log_level)
                         .unwrap_or(log::LevelFilter::Info);
                 }
@@ -74,8 +73,8 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 async fn check_connection_status(
     app: tauri::AppHandle,
-) -> Result<status::ConnectionStatus, String> {
-    Ok(status::run_check(&app).await)
+) -> Result<models::ConnectionStatus, String> {
+    Ok(services::status::run_check(&app).await)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -84,6 +83,7 @@ pub fn run() {
     let log_level = get_log_level(context.config());
 
     tauri::Builder::default()
+        .manage(database::DbState::default())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .targets([
@@ -101,7 +101,7 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                status::monitor_connections(handle).await;
+                services::status::monitor_connections(handle).await;
             });
 
             let handle = app.handle();
@@ -149,17 +149,18 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
-            commands::load_config,
-            commands::save_config,
-            commands::export_config,
-            commands::import_config,
-            commands::get_default_sqlite_path,
-            commands::test_r2_connection,
-            commands::list_r2_objects,
-            commands::read_r2_object,
-            commands::test_database_connection,
-            commands::initialize_database,
-            commands::restart,
+            commands::config::load_config,
+            commands::config::save_config,
+            commands::config::export_config,
+            commands::config::import_config,
+            commands::db::get_default_sqlite_path,
+            commands::r2::test_r2_connection,
+            commands::r2::list_r2_objects,
+            commands::r2::read_r2_object,
+            commands::db::test_database_connection,
+            commands::db::initialize_database,
+            commands::books::get_books,
+            commands::system::restart,
             check_connection_status
         ])
         .run(context)

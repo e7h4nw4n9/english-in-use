@@ -68,3 +68,19 @@ export interface AppInitProgress {
   message: string
   progress: number
 }
+
+export enum BookGroup {
+  Vocabulary = 1,
+  Grammar = 2,
+}
+
+export interface Book {
+  id: number
+  book_group: BookGroup
+  product_code: string
+  title: string
+  author: string | null
+  product_type: string
+  cover: string | null
+  sort_num: number
+}
