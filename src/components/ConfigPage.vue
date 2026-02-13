@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import { ref, reactive, computed, watch } from 'vue'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { info, error, debug, warn } from '@tauri-apps/plugin-log'
 import type {
@@ -16,13 +15,23 @@ import {
   SettingOutlined,
   BookOutlined,
   DatabaseOutlined,
-  FolderOpenOutlined,
   ArrowLeftOutlined,
   DownloadOutlined,
   UploadOutlined,
-  CopyOutlined,
 } from '@ant-design/icons-vue'
 import { message as antMessage, theme, Modal } from 'ant-design-vue'
+import {
+  saveConfig,
+  exportConfig,
+  importConfig,
+  getDefaultSqlitePath,
+  testDatabaseConnection,
+  testR2Connection,
+} from '../lib/api'
+import { restartApp } from '../lib/api/system'
+import SystemSettings from './config/SystemSettings.vue'
+import BookSourceSettings from './config/BookSourceSettings.vue'
+import DatabaseSettings from './config/DatabaseSettings.vue'
 
 const { t, locale } = useI18n()
 const { setTheme } = useTheme()
@@ -109,7 +118,7 @@ const d1Config = reactive({
 
 async function fetchDefaultSqlitePath() {
   try {
-    const path = await invoke<string>('get_default_sqlite_path')
+    const path = await getDefaultSqlitePath()
     sqlitePath.value = path
   } catch (err) {
     console.error('Failed to get default sqlite path:', err)
@@ -124,6 +133,12 @@ async function copyToClipboard(text: string) {
     antMessage.error('Failed to copy')
   }
 }
+
+watch(dbType, (newType) => {
+  if (newType === 'SQLite' && !sqlitePath.value) {
+    fetchDefaultSqlitePath()
+  }
+})
 
 // Initial fetch if type is SQLite
 if (dbType.value === 'SQLite') {
@@ -195,7 +210,10 @@ function updateFormFromConfig(config: AppConfig) {
     }
   } else {
     dbType.value = 'SQLite'
-    fetchDefaultSqlitePath()
+    // Do not reset sqlitePath if we already have it
+    if (!sqlitePath.value) {
+      fetchDefaultSqlitePath()
+    }
   }
 }
 
@@ -215,7 +233,7 @@ async function handleSave() {
       database: getCurrentDatabase(),
     }
 
-    await invoke('save_config', { config })
+    await saveConfig(config)
     info('配置保存成功')
 
     locale.value = language.value
@@ -227,7 +245,7 @@ async function handleSave() {
       okText: t('common.ok' as any) || 'OK',
       onOk: () => {
         info('用户点击重启应用')
-        invoke('restart')
+        restartApp()
       },
     })
   } catch (err) {
@@ -270,7 +288,7 @@ async function handleExport() {
       if (!filePath.toLowerCase().endsWith('.toml')) {
         filePath += '.toml'
       }
-      await invoke('export_config', { path: filePath, config })
+      await exportConfig(filePath, config)
       info('配置文件导出成功')
       antMessage.success(t('config.exportSuccess'))
     } else {
@@ -300,12 +318,10 @@ async function handleImport() {
 
     if (selected && typeof selected === 'string') {
       debug(`选择导入的文件: ${selected}`)
-      const config: AppConfig = await invoke('import_config', {
-        path: selected,
-      })
+      const config: AppConfig = await importConfig(selected)
 
       // Save to application config immediately (overwrite current config.toml)
-      await invoke('save_config', { config })
+      await saveConfig(config)
       info('配置文件导入并保存成功')
 
       // Update form fields
@@ -321,7 +337,7 @@ async function handleImport() {
         okText: t('common.ok' as any) || 'OK',
         onOk: () => {
           info('用户点击重启应用 (导入后)')
-          invoke('restart')
+          restartApp()
         },
       })
     } else {
@@ -341,11 +357,11 @@ async function testConnection() {
   try {
     if (currentTab.value === 'books') {
       const source = getCurrentBookSource()
-      if (source?.type !== 'CloudflareR2') {
+      if (!source || source.type !== 'CloudflareR2') {
         warn('尝试测试非 R2 类型的图书源连接')
         return
       }
-      await invoke<string[]>('test_r2_connection', { source })
+      await testR2Connection(source)
       info('R2 连接测试成功 (前端反馈)')
       antMessage.success(t('config.testSuccess'))
     } else if (currentTab.value === 'database') {
@@ -354,13 +370,14 @@ async function testConnection() {
         warn('尝试测试未配置的数据库连接')
         return
       }
-      await invoke('test_database_connection', { connection })
+      await testDatabaseConnection(connection)
       info('数据库连接测试成功 (前端反馈)')
       antMessage.success(t('config.testSuccess'))
     }
   } catch (err) {
     error(`连接测试失败: ${err}`)
-    antMessage.error(t('config.connectionFailed', { error: err }))
+    const errMsg = String(err).replace(/https?:\/\/[^\s]+/g, '[URL]')
+    antMessage.error(t('config.connectionFailed', { error: errMsg }))
   } finally {
     isTesting.value = false
   }
@@ -492,222 +509,37 @@ function getCurrentDatabase(): DatabaseConnection | null {
     <div class="config-content">
       <div class="tab-container">
         <!-- System Configuration -->
-        <a-form
+        <SystemSettings
           v-if="currentTab === 'system'"
-          layout="horizontal"
-          :label-col="{ xs: { span: 24 }, sm: { span: 6 } }"
-          :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 } }"
-          label-align="right"
-        >
-          <a-form-item :label="t('config.language')">
-            <a-select v-model:value="language">
-              <a-select-option value="en">English</a-select-option>
-              <a-select-option value="zh">中文</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item :label="t('config.theme')">
-            <a-select v-model:value="themeMode">
-              <a-select-option value="system">{{ t('config.themeSystem') }}</a-select-option>
-              <a-select-option value="light">{{ t('config.themeLight') }}</a-select-option>
-              <a-select-option value="dark">{{ t('config.themeDark') }}</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item :label="t('config.logLevel')">
-            <a-select v-model:value="logLevel">
-              <a-select-option value="trace">Trace</a-select-option>
-              <a-select-option value="debug">Debug</a-select-option>
-              <a-select-option value="info">Info</a-select-option>
-              <a-select-option value="warn">Warn</a-select-option>
-              <a-select-option value="error">Error</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item :label="t('config.enableAutoCheck')">
-            <a-tooltip
-              :title="!isCloudConfigured ? 'Only available when R2 or D1 is configured' : ''"
-            >
-              <a-switch v-model:checked="enableAutoCheck" :disabled="!isCloudConfigured" />
-            </a-tooltip>
-          </a-form-item>
-          <a-form-item v-if="enableAutoCheck" :label="t('config.checkInterval')">
-            <a-input-number
-              v-model:value="checkIntervalMins"
-              :min="1"
-              :max="1440"
-              style="width: 100%"
-              autocomplete="off"
-              autocapitalize="none"
-              autocorrect="off"
-              spellcheck="false"
-            />
-          </a-form-item>
-        </a-form>
+          v-model:language="language"
+          v-model:themeMode="themeMode"
+          v-model:logLevel="logLevel"
+          v-model:enableAutoCheck="enableAutoCheck"
+          v-model:checkIntervalMins="checkIntervalMins"
+          :is-cloud-configured="isCloudConfigured"
+        />
 
         <!-- Book Sources Configuration -->
-        <div v-if="currentTab === 'books'">
-          <a-form
-            layout="horizontal"
-            :label-col="{ xs: { span: 24 }, sm: { span: 6 } }"
-            :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 } }"
-            label-align="right"
-          >
-            <a-form-item :label="t('config.sourceType')">
-              <a-radio-group v-model:value="sourceType" button-style="solid">
-                <a-radio-button value="Local">{{ t('config.localFolder') }}</a-radio-button>
-                <a-radio-button value="CloudflareR2">{{ t('config.cloudR2') }}</a-radio-button>
-              </a-radio-group>
-            </a-form-item>
-
-            <div v-if="sourceType === 'Local'">
-              <a-form-item :label="t('config.folderPath')">
-                <a-input
-                  v-model:value="localBookPath"
-                  :placeholder="t('config.folderPath')"
-                  autocomplete="off"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                >
-                  <template #addonAfter>
-                    <FolderOpenOutlined @click="selectBookFolder" class="cursor-pointer" />
-                  </template>
-                </a-input>
-              </a-form-item>
-            </div>
-
-            <div v-else>
-              <a-form-item :label="t('config.accountId')">
-                <a-input
-                  v-model:value="r2Config.account_id"
-                  autocomplete="off"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                />
-              </a-form-item>
-              <a-form-item :label="t('config.bucketName')">
-                <a-input
-                  v-model:value="r2Config.bucket_name"
-                  autocomplete="off"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                />
-              </a-form-item>
-              <a-form-item :label="t('config.accessKeyId')">
-                <a-input
-                  v-model:value="r2Config.access_key_id"
-                  autocomplete="off"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                />
-              </a-form-item>
-              <a-form-item :label="t('config.secretAccessKey')">
-                <a-input-password
-                  v-model:value="r2Config.secret_access_key"
-                  autocomplete="off"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                />
-              </a-form-item>
-              <a-form-item :label="t('config.publicUrl')">
-                <a-input
-                  v-model:value="r2Config.public_url"
-                  placeholder="https://..."
-                  autocomplete="off"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                />
-              </a-form-item>
-            </div>
-          </a-form>
-
-          <div v-if="sourceType === 'CloudflareR2'" class="form-footer-actions">
-            <a-button @click="testConnection" :loading="isTesting">
-              {{ t('config.testConnection') }}
-            </a-button>
-          </div>
-        </div>
+        <BookSourceSettings
+          v-else-if="currentTab === 'books'"
+          v-model:sourceType="sourceType"
+          v-model:localBookPath="localBookPath"
+          :r2-config="r2Config"
+          :is-testing="isTesting"
+          @select-folder="selectBookFolder"
+          @test-connection="testConnection"
+        />
 
         <!-- Database Configuration -->
-        <div v-if="currentTab === 'database'">
-          <a-form
-            layout="horizontal"
-            :label-col="{ xs: { span: 24 }, sm: { span: 6 } }"
-            :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 } }"
-            label-align="right"
-          >
-            <a-form-item :label="t('config.databaseType')">
-              <a-radio-group
-                v-model:value="dbType"
-                button-style="solid"
-                @change="dbType === 'SQLite' && fetchDefaultSqlitePath()"
-              >
-                <a-radio-button value="SQLite">{{ t('config.localSqlite') }}</a-radio-button>
-                <a-radio-button value="CloudflareD1">{{ t('config.cloudD1') }}</a-radio-button>
-              </a-radio-group>
-            </a-form-item>
-
-            <div v-if="dbType === 'SQLite'">
-              <a-form-item :label="t('config.filePath')">
-                <a-tooltip :title="sqlitePath" placement="topLeft">
-                  <a-input
-                    v-model:value="sqlitePath"
-                    readonly
-                    autocomplete="off"
-                    autocapitalize="none"
-                    autocorrect="off"
-                    spellcheck="false"
-                  >
-                    <template #addonAfter>
-                      <a-tooltip :title="t('common.copy' as any) || 'Copy'">
-                        <CopyOutlined @click="copyToClipboard(sqlitePath)" class="cursor-pointer" />
-                      </a-tooltip>
-                    </template>
-                  </a-input>
-                </a-tooltip>
-              </a-form-item>
-            </div>
-
-            <div v-else-if="dbType === 'CloudflareD1'">
-              <a-form-item :label="t('config.accountId')">
-                <a-input
-                  v-model:value="d1Config.account_id"
-                  autocomplete="off"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                />
-              </a-form-item>
-              <a-form-item :label="t('config.databaseId')">
-                <a-input
-                  v-model:value="d1Config.database_id"
-                  autocomplete="off"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                />
-              </a-form-item>
-              <a-form-item :label="t('config.apiToken')">
-                <a-input-password
-                  v-model:value="d1Config.api_token"
-                  autocomplete="off"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                />
-              </a-form-item>
-            </div>
-          </a-form>
-
-          <div class="form-footer-actions">
-            <a-button @click="testConnection" :loading="isTesting">
-              {{ t('config.testConnection') }}
-            </a-button>
-          </div>
-        </div>
+        <DatabaseSettings
+          v-else-if="currentTab === 'database'"
+          v-model:dbType="dbType"
+          :sqlite-path="sqlitePath"
+          :d1-config="d1Config"
+          :is-testing="isTesting"
+          @copy-path="copyToClipboard"
+          @test-connection="testConnection"
+        />
       </div>
     </div>
   </div>
@@ -715,16 +547,17 @@ function getCurrentDatabase(): DatabaseConnection | null {
 
 <style scoped>
 .config-container {
-  height: calc(100vh - 28px);
+  flex: 1;
   display: flex;
   flex-direction: column;
   background: v-bind('token.colorBgContainer');
+  width: 100%;
 }
 
 .config-header {
   border-bottom: 1px solid v-bind('token.colorBorderSecondary');
   background: v-bind('token.colorBgContainer');
-  padding: 0 24px;
+  padding: 0 8px;
 }
 
 .config-title-row {
@@ -737,17 +570,36 @@ function getCurrentDatabase(): DatabaseConnection | null {
 .config-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
 }
 
 .back-button {
-  margin-left: -8px;
+  margin-left: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure icons and text are perfectly aligned in buttons */
+:deep(.ant-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.ant-btn .anticon) {
+  line-height: 0;
+  vertical-align: middle;
+  margin-top: -1px; /* Optical adjustment */
 }
 
 .config-title-text {
   font-size: 16px;
   font-weight: 600;
   color: v-bind('token.colorText');
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .config-header-actions {
@@ -805,7 +657,7 @@ function getCurrentDatabase(): DatabaseConnection | null {
 
 .config-content {
   flex: 1;
-  padding: 24px;
+  padding: 16px 8px;
   overflow-y: auto;
 }
 
@@ -820,8 +672,9 @@ function getCurrentDatabase(): DatabaseConnection | null {
 }
 
 .tab-container {
-  max-width: 600px;
+  max-width: 800px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .form-footer-actions {

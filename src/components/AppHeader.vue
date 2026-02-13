@@ -32,10 +32,8 @@ function startDrag() {
   display: flex;
   justify-content: center;
   align-items: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  width: 100%;
+  flex-shrink: 0;
   z-index: 1000;
   cursor: default;
   border-bottom: 1px solid v-bind('token.colorBorderSecondary');

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import { onMounted, onUnmounted, computed } from 'vue'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { theme, notification } from 'ant-design-vue'
 import {
@@ -11,45 +10,32 @@ import {
 } from '@ant-design/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { ConnectionStatus, ServiceStatusType } from '../types'
+import { useAppStore } from '../stores/app'
+import { storeToRefs } from 'pinia'
 
 const { t } = useI18n()
 const { useToken } = theme
 const { token } = useToken()
 
-const status = ref<ConnectionStatus>({
-  r2: { status: 'NotConfigured' },
-  d1: { status: 'NotConfigured' },
-})
+const appStore = useAppStore()
+const { connectionStatus: status } = storeToRefs(appStore)
 
-const isChecking = ref(false)
 let unlistenStatus: UnlistenFn | null = null
 
 const hasR2 = computed(() => status.value.r2.status !== 'NotConfigured')
 const hasD1 = computed(() => status.value.d1.status !== 'NotConfigured')
 const hasActiveConfig = computed(() => hasR2.value || hasD1.value)
 
-async function checkStatus() {
-  if (isChecking.value) return
-  isChecking.value = true
-
-  if (hasR2.value) status.value.r2 = { status: 'Testing' }
-  if (hasD1.value) status.value.d1 = { status: 'Testing' }
-
-  try {
-    const newStatus = await invoke<ConnectionStatus>('check_connection_status')
-    updateStatus(newStatus)
-  } catch (error) {
-    console.error('Failed to check status:', error)
-  } finally {
-    isChecking.value = false
-  }
+function sanitizeErrorMessage(message: string): string {
+  // Simple regex to remove http/https URLs
+  return message.replace(/https?:\/\/[^\s]+/g, '[URL]')
 }
 
 function updateStatus(newStatus: ConnectionStatus) {
   if (newStatus.r2.status === 'Disconnected' && status.value.r2.status !== 'Disconnected') {
     notification.error({
       message: t('footer.connectionError'),
-      description: `R2: ${newStatus.r2.message}`,
+      description: `R2: ${sanitizeErrorMessage(newStatus.r2.message)}`,
       placement: 'bottomRight',
     })
   }
@@ -57,7 +43,7 @@ function updateStatus(newStatus: ConnectionStatus) {
   if (newStatus.d1.status === 'Disconnected' && status.value.d1.status !== 'Disconnected') {
     notification.error({
       message: t('footer.connectionError'),
-      description: `D1: ${newStatus.d1.message}`,
+      description: `D1: ${sanitizeErrorMessage(newStatus.d1.message)}`,
       placement: 'bottomRight',
     })
   }
@@ -66,7 +52,6 @@ function updateStatus(newStatus: ConnectionStatus) {
 }
 
 onMounted(async () => {
-  checkStatus()
   unlistenStatus = await listen<ConnectionStatus>('connection-status-update', (event) => {
     updateStatus(event.payload)
   })
@@ -148,8 +133,10 @@ const getStatusText = (s: ServiceStatusType) => {
     </div>
 
     <div class="actions">
-      <a-button type="link" size="small" @click="checkStatus" :disabled="isChecking">
-        <template #icon><SyncOutlined :spin="isChecking" /></template>
+      <a-button type="link" size="small" @click="appStore.updateConnectionStatus">
+        <template #icon
+          ><SyncOutlined :spin="status.r2.status === 'Testing' || status.d1.status === 'Testing'"
+        /></template>
         {{ t('footer.recheck') }}
       </a-button>
     </div>
@@ -164,10 +151,8 @@ const getStatusText = (s: ServiceStatusType) => {
   align-items: center;
   padding: 0 12px;
   font-size: 11px;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  width: 100%;
+  flex-shrink: 0;
   z-index: 1000;
   user-select: none;
 }
