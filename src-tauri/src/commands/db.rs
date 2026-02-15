@@ -73,7 +73,7 @@ pub async fn execute_migration_up(
             .map_err(|e| e.to_string())?;
 
         // 迁移成功后确保标记为已初始化
-        let _ = crate::services::db_init::mark_as_initialized(&app);
+        let _ = crate::services::db_init::mark_as_initialized();
         Ok(())
     } else {
         Err("Database not initialized".to_string())

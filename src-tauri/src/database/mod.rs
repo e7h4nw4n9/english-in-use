@@ -67,7 +67,14 @@ pub async fn init<R: tauri::Runtime>(
 
 pub async fn migrate_up(db: &dyn Database, target_version: Option<&str>) -> Result<()> {
     use self::migrations::MIGRATIONS;
+    migrate_up_with_list(db, target_version, MIGRATIONS).await
+}
 
+pub async fn migrate_up_with_list(
+    db: &dyn Database,
+    target_version: Option<&str>,
+    migrations: &[self::migrations::Migration],
+) -> Result<()> {
     let current_db_version_str = db.get_version().await?;
     let normalized_db_version = normalize_version(&current_db_version_str);
     let current_db_version =
@@ -79,7 +86,7 @@ pub async fn migrate_up(db: &dyn Database, target_version: Option<&str>) -> Resu
         None
     };
 
-    for migration in MIGRATIONS {
+    for migration in migrations {
         let migration_version = Version::parse(&normalize_version(migration.version))?;
 
         if migration_version > current_db_version {
@@ -99,7 +106,14 @@ pub async fn migrate_up(db: &dyn Database, target_version: Option<&str>) -> Resu
 
 pub async fn migrate_down(db: &dyn Database, target_version: Option<&str>) -> Result<()> {
     use self::migrations::MIGRATIONS;
+    migrate_down_with_list(db, target_version, MIGRATIONS).await
+}
 
+pub async fn migrate_down_with_list(
+    db: &dyn Database,
+    target_version: Option<&str>,
+    migrations: &[self::migrations::Migration],
+) -> Result<()> {
     let current_db_version_str = db.get_version().await?;
     let normalized_db_version = normalize_version(&current_db_version_str);
     let current_db_version =
@@ -110,7 +124,7 @@ pub async fn migrate_down(db: &dyn Database, target_version: Option<&str>) -> Re
     } else {
         // Default to one version down
         let mut prev_version = Version::parse("0.0.0").unwrap();
-        for migration in MIGRATIONS {
+        for migration in migrations {
             let mv = Version::parse(&normalize_version(migration.version))?;
             if mv < current_db_version && mv > prev_version {
                 prev_version = mv;
@@ -120,7 +134,7 @@ pub async fn migrate_down(db: &dyn Database, target_version: Option<&str>) -> Re
     };
 
     // Migrations are sorted ascending, so we need to iterate in reverse for downgrade
-    for migration in MIGRATIONS.iter().rev() {
+    for migration in migrations.iter().rev() {
         let migration_version = Version::parse(&normalize_version(migration.version))?;
 
         if migration_version <= current_db_version && migration_version > target_v {
@@ -131,7 +145,7 @@ pub async fn migrate_down(db: &dyn Database, target_version: Option<&str>) -> Re
 
             // Set version to the one BEFORE this migration
             let mut prev_v = "0.0.0".to_string();
-            for m in MIGRATIONS {
+            for m in migrations {
                 let mv = Version::parse(&normalize_version(m.version))?;
                 if mv < migration_version {
                     prev_v = m.version.to_string();
@@ -171,6 +185,7 @@ pub async fn check_status(connection: &DatabaseConnection) -> ServiceStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::database::migrations::Migration;
 
     #[test]
     fn test_normalize_version() {
@@ -186,5 +201,64 @@ mod tests {
         let conn = DatabaseConnection::SQLite { path };
         let status = check_status(&conn).await;
         assert_eq!(status, ServiceStatus::Connected);
+    }
+
+    #[tokio::test]
+    async fn test_migration_logic() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        let db = SqliteDatabase::new(&path).await.unwrap();
+
+        static TEST_MIGRATIONS: &[Migration] = &[
+            Migration {
+                version: "0.1.0",
+                up: "CREATE TABLE _app_meta (version TEXT); INSERT INTO _app_meta (version) VALUES ('0.0.0'); CREATE TABLE t1 (id INTEGER);",
+                down: "DROP TABLE t1;",
+            },
+            Migration {
+                version: "0.2.0",
+                up: "CREATE TABLE t2 (id INTEGER);",
+                down: "DROP TABLE t2;",
+            },
+        ];
+
+        // Initial state
+        assert_eq!(db.get_version().await.unwrap(), "0.0.0");
+
+        // Migrate up to 0.1.0
+        migrate_up_with_list(&db, Some("0.1.0"), TEST_MIGRATIONS)
+            .await
+            .unwrap();
+        assert_eq!(db.get_version().await.unwrap(), "0.1.0");
+        db.execute("SELECT * FROM t1".to_string()).await.unwrap();
+        db.execute("SELECT * FROM t2".to_string())
+            .await
+            .unwrap_err();
+
+        // Migrate up to latest (0.2.0)
+        migrate_up_with_list(&db, None, TEST_MIGRATIONS)
+            .await
+            .unwrap();
+        assert_eq!(db.get_version().await.unwrap(), "0.2.0");
+        db.execute("SELECT * FROM t2".to_string()).await.unwrap();
+
+        // Migrate down to 0.1.0
+        migrate_down_with_list(&db, Some("0.1.0"), TEST_MIGRATIONS)
+            .await
+            .unwrap();
+        assert_eq!(db.get_version().await.unwrap(), "0.1.0");
+        db.execute("SELECT * FROM t2".to_string())
+            .await
+            .unwrap_err();
+        db.execute("SELECT * FROM t1".to_string()).await.unwrap();
+
+        // Migrate down to 0.0.0
+        migrate_down_with_list(&db, Some("0.0.0"), TEST_MIGRATIONS)
+            .await
+            .unwrap();
+        assert_eq!(db.get_version().await.unwrap(), "0.0.0");
+        db.execute("SELECT * FROM t1".to_string())
+            .await
+            .unwrap_err();
     }
 }

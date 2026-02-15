@@ -1,22 +1,35 @@
 use crate::models::AppConfig;
-use crate::services::config::{self, AppConfigExt};
+use crate::services::config::{self, AppConfigExt, ConfigState};
 use log::{error, info};
 use std::path::PathBuf;
-use tauri::AppHandle;
+use tauri::{AppHandle, State};
 
 #[tauri::command]
-pub fn load_config(app: AppHandle) -> Result<AppConfig, String> {
-    info!("正在加载配置文件...");
-    Ok(config::load(&app))
+pub fn load_config(state: State<ConfigState>) -> Result<AppConfig, String> {
+    info!("正在从缓存加载配置文件...");
+    let config = state.0.read().map_err(|e| e.to_string())?;
+    Ok(config.clone())
 }
 
 #[tauri::command]
-pub fn save_config(app: AppHandle, config: AppConfig) -> Result<(), String> {
+pub fn save_config(
+    app: AppHandle,
+    state: State<ConfigState>,
+    config: AppConfig,
+) -> Result<(), String> {
     info!("正在保存配置文件...");
+
+    // 保存到磁盘
     config::save(&app, &config).map_err(|e| {
         error!("保存配置文件失败: {}", e);
         e
-    })
+    })?;
+
+    // 更新缓存
+    let mut cache = state.0.write().map_err(|e| e.to_string())?;
+    *cache = config;
+
+    Ok(())
 }
 
 #[tauri::command]

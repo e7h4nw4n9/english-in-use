@@ -3,7 +3,53 @@ use log::{debug, info};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::RwLock;
 use tauri::{AppHandle, Manager};
+
+pub struct ConfigState(pub RwLock<AppConfig>);
+
+pub fn get_config_path_from_context(context: &tauri::Context) -> PathBuf {
+    let identifier = &context.config().identifier;
+    // This logic mimics tauri's internal resolution for app_config_dir
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+            let mut path = home;
+            path.push("Library/Application Support");
+            path.push(identifier);
+            return path.join("config.toml");
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(appdata) = std::env::var_os("APPDATA").map(PathBuf::from) {
+            let mut path = appdata;
+            path.push(identifier);
+            return path.join("config.toml");
+        }
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        let mut path =
+            if let Some(config_home) = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from) {
+                config_home
+            } else if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+                let mut p = home;
+                p.push(".config");
+                p
+            } else {
+                PathBuf::from(".")
+            };
+        path.push(identifier);
+        return path.join("config.toml");
+    }
+    PathBuf::from("config.toml")
+}
+
+pub fn load_initial(context: &tauri::Context) -> AppConfig {
+    let path = get_config_path_from_context(context);
+    AppConfig::load_from_path(&path).unwrap_or_default()
+}
 
 pub fn get_config_path(app: &AppHandle) -> PathBuf {
     app.path()

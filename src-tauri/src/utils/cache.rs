@@ -12,3 +12,21 @@ impl CacheKey {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_book_list_cache_key() {
+        assert_eq!(CacheKey::book_list(None), "book_list:all");
+        assert_eq!(
+            CacheKey::book_list(Some(BookGroup::Vocabulary)),
+            "book_list:Vocabulary"
+        );
+        assert_eq!(
+            CacheKey::book_list(Some(BookGroup::Grammar)),
+            "book_list:Grammar"
+        );
+    }
+}

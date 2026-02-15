@@ -240,7 +240,7 @@ mod tests {
         let v = db.get_version().await.expect("Failed to get version");
         assert_eq!(v, "0.0.0");
 
-        db.execute(MIGRATIONS[0].sql.to_string())
+        db.execute(MIGRATIONS[0].up.to_string())
             .await
             .expect("Migration failed");
         db.set_version("0.1.0").await.expect("Set version failed");

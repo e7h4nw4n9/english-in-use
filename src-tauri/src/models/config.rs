@@ -70,12 +70,22 @@ impl Default for SystemConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct AppConfig {
+    #[serde(skip, default = "uuid::Uuid::new_v4")]
+    pub version: uuid::Uuid,
     #[serde(default)]
     pub system: SystemConfig,
     pub book_source: Option<BookSource>,
     pub database: Option<DatabaseConnection>,
+}
+
+impl PartialEq for AppConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.system == other.system
+            && self.book_source == other.book_source
+            && self.database == other.database
+    }
 }
 
 impl AppConfig {

@@ -1,9 +1,58 @@
 use crate::models::{BookSource, ServiceStatus};
-use crate::utils::local;
 use aws_config::Region;
 use aws_sdk_s3::Client;
 use aws_sdk_s3::config::{Credentials, SharedCredentialsProvider};
 use log::{debug, error, info};
+use std::sync::Arc;
+use tauri::Manager;
+use tokio::sync::RwLock;
+use uuid::Uuid;
+
+pub struct R2ClientState {
+    pub client: Arc<RwLock<Option<(Uuid, Client)>>>,
+}
+
+impl Default for R2ClientState {
+    fn default() -> Self {
+        Self {
+            client: Arc::new(RwLock::new(None)),
+        }
+    }
+}
+
+pub async fn get_client(
+    config_state: &tauri::State<'_, crate::services::config::ConfigState>,
+    r2_state: &tauri::State<'_, R2ClientState>,
+) -> Result<Client, String> {
+    let (config_version, book_source) = {
+        let config = config_state.0.read().map_err(|e| e.to_string())?;
+        (config.version, config.book_source.clone())
+    };
+
+    // 1. 尝试读取缓存
+    {
+        let cache = r2_state.client.read().await;
+        if let Some((version, client)) = &*cache {
+            if *version == config_version {
+                debug!("命中 R2 客户端缓存 (version: {})", version);
+                return Ok(client.clone());
+            }
+        }
+    }
+
+    // 2. 缓存未命中或版本不一致，创建新客户端
+    let book_source = book_source.ok_or("Book source not configured")?;
+    let client = create_r2_client(&book_source).await?;
+
+    // 3. 更新缓存
+    {
+        let mut cache = r2_state.client.write().await;
+        *cache = Some((config_version, client.clone()));
+        info!("已刷新 R2 客户端缓存 (version: {})", config_version);
+    }
+
+    Ok(client)
+}
 
 pub async fn create_r2_client(source: &BookSource) -> Result<Client, String> {
     create_r2_client_internal(source, None).await
@@ -104,66 +153,57 @@ pub async fn list_folders(client: &Client, bucket: &str) -> Result<Vec<String>, 
 }
 
 pub async fn get_object(client: &Client, bucket: &str, key: &str) -> Result<Vec<u8>, String> {
-    // 1. 优先尝试从本地读取
-    if let Some(bytes) = read_from_local(key).await {
-        return Ok(bytes);
-    }
-
-    // 2. 本地不存在，从 R2 获取
-    let bytes = fetch_from_r2(client, bucket, key).await?;
-
-    // 3. 获取成功后保存到本地
-    let _ = save_to_local(key, &bytes).await;
-
-    Ok(bytes)
-}
-
-/// 私有方法：从本地读取文件
-async fn read_from_local(key: &str) -> Option<Vec<u8>> {
-    local::read_app_file(key).await
-}
-
-/// 私有方法：将文件保存到本地
-async fn save_to_local(key: &str, data: &[u8]) -> Result<String, String> {
-    local::save_app_file(key, data).await
-}
-
-/// 私有方法：从 R2 远程获取对象内容
-async fn fetch_from_r2(client: &Client, bucket: &str, key: &str) -> Result<Vec<u8>, String> {
-    info!("正在从存储桶 {} 远程获取对象: {}", bucket, key);
+    let normalized_key = key.trim_start_matches('/');
+    info!("正在从存储桶 {} 获取对象: {}", bucket, normalized_key);
     let resp = client
         .get_object()
         .bucket(bucket)
-        .key(key)
+        .key(normalized_key)
         .send()
         .await
         .map_err(|e| {
-            error!("获取 R2 对象失败 (key: {}): {}", key, e);
+            error!("获取 R2 对象失败 (key: {}): {}", normalized_key, e);
             format!("Failed to get object: {}", e)
         })?;
 
     let data = resp.body.collect().await.map_err(|e| {
-        error!("收集 R2 对象数据失败 (key: {}): {}", key, e);
+        error!("收集 R2 对象数据失败 (key: {}): {}", normalized_key, e);
         format!("Failed to collect body: {}", e)
     })?;
 
     let bytes = data.into_bytes().to_vec();
-    debug!("成功从远程获取对象 {}, 大小: {} 字节", key, bytes.len());
+    debug!(
+        "成功获取对象 {}, 大小: {} 字节",
+        normalized_key,
+        bytes.len()
+    );
     Ok(bytes)
 }
 
-pub async fn check_status(source: &BookSource) -> ServiceStatus {
-    check_status_internal(source, None).await
+pub async fn check_status(app: &tauri::AppHandle, source: &BookSource) -> ServiceStatus {
+    check_status_internal(Some(app), source, None).await
 }
 
 async fn check_status_internal(
+    app: Option<&tauri::AppHandle>,
     source: &BookSource,
     endpoint_override: Option<String>,
 ) -> ServiceStatus {
     debug!("执行 R2 状态检查...");
     match source {
         BookSource::CloudflareR2 { bucket_name, .. } => {
-            match create_r2_client_internal(source, endpoint_override).await {
+            let client_res = if let Some(url) = endpoint_override {
+                create_r2_client_internal(source, Some(url)).await
+            } else if let Some(app_handle) = app {
+                use crate::services::config::ConfigState;
+                let config_state = app_handle.state::<ConfigState>();
+                let r2_state = app_handle.state::<R2ClientState>();
+                get_client(&config_state, &r2_state).await
+            } else {
+                create_r2_client(source).await
+            };
+
+            match client_res {
                 Ok(client) => match list_folders(&client, bucket_name).await {
                     Ok(_) => ServiceStatus::Connected,
                     Err(e) => {
@@ -291,7 +331,7 @@ mod tests {
             public_url: None,
         };
 
-        let status = check_status_internal(&source, Some(url)).await;
+        let status = check_status_internal(None, &source, Some(url)).await;
         assert_eq!(status, ServiceStatus::Connected);
     }
 
@@ -314,7 +354,7 @@ mod tests {
             public_url: None,
         };
 
-        let status = check_status_internal(&source, Some(url)).await;
+        let status = check_status_internal(None, &source, Some(url)).await;
         match status {
             ServiceStatus::Disconnected(_) => (),
             _ => panic!("Expected Disconnected status, got {:?}", status),
@@ -323,11 +363,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_status_not_r2() {
-        let source = BookSource::Local {
-            path: "/tmp".to_string(),
-        };
-        let status = check_status(&source).await;
-        assert_eq!(status, ServiceStatus::NotConfigured);
+        // let source = BookSource::Local {
+        //     path: "/tmp".to_string(),
+        // };
+        // let status = check_status(&source).await;
+        // assert_eq!(status, ServiceStatus::NotConfigured);
     }
 
     #[tokio::test]

@@ -1,7 +1,7 @@
 <template>
   <div class="book-list-container h-full">
     <div v-if="loading" class="flex h-full min-h-[400px] items-center justify-center">
-      <a-spin :tip="$t('app.loading')" />
+      <a-spin :tip="t('app.loading')" />
     </div>
 
     <div
@@ -55,7 +55,7 @@
             <!-- Book Title -->
             <a-tooltip :title="book.title" placement="bottom">
               <span
-                class="line-clamp-2 w-full px-2 text-center text-xs font-medium leading-snug text-gray-700 transition-colors group-hover:text-blue-600"
+                class="book-title line-clamp-2 w-full px-2 text-center text-xs font-medium leading-snug text-gray-700 transition-colors group-hover:text-blue-600"
               >
                 {{ book.title }}
               </span>

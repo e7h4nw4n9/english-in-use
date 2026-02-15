@@ -4,65 +4,9 @@ pub mod models;
 pub mod services;
 pub mod utils;
 
-use std::str::FromStr;
 use tauri::Emitter;
+use tauri::Manager;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::{Config, Manager};
-
-fn get_log_level(config: &Config) -> log::LevelFilter {
-    let identifier = &config.identifier;
-
-    // Resolve config directory based on platform rules
-    let config_dir = {
-        #[cfg(target_os = "macos")]
-        {
-            std::env::var_os("HOME").map(|home| {
-                let mut path = std::path::PathBuf::from(home);
-                path.push("Library/Application Support");
-                path.push(identifier);
-                path
-            })
-        }
-        #[cfg(target_os = "windows")]
-        {
-            std::env::var_os("APPDATA").map(|appdata| {
-                let mut path = std::path::PathBuf::from(appdata);
-                path.push(identifier);
-                path
-            })
-        }
-        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-        {
-            std::env::var_os("XDG_CONFIG_HOME")
-                .map(std::path::PathBuf::from)
-                .or_else(|| {
-                    std::env::var_os("HOME").map(|home| {
-                        let mut path = std::path::PathBuf::from(home);
-                        path.push(".config");
-                        path
-                    })
-                })
-                .map(|mut path| {
-                    path.push(identifier);
-                    path
-                })
-        }
-    };
-
-    if let Some(mut path) = config_dir {
-        path.push("config.toml");
-        if path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&path) {
-                if let Ok(config) = toml::from_str::<crate::models::AppConfig>(&content) {
-                    return log::LevelFilter::from_str(&config.system.log_level)
-                        .unwrap_or(log::LevelFilter::Info);
-                }
-            }
-        }
-    }
-
-    log::LevelFilter::Info
-}
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -80,7 +24,13 @@ async fn check_connection_status(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let context = tauri::generate_context!();
-    let log_level = get_log_level(context.config());
+
+    // 加载初始配置
+    let initial_config = services::config::load_initial(&context);
+    let log_level = std::str::FromStr::from_str(&initial_config.system.log_level)
+        .unwrap_or(log::LevelFilter::Info);
+
+    let config_state = services::config::ConfigState(std::sync::RwLock::new(initial_config));
 
     let book_cache = commands::books::BookCacheState {
         cache: moka::future::Cache::builder()
@@ -89,8 +39,10 @@ pub fn run() {
     };
 
     tauri::Builder::default()
+        .manage(config_state)
         .manage(database::DbState::default())
         .manage(book_cache)
+        .manage(utils::r2::R2ClientState::default())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .targets([
@@ -112,6 +64,13 @@ pub fn run() {
                 .app_data_dir()
                 .expect("Failed to resolve app data directory");
             crate::utils::local::init_app_data_dir(app_data_dir);
+
+            // 初始化全局应用缓存目录常量
+            let app_cache_dir = app
+                .path()
+                .app_cache_dir()
+                .expect("Failed to resolve app cache directory");
+            crate::utils::local::init_app_cache_dir(app_cache_dir);
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
