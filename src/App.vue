@@ -54,19 +54,19 @@ watch(
   { immediate: true, deep: true },
 )
 
-// Show config if invalid
+// Show config if invalid when loading finishes
 watch(
-  isConfigValid,
-  (valid) => {
-    if (!valid && !isLoading.value) {
+  [isConfigValid, isLoading],
+  ([valid, loading]) => {
+    if (!valid && !loading) {
       showConfig.value = true
     }
   },
   { immediate: true },
 )
 
-function onConfigSaved() {
-  appStore.refreshConfig()
+async function onConfigSaved() {
+  await appStore.refreshConfig()
   if (isConfigValid.value) {
     showConfig.value = false
   }

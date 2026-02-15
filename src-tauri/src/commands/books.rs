@@ -119,4 +119,37 @@ mod tests {
         assert_eq!(books_v[0].product_code, "book1");
         assert_eq!(books_v[1].product_code, "book2");
     }
+
+    #[tokio::test]
+    async fn test_get_books_command_integration() {
+        use crate::database::{DbState, migrate_up};
+        use tauri::test::mock_app;
+        use tokio::sync::RwLock;
+
+        let app = mock_app();
+
+        // Prepare DB
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        let db = SqliteDatabase::new(&path).await.unwrap();
+        migrate_up(&db, None).await.unwrap();
+
+        db.execute("INSERT INTO books (book_group, product_code, title, author, product_type, sort_num) VALUES (1, 'book1', 'Title 1', NULL, 'imgbook', 1)".to_string()).await.unwrap();
+
+        // Set state
+        app.manage(DbState {
+            db: RwLock::new(Some(Box::new(db))),
+        });
+        app.manage(BookCacheState {
+            cache: moka::future::Cache::new(10),
+        });
+
+        // Run command
+        let state = app.state::<DbState>();
+        let cache_state = app.state::<BookCacheState>();
+
+        let result = get_books(state, cache_state, None).await.unwrap();
+        assert_eq!(result.len(), 4);
+        assert!(result.iter().any(|b| b.product_code == "book1"));
+    }
 }

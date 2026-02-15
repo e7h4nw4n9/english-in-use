@@ -62,7 +62,6 @@ pub async fn get_current_db_version(
 
 #[tauri::command]
 pub async fn execute_migration_up(
-    app: AppHandle,
     state: State<'_, crate::database::DbState>,
     target_version: Option<String>,
 ) -> Result<(), String> {

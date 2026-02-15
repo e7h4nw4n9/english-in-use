@@ -1,5 +1,5 @@
 use crate::database::{self, Database, DbState};
-use crate::models::{DatabaseConnection, config};
+use crate::models::DatabaseConnection;
 use anyhow::Result;
 use log::{debug, info};
 use std::fs;
@@ -23,8 +23,14 @@ pub fn mark_as_initialized() -> Result<(), String> {
 }
 
 pub trait DatabaseInitHandler: Send + Sync {
-    async fn init_db(&self, config: &DatabaseConnection) -> anyhow::Result<Box<dyn Database>>;
-    async fn migrate_up(&self, db: &dyn Database) -> anyhow::Result<()>;
+    fn init_db(
+        &self,
+        config: &DatabaseConnection,
+    ) -> impl std::future::Future<Output = anyhow::Result<Box<dyn Database>>> + Send;
+    fn migrate_up(
+        &self,
+        db: &dyn Database,
+    ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send;
     fn mark_initialized(&self) -> Result<(), String>;
 }
 
@@ -33,11 +39,19 @@ struct DefaultInitHandler {
 }
 
 impl DatabaseInitHandler for DefaultInitHandler {
-    async fn init_db(&self, config: &DatabaseConnection) -> anyhow::Result<Box<dyn Database>> {
-        database::init(&self.app, config).await
+    fn init_db(
+        &self,
+        config: &DatabaseConnection,
+    ) -> impl std::future::Future<Output = anyhow::Result<Box<dyn Database>>> + Send {
+        let app = self.app.clone();
+        let config = config.clone();
+        async move { database::init(&app, &config).await }
     }
-    async fn migrate_up(&self, db: &dyn Database) -> anyhow::Result<()> {
-        database::migrate_up(db, None).await
+    fn migrate_up(
+        &self,
+        db: &dyn Database,
+    ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
+        database::migrate_up(db, None)
     }
     fn mark_initialized(&self) -> Result<(), String> {
         mark_as_initialized()
@@ -143,11 +157,17 @@ mod tests {
     }
 
     impl DatabaseInitHandler for MockHandler {
-        async fn init_db(&self, _config: &DatabaseConnection) -> anyhow::Result<Box<dyn Database>> {
-            Ok(Box::new(MockDb))
+        fn init_db(
+            &self,
+            _config: &DatabaseConnection,
+        ) -> impl std::future::Future<Output = anyhow::Result<Box<dyn Database>>> + Send {
+            async { Ok(Box::new(MockDb) as Box<dyn Database>) }
         }
-        async fn migrate_up(&self, _db: &dyn Database) -> anyhow::Result<()> {
-            Ok(())
+        fn migrate_up(
+            &self,
+            _db: &dyn Database,
+        ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
+            async { Ok(()) }
         }
         fn mark_initialized(&self) -> Result<(), String> {
             fs::write(&self.flag_path, b"init").unwrap();

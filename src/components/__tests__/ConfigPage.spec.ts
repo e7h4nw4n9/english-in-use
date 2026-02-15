@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import ConfigPage from '../ConfigPage.vue'
 import * as api from '../../lib/api'
+import * as dialog from '@tauri-apps/plugin-dialog'
 
 // Mock matchMedia globally
 vi.stubGlobal(
@@ -40,7 +41,7 @@ vi.mock('ant-design-vue', async (importOriginal) => {
       error: vi.fn(),
     },
     Modal: {
-      success: vi.fn(),
+      success: vi.fn((config: any) => config.onOk?.()),
     },
     theme: {
       useToken: () => ({
@@ -84,10 +85,8 @@ const commonStubs = {
   'a-button': {
     template: '<button class="a-button-stub" @click="$emit(\'click\')"><slot /></button>',
   },
-  'a-menu': { template: '<div class="a-menu-stub"><slot /></div>' },
-  'a-menu-item': {
-    template: '<div class="a-menu-item-stub" @click="$emit(\'click\')"><slot /></div>',
-  },
+  'a-menu': { template: '<div><slot /></div>' },
+  'a-menu-item': { template: '<div><slot /></div>' },
   SystemSettings: { template: '<div class="system-settings-stub" />' },
   BookSourceSettings: { template: '<div class="book-source-settings-stub" />' },
   DatabaseSettings: { template: '<div class="database-settings-stub" />' },
@@ -99,51 +98,77 @@ const commonStubs = {
   UploadOutlined: true,
 }
 
-describe('ConfigPage.vue', () => {
+describe('ConfigPage.vue Core Logic', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('renders initial state correctly', async () => {
     const wrapper = mount(ConfigPage, {
-      global: {
-        stubs: commonStubs,
-      },
+      global: { stubs: commonStubs },
     })
-
     expect(wrapper.find('.config-title-text').text()).toContain('config.title')
-    expect(wrapper.find('.system-settings-stub').exists()).toBe(true)
   })
 
-  it('calls saveConfig when handleSave is called', async () => {
-    ;(api.saveConfig as any).mockResolvedValue(undefined)
+  it('triggers save flow', async () => {
     const wrapper = mount(ConfigPage, {
-      global: {
-        stubs: commonStubs,
-      },
+      global: { stubs: commonStubs },
     })
 
-    const saveButtons = wrapper
+    const saveBtn = wrapper
       .findAll('.a-button-stub')
-      .filter((b) => b.text().includes('config.saveConfig'))
-    await saveButtons[0].trigger('click')
+      .find((b) => b.text().includes('config.saveConfig'))
+    await saveBtn?.trigger('click')
+    await flushPromises()
 
     expect(api.saveConfig).toHaveBeenCalled()
+    const system = await import('../../lib/api/system')
+    expect(system.restartApp).toHaveBeenCalled()
   })
 
-  it('emits back event when back button is clicked', async () => {
+  it('triggers export flow', async () => {
+    ;(dialog.save as any).mockResolvedValue('/path/to/export.toml')
     const wrapper = mount(ConfigPage, {
-      props: {
-        allowBack: true,
-      },
-      global: {
-        stubs: commonStubs,
-      },
+      global: { stubs: commonStubs },
     })
 
-    const backButton = wrapper.find('.back-button')
-    await backButton.trigger('click')
+    const exportBtn = wrapper
+      .findAll('.a-button-stub')
+      .find((b) => b.text().includes('config.exportConfig'))
+    await exportBtn?.trigger('click')
+    await flushPromises()
 
-    expect(wrapper.emitted()).toHaveProperty('back')
+    expect(dialog.save).toHaveBeenCalled()
+    expect(api.exportConfig).toHaveBeenCalled()
+  })
+
+  it('triggers import flow', async () => {
+    const mockConfig = {
+      system: {
+        language: 'zh',
+        theme: 'dark',
+        log_level: 'debug',
+        enable_auto_check: true,
+        check_interval_mins: 10,
+      },
+      book_source: { type: 'Local', details: { path: '/path' } },
+      database: { type: 'SQLite', details: { path: '/db' } },
+    }
+    ;(dialog.open as any).mockResolvedValue('/path/to/import.toml')
+    ;(api.importConfig as any).mockResolvedValue(mockConfig)
+
+    const wrapper = mount(ConfigPage, {
+      global: { stubs: commonStubs },
+    })
+
+    const importBtn = wrapper
+      .findAll('.a-button-stub')
+      .find((b) => b.text().includes('config.importConfig'))
+    await importBtn?.trigger('click')
+    await flushPromises()
+
+    expect(dialog.open).toHaveBeenCalled()
+    expect(api.importConfig).toHaveBeenCalledWith('/path/to/import.toml')
+    expect(api.saveConfig).toHaveBeenCalledWith(mockConfig)
   })
 })

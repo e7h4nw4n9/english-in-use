@@ -261,4 +261,39 @@ mod tests {
             .await
             .unwrap_err();
     }
+
+    #[tokio::test]
+    async fn test_real_migrations_integration() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        let db = SqliteDatabase::new(&path).await.unwrap();
+
+        // 1. Migrate Up to latest
+        migrate_up(&db, None)
+            .await
+            .expect("Real migration UP failed");
+
+        let version = db.get_version().await.unwrap();
+        assert_ne!(version, "0.0.0");
+        info!("Migrated to real version: {}", version);
+
+        // 2. Verify some tables exist (e.g., _app_meta, books)
+        db.query("SELECT * FROM _app_meta".to_string())
+            .await
+            .expect("Table _app_meta should exist");
+        db.query("SELECT * FROM books".to_string())
+            .await
+            .expect("Table books should exist");
+
+        // 3. Migrate Down to 0.0.0
+        migrate_down(&db, Some("0.0.0"))
+            .await
+            .expect("Real migration DOWN failed");
+        assert_eq!(db.get_version().await.unwrap(), "0.0.0");
+
+        // 4. Verify tables are gone
+        db.query("SELECT * FROM books".to_string())
+            .await
+            .expect_err("Table books should be dropped");
+    }
 }
