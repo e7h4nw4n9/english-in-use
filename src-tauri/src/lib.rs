@@ -57,6 +57,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
             // 初始化全局应用数据目录常量
             let app_data_dir = app
@@ -143,6 +144,12 @@ pub fn run() {
             commands::db::execute_migration_down,
             commands::books::get_books,
             commands::books::get_book_cover,
+            commands::books::get_book_metadata,
+            commands::books::resolve_page_resource,
+            commands::books::resolve_book_asset,
+            commands::books::resolve_exercise_resource,
+            commands::books::get_reading_progress,
+            commands::books::update_reading_progress,
             commands::system::restart,
             check_connection_status
         ])

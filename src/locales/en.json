@@ -86,6 +86,22 @@
     "notConfigured": "Not Configured",
     "testing": "Testing...",
     "connectionError": "Connection Error",
+    "connectionStatus": "Connection Status",
     "recheck": "Recheck"
+  },
+  "reader": {
+    "toc": "TOC",
+    "search": "Search chapters...",
+    "noResults": "No results found",
+    "noContent": "No content",
+    "progress": "PROGRESS",
+    "prevPage": "Previous Page",
+    "nextPage": "Next Page",
+    "home": "Back to Home",
+    "viewSingle": "Single Page Mode",
+    "viewSpread": "Spread Mode",
+    "showHotspots": "Show Hotspots",
+    "hideHotspots": "Hide Hotspots",
+    "resetZoom": "Reset Zoom"
   }
 }

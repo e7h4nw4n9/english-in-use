@@ -142,8 +142,6 @@ pub async fn read_r2_object_internal(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[tokio::test]
     async fn test_r2_commands_error_on_local() {
         // Since we removed AppHandle, these tests can't easily run without real states.

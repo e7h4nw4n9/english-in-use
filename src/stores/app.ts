@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { AppConfig, ConnectionStatus } from '../types'
+import type { AppConfig, ConnectionStatus, Book } from '../types'
 import { loadConfig, checkConnectionStatus, initializeDatabase } from '../lib/api'
 import { info, error, debug } from '@tauri-apps/plugin-log'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { notification } from 'ant-design-vue'
 import i18n from '../i18n'
 
 export const useAppStore = defineStore('app', () => {
@@ -13,6 +15,13 @@ export const useAppStore = defineStore('app', () => {
   })
   const isLoading = ref(true)
   const loadingMessage = ref('')
+  const currentBook = ref<Book | null>(null)
+
+  let unlistenStatus: UnlistenFn | null = null
+
+  function sanitizeErrorMessage(message: string): string {
+    return message.replace(/https?:\/\/[^\s]+/g, '[URL]')
+  }
 
   const isConfigValid = computed(() => {
     if (!config.value) return false
@@ -44,6 +53,32 @@ export const useAppStore = defineStore('app', () => {
     isLoading.value = true
     loadingMessage.value = i18n.global.t('app.loading')
     info('正在初始化应用 Store...')
+
+    if (!unlistenStatus) {
+      unlistenStatus = await listen<ConnectionStatus>('connection-status-update', (event) => {
+        const newStatus = event.payload
+        const oldStatus = connectionStatus.value
+
+        // Error notifications
+        if (newStatus.r2.status === 'Disconnected' && oldStatus.r2.status !== 'Disconnected') {
+          notification.error({
+            message: i18n.global.t('footer.connectionError'),
+            description: `R2: ${sanitizeErrorMessage(newStatus.r2.message)}`,
+            placement: 'bottomRight',
+          })
+        }
+
+        if (newStatus.d1.status === 'Disconnected' && oldStatus.d1.status !== 'Disconnected') {
+          notification.error({
+            message: i18n.global.t('footer.connectionError'),
+            description: `D1: ${sanitizeErrorMessage(newStatus.d1.message)}`,
+            placement: 'bottomRight',
+          })
+        }
+
+        connectionStatus.value = newStatus
+      })
+    }
 
     try {
       const loadedConfig = await loadConfig()
@@ -98,6 +133,7 @@ export const useAppStore = defineStore('app', () => {
     isLoading,
     loadingMessage,
     isConfigValid,
+    currentBook,
     initApp,
     updateConnectionStatus,
     refreshConfig,

@@ -81,7 +81,7 @@ describe('AppFooter.vue', () => {
       },
     })
     expect(wrapper.find('.app-footer').exists()).toBe(true)
-    expect(wrapper.text()).toContain('footer.r2Status')
+    expect(wrapper.text()).toContain('R2:')
     expect(wrapper.text()).toContain('footer.connected')
   })
 

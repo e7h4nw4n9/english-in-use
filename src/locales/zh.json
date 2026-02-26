@@ -86,6 +86,22 @@
     "notConfigured": "未配置",
     "testing": "检查中...",
     "connectionError": "连接错误",
+    "connectionStatus": "连接状态",
     "recheck": "重新检查"
+  },
+  "reader": {
+    "toc": "目录",
+    "search": "搜索章节...",
+    "noResults": "未找到结果",
+    "noContent": "无内容",
+    "progress": "阅读进度",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
+    "home": "返回主页",
+    "viewSingle": "单页模式",
+    "viewSpread": "双页模式",
+    "showHotspots": "显示热区",
+    "hideHotspots": "隐藏热区",
+    "resetZoom": "重置缩放"
   }
 }

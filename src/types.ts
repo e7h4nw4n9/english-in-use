@@ -84,3 +84,62 @@ export interface Book {
   cover: string | null
   sort_num: number
 }
+
+export interface TocNode {
+  title: string
+  key: string
+  startPage?: string
+  endPage?: string
+  audioFiles?: OverlayAudio[]
+  children?: TocNode[]
+}
+
+export interface ExerciseInfo {
+  name: string
+  resource_id: string
+}
+
+export interface OverlayAudio {
+  path: string
+  title?: string
+}
+
+export interface OverlayTargetPage {
+  pagelabel: string
+}
+
+export interface OverlayItem {
+  x: number
+  y: number
+  w: number
+  h: number
+  type: 'audio' | 'page'
+  audio?: OverlayAudio
+  page?: OverlayTargetPage
+}
+
+export interface PageIndex {
+  label: string
+  image_path: string
+  resource_id?: string
+  exercises?: ExerciseInfo[]
+  overlays?: OverlayItem[]
+}
+
+export interface BookMetadata {
+  toc: TocNode[]
+  pages: Record<string, PageIndex>
+  pageLabels: string[]
+  pageWidth: number
+  pageHeight: number
+}
+
+export interface ReadingProgress {
+  book_id: number
+  resource_id: string | null
+  page_label: string | null
+  scale: number
+  offset_x: number
+  offset_y: number
+  updated_at: string
+}

@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import BookList from '../BookList.vue'
 import * as api from '../../lib/api'
 import { BookGroup } from '../../types'
+import { createPinia, setActivePinia } from 'pinia'
 
 // Mock the API
 vi.mock('../../lib/api', () => ({
@@ -16,6 +17,13 @@ vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key: string) => key,
   }),
+  createI18n: vi.fn(() => ({
+    global: {
+      t: (key: string) => key,
+      locale: { value: 'en' },
+    },
+    install: vi.fn(),
+  })),
 }))
 
 // Mock URL methods
@@ -28,7 +36,7 @@ const commonStubs = {
   'a-collapse-panel': {
     props: ['header'],
     template:
-      '<div class="a-collapse-panel-stub"><div class="panel-header">{{header}}</div><slot /></div>',
+      '<div class="a-collapse-panel-stub"><div class="panel-header"><slot name="header">{{header}}</slot></div><slot /></div>',
   },
   'a-tooltip': { template: '<div class="a-tooltip-stub"><slot /></div>' },
 }
@@ -58,6 +66,7 @@ describe('BookList.vue', () => {
   ]
 
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
     ;(api.getBooks as any).mockResolvedValue(mockBooks)
     ;(api.getBookCover as any).mockResolvedValue(new Uint8Array([1, 2, 3]))

@@ -1,21 +1,25 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { SyncOutlined } from '@ant-design/icons-vue'
 import AppHeader from './components/AppHeader.vue'
-import AppFooter from './components/AppFooter.vue'
 import ConfigPage from './components/ConfigPage.vue'
 import BookList from './components/BookList.vue'
+import ReaderView from './components/ReaderView.vue'
 import type { AppInitProgress } from './types'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from './composables/useTheme'
 import { theme } from 'ant-design-vue'
 import { useAppStore } from './stores/app'
+import { useReaderStore } from './stores/reader'
 import { storeToRefs } from 'pinia'
 
 const { t, locale } = useI18n()
 const { isDark, setTheme } = useTheme()
 const appStore = useAppStore()
-const { config, isLoading, loadingMessage, isConfigValid } = storeToRefs(appStore)
+const readerStore = useReaderStore()
+const { config, isLoading, loadingMessage, isConfigValid, currentBook } = storeToRefs(appStore)
+const { isUiVisible } = storeToRefs(readerStore)
 
 const showConfig = ref(false)
 
@@ -72,6 +76,15 @@ async function onConfigSaved() {
   }
 }
 
+function goHome() {
+  if (currentBook.value) {
+    currentBook.value = null
+  }
+  if (showConfig.value) {
+    showConfig.value = false
+  }
+}
+
 onMounted(async () => {
   unlistenProgress = await listen<AppInitProgress>('init-progress', (event) => {
     loadingMessage.value = event.payload.message
@@ -93,27 +106,52 @@ onUnmounted(() => {
 <template>
   <a-config-provider :theme="{ algorithm }">
     <div class="app-layout">
-      <AppHeader :title="currentTitle" />
+      <Transition name="slide-up">
+        <AppHeader
+          v-show="isUiVisible || !currentBook"
+          :title="currentTitle"
+          :is-sub-page="showConfig"
+          @home="goHome"
+        />
+      </Transition>
 
       <main class="app-main-container" :style="containerStyle">
-        <div v-if="isLoading" class="loading-container">
-          <a-spin size="large" :tip="loadingMessage" />
-        </div>
+        <Transition name="fade" mode="out-in">
+          <div v-if="isLoading" class="loading-container">
+            <div
+              class="loading-card flex flex-col items-center gap-6 rounded-3xl bg-white/50 p-12 backdrop-blur-xl dark:bg-black/20"
+            >
+              <a-spin size="large">
+                <template #indicator>
+                  <SyncOutlined spin style="font-size: 32px" />
+                </template>
+              </a-spin>
+              <div class="flex flex-col items-center gap-1">
+                <span class="text-sm font-bold uppercase tracking-widest text-blue-500">{{
+                  t('app.loading')
+                }}</span>
+                <span class="text-xs font-medium text-gray-400 dark:text-gray-500">{{
+                  loadingMessage
+                }}</span>
+              </div>
+            </div>
+          </div>
 
-        <ConfigPage
-          v-else-if="showConfig"
-          :initial-config="config || undefined"
-          :allow-back="isConfigValid"
-          @config-saved="onConfigSaved"
-          @back="showConfig = false"
-        />
+          <ConfigPage
+            v-else-if="showConfig"
+            :initial-config="config || undefined"
+            :allow-back="isConfigValid"
+            @config-saved="onConfigSaved"
+            @back="showConfig = false"
+          />
 
-        <div v-else class="main-content">
-          <BookList />
-        </div>
+          <ReaderView v-else-if="currentBook" />
+
+          <div v-else class="main-content">
+            <BookList />
+          </div>
+        </Transition>
       </main>
-
-      <AppFooter v-show="config && config.system.enable_auto_check" />
     </div>
   </a-config-provider>
 </template>
@@ -135,29 +173,83 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   width: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   position: relative;
 }
 
 .loading-container {
-  flex: 1;
+  position: absolute;
+  inset: 0;
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 50;
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+}
+
+.loading-card {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .main-content {
   padding: 0;
   width: 100%;
   flex: 1;
+  overflow-y: auto;
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition:
+    opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
 }
 </style>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html,

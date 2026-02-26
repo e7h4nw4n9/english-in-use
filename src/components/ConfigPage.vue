@@ -16,6 +16,7 @@ import {
   BookOutlined,
   DatabaseOutlined,
   ArrowLeftOutlined,
+  HomeOutlined,
   DownloadOutlined,
   UploadOutlined,
 } from '@ant-design/icons-vue'
@@ -444,8 +445,13 @@ function getCurrentDatabase(): DatabaseConnection | null {
     <div class="config-header">
       <div class="config-title-row">
         <div class="config-header-left">
-          <a-button v-if="allowBack" type="text" @click="emit('back')" class="back-button">
-            <template #icon><ArrowLeftOutlined /></template>
+          <a-button
+            type="text"
+            class="back-button"
+            @click="emit('back')"
+            :title="t('common.back' as any) || 'Back'"
+          >
+            <template #icon><HomeOutlined /></template>
           </a-button>
           <span class="config-title-text">{{ t('config.title') }}</span>
         </div>

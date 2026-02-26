@@ -14,52 +14,72 @@
     <a-collapse
       v-else
       v-model:activeKey="activeKeys"
-      class="p-4"
+      class="book-list-collapse p-6"
       ghost
       expand-icon-position="right"
     >
-      <a-collapse-panel
-        v-for="group in groupedBooks"
-        :key="group.id"
-        :header="getGroupName(group.id)"
-      >
+      <a-collapse-panel v-for="group in groupedBooks" :key="group.id">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <div class="h-4 w-1 rounded-full bg-blue-500"></div>
+            <span class="text-base font-bold tracking-tight text-gray-800 dark:text-gray-200">
+              {{ getGroupName(group.id) }}
+            </span>
+          </div>
+        </template>
         <div
-          class="grid grid-cols-2 gap-x-4 gap-y-8 py-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8"
+          class="grid grid-cols-2 gap-x-6 gap-y-10 py-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8"
         >
           <div
             v-for="book in group.books"
             :key="book.id"
             class="book-item group flex cursor-pointer flex-col items-center"
+            @click="openBook(book)"
           >
             <!-- Book Cover -->
             <div
-              class="relative mb-3 flex aspect-[3/4] w-full max-w-[160px] items-center justify-center overflow-hidden rounded-lg border border-gray-200/50 bg-gray-100 shadow-sm transition-all duration-300 group-hover:shadow-lg"
+              class="relative mb-4 flex aspect-[3/4] w-full max-w-[180px] items-center justify-center overflow-hidden rounded-xl bg-gray-100 shadow-sm transition-all duration-500 ease-out group-hover:-translate-y-2 group-hover:shadow-2xl group-hover:shadow-blue-500/20 dark:bg-gray-800"
             >
               <template v-if="covers[book.id]">
-                <img :src="covers[book.id]" :alt="book.title" class="h-full w-full object-cover" />
+                <img
+                  :src="covers[book.id]"
+                  :alt="book.title"
+                  class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
               </template>
               <template v-else>
                 <div
-                  class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-200 opacity-50"
+                  class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-200 opacity-50 dark:from-gray-800 dark:to-gray-900"
                 ></div>
                 <span
-                  class="relative z-10 select-none text-[10px] font-medium uppercase tracking-wider text-gray-300"
+                  class="relative z-10 select-none text-[10px] font-bold uppercase tracking-widest text-gray-400"
                   >{{ book.product_code }}</span
                 >
               </template>
+
+              <!-- Subtle overlay on hover -->
               <div
-                class="absolute inset-0 bg-blue-500 opacity-0 transition-opacity group-hover:opacity-5"
+                class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
               ></div>
             </div>
 
             <!-- Book Title -->
-            <a-tooltip :title="book.title" placement="bottom">
-              <span
-                class="book-title line-clamp-2 w-full px-2 text-center text-xs font-medium leading-snug text-gray-700 transition-colors group-hover:text-blue-600"
+            <div class="w-full px-2">
+              <a-tooltip :title="book.title" placement="bottom">
+                <h3
+                  class="book-title line-clamp-2 w-full text-center text-xs font-semibold leading-relaxed text-gray-700 transition-colors duration-300 group-hover:text-blue-600 dark:text-gray-300 dark:group-hover:text-blue-400"
+                >
+                  {{ book.title }}
+                </h3>
+              </a-tooltip>
+              <div
+                class="mt-1 flex justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100"
               >
-                {{ book.title }}
-              </span>
-            </a-tooltip>
+                <span class="text-[10px] font-medium uppercase tracking-tighter text-blue-500"
+                  >Click to Open</span
+                >
+              </div>
+            </div>
           </div>
         </div>
       </a-collapse-panel>
@@ -72,12 +92,18 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getBooks, getBookCover, bytesToImageUrl } from '../lib/api'
 import { Book, BookGroup } from '../types'
+import { useAppStore } from '../stores/app'
 
 const { t } = useI18n()
+const appStore = useAppStore()
 const loading = ref(true)
 const books = ref<Book[]>([])
 const covers = ref<Record<number, string>>({})
 const activeKeys = ref<number[]>([BookGroup.Vocabulary, BookGroup.Grammar])
+
+const openBook = (book: Book) => {
+  appStore.currentBook = book
+}
 
 const groupedBooks = computed(() => {
   const groups: Record<number, Book[]> = {}
