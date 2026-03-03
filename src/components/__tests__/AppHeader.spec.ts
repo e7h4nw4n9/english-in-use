@@ -6,6 +6,8 @@ import AppHeader from '../AppHeader.vue'
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({
     startDragging: vi.fn(),
+    toggleMaximize: vi.fn(),
+    isFullscreen: vi.fn(() => Promise.resolve(false)),
   }),
 }))
 

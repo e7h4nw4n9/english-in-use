@@ -434,6 +434,88 @@ describe('ConfigPage.vue Core Logic', () => {
     expect(wrapper.emitted('config-saved')).toBeTruthy()
   })
 
+  it('auto-falls back to default sqlite path when cloud-synced path is detected on save', async () => {
+    ;(api.getDefaultSqlitePath as any).mockResolvedValue('/safe/default.db')
+
+    const wrapper = mount(ConfigPage, {
+      props: {
+        initialConfig: {
+          system: {
+            language: 'en',
+            theme: 'system',
+            log_level: 'info',
+            enable_auto_check: true,
+            check_interval_mins: 5,
+          },
+          book_source: {
+            type: 'Local',
+            details: {
+              path: '/books',
+            },
+          },
+          database: {
+            type: 'SQLite',
+            details: {
+              path: '/Users/test/OneDrive/work.db',
+            },
+          },
+        } as any,
+      },
+      global: { stubs: commonStubs },
+    })
+
+    const saveBtn = wrapper
+      .findAll('.a-button-stub')
+      .find((b) => b.text().includes('config.saveConfig'))
+    await saveBtn?.trigger('click')
+    await flushPromises()
+
+    const savedConfig = (api.saveConfig as any).mock.calls[0]?.[0]
+    expect(savedConfig?.database?.details?.path).toBe('/safe/default.db')
+    expect(api.saveConfig).toHaveBeenCalled()
+  })
+
+  it('blocks save when cloud-synced sqlite path fallback fails', async () => {
+    ;(api.getDefaultSqlitePath as any).mockResolvedValue('/Users/test/OneDrive/default.db')
+
+    const wrapper = mount(ConfigPage, {
+      props: {
+        initialConfig: {
+          system: {
+            language: 'en',
+            theme: 'system',
+            log_level: 'info',
+            enable_auto_check: true,
+            check_interval_mins: 5,
+          },
+          book_source: {
+            type: 'Local',
+            details: {
+              path: '/books',
+            },
+          },
+          database: {
+            type: 'SQLite',
+            details: {
+              path: '/Users/test/Google Drive/work.db',
+            },
+          },
+        } as any,
+      },
+      global: { stubs: commonStubs },
+    })
+
+    const saveBtn = wrapper
+      .findAll('.a-button-stub')
+      .find((b) => b.text().includes('config.saveConfig'))
+    await saveBtn?.trigger('click')
+    await flushPromises()
+
+    const antd = await import('ant-design-vue')
+    expect(antd.message.error).toHaveBeenCalled()
+    expect(api.saveConfig).not.toHaveBeenCalled()
+  })
+
   it('prevents save when sqlite path is not absolute', async () => {
     const wrapper = mount(ConfigPage, {
       props: {

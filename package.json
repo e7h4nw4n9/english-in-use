@@ -8,9 +8,13 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "tauri:build:release": "VITE_ENABLE_DEBUG_FEATURES=false pnpm tauri build",
+    "tauri:build:debug-tools": "VITE_ENABLE_DEBUG_FEATURES=true pnpm tauri build",
     "tauri:ios:init": "tauri ios init",
     "tauri:ios:dev": "tauri ios dev",
     "tauri:ios:build": "tauri ios build",
+    "tauri:ios:build:release": "VITE_ENABLE_DEBUG_FEATURES=false pnpm tauri ios build",
+    "tauri:ios:build:debug-tools": "VITE_ENABLE_DEBUG_FEATURES=true pnpm tauri ios build",
     "test": "vitest",
     "prepare": "husky"
   },

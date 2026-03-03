@@ -1,4 +1,4 @@
-use crate::models::AppConfig;
+use crate::models::{AppConfig, DatabaseConnection};
 use crate::services::config::{self, AppConfigExt, ConfigState};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
@@ -44,6 +44,30 @@ fn is_likely_ios_icloud_path(path: &PathBuf) -> bool {
     raw.contains("/Mobile Documents/") || raw.contains("com~apple~CloudDocs")
 }
 
+fn is_cloud_synced_sqlite_path(path: &str) -> bool {
+    let normalized = path.to_lowercase();
+    [
+        "mobile documents",
+        "com~apple~clouddocs",
+        "onedrive -",
+        "onedrive",
+        "dropbox",
+        "google drive",
+        "googledrive",
+    ]
+    .iter()
+    .any(|marker| normalized.contains(marker))
+}
+
+fn validate_sqlite_path_not_cloud(config: &AppConfig) -> Result<(), String> {
+    if let Some(DatabaseConnection::SQLite { path }) = &config.database {
+        if is_cloud_synced_sqlite_path(path) {
+            return Err(format!("SQLite 路径位于云盘同步目录，已拒绝保存: {}", path));
+        }
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalBookSourceValidation {
@@ -66,6 +90,7 @@ pub fn save_config(
     config: AppConfig,
 ) -> Result<(), String> {
     info!("正在保存配置文件...");
+    validate_sqlite_path_not_cloud(&config)?;
 
     // 保存到磁盘
     config::save(&app, &config).map_err(|e| {
@@ -181,7 +206,7 @@ pub fn validate_local_book_source(path: String) -> Result<LocalBookSourceValidat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::BookSource;
+    use crate::models::{BookSource, DatabaseConnection};
     use tempfile::{NamedTempFile, tempdir};
 
     #[cfg(unix)]
@@ -257,5 +282,48 @@ mod tests {
         let result = validate_local_book_source(dir.path().to_string_lossy().to_string()).unwrap();
         assert!(!result.ok);
         assert!(!result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_is_cloud_synced_sqlite_path_positive_cases() {
+        assert!(is_cloud_synced_sqlite_path(
+            "/Users/test/Library/Mobile Documents/com~apple~CloudDocs/app.db"
+        ));
+        assert!(is_cloud_synced_sqlite_path(
+            "/Users/test/OneDrive - Work/app.db"
+        ));
+        assert!(is_cloud_synced_sqlite_path(
+            "/Users/test/Google Drive/app.db"
+        ));
+    }
+
+    #[test]
+    fn test_is_cloud_synced_sqlite_path_negative_case() {
+        assert!(!is_cloud_synced_sqlite_path(
+            "/Users/test/Documents/english-in-use.db"
+        ));
+    }
+
+    #[test]
+    fn test_validate_sqlite_path_not_cloud_rejects_cloud_path() {
+        let mut config = AppConfig::new();
+        config.database = Some(DatabaseConnection::SQLite {
+            path: "/Users/test/Dropbox/english-in-use.db".to_string(),
+        });
+
+        let result = validate_sqlite_path_not_cloud(&config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("云盘同步目录"));
+    }
+
+    #[test]
+    fn test_validate_sqlite_path_not_cloud_accepts_local_path() {
+        let mut config = AppConfig::new();
+        config.database = Some(DatabaseConnection::SQLite {
+            path: "/Users/test/Documents/english-in-use.db".to_string(),
+        });
+
+        let result = validate_sqlite_path_not_cloud(&config);
+        assert!(result.is_ok());
     }
 }

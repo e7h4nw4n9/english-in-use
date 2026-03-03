@@ -58,7 +58,7 @@ const shouldShowHeader = computed(() => {
   return showConfig.value || isUiVisible.value || !currentBook.value
 })
 
-const buildStamp = __BUILD_STAMP__
+const buildStamp = __DEBUG_FEATURES__ ? __BUILD_STAMP__ : undefined
 
 // Apply settings from config whenever it changes
 watch(

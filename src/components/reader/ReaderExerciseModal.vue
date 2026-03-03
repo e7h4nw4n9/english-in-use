@@ -107,6 +107,7 @@ function scrollLogPanelToBottom() {
 }
 
 function appendDebugLog(level: 'info' | 'error', message: string, payload?: unknown) {
+  if (!showDebugPanel.value) return ''
   const payloadText = payload === undefined ? '' : ` | payload=${payloadToText(payload)}`
   const timestamp = new Date().toISOString()
   const line = `[${timestamp}] [${level.toUpperCase()}] ${message}${payloadText}`
@@ -229,6 +230,7 @@ async function buildBackendLogSection() {
 }
 
 async function copyDebugLogs() {
+  if (!showDebugPanel.value) return
   if (isCopyingLogs.value) return
   isCopyingLogs.value = true
   void logModalEvent('info', 'debug log copy started')
@@ -275,6 +277,7 @@ async function copyDebugLogs() {
 }
 
 const logModalEvent = async (level: 'info' | 'error', message: string, payload?: unknown) => {
+  if (!showDebugPanel.value) return
   const payloadText = payload === undefined ? '' : ` | payload=${payloadToText(payload)}`
   const line = `[ExerciseModal] ${message}${payloadText}`
   appendDebugLog(level, line)
@@ -310,6 +313,7 @@ function isFromExerciseIframe(source: MessageEventSource | null): boolean {
 }
 
 function handleWindowMessage(event: MessageEvent) {
+  if (!showDebugPanel.value) return
   if (!exerciseVisible.value) return
 
   // Try to parse message regardless of strict source check if it looks like our log type
@@ -352,6 +356,7 @@ function handleWindowMessage(event: MessageEvent) {
 }
 
 function handleWindowError(event: ErrorEvent) {
+  if (!showDebugPanel.value) return
   if (!exerciseVisible.value) return
   void logModalEvent('error', 'window error while exercise visible', {
     message: event.message,
@@ -362,6 +367,7 @@ function handleWindowError(event: ErrorEvent) {
 }
 
 function handleWindowUnhandledRejection(event: PromiseRejectionEvent) {
+  if (!showDebugPanel.value) return
   if (!exerciseVisible.value) return
   void logModalEvent('error', 'window unhandled rejection while exercise visible', {
     reason: String(event.reason),
@@ -586,27 +592,33 @@ watch(
   (visible) => {
     if (visible) {
       clearDebugLogs()
-      void logModalEvent('info', 'visible=true', {
-        hasHtml: Boolean(currentExerciseHtml.value),
-        htmlLength: currentExerciseHtml.value.length,
-        activeSrcPrefix: activeExerciseSrc.value.slice(0, 140),
-        hasEnginePath: Boolean(runtimePaths.value.engine),
-        hasDpPath: Boolean(runtimePaths.value.dp),
-        enginePathPrefix: runtimePaths.value.engine ? runtimePaths.value.engine.slice(0, 140) : '',
-        dpPathPrefix: runtimePaths.value.dp ? runtimePaths.value.dp.slice(0, 140) : '',
-        productCode: props.debugMeta.productCode || '',
-        pageLabel: props.debugMeta.pageLabel || '',
-        unitName: props.debugMeta.unitName || '',
-        sandboxDisabledForDebug: !iframeSandbox.value,
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-      })
+      if (showDebugPanel.value) {
+        void logModalEvent('info', 'visible=true', {
+          hasHtml: Boolean(currentExerciseHtml.value),
+          htmlLength: currentExerciseHtml.value.length,
+          activeSrcPrefix: activeExerciseSrc.value.slice(0, 140),
+          hasEnginePath: Boolean(runtimePaths.value.engine),
+          hasDpPath: Boolean(runtimePaths.value.dp),
+          enginePathPrefix: runtimePaths.value.engine
+            ? runtimePaths.value.engine.slice(0, 140)
+            : '',
+          dpPathPrefix: runtimePaths.value.dp ? runtimePaths.value.dp.slice(0, 140) : '',
+          productCode: props.debugMeta.productCode || '',
+          pageLabel: props.debugMeta.pageLabel || '',
+          unitName: props.debugMeta.unitName || '',
+          sandboxDisabledForDebug: !iframeSandbox.value,
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        })
+      }
       isMaximized.value = false
       stopDragging()
       stopResizing()
       centerModal()
       return
     }
-    void logModalEvent('info', 'visible=false')
+    if (showDebugPanel.value) {
+      void logModalEvent('info', 'visible=false')
+    }
     stopDragging()
     stopResizing()
   },
@@ -615,6 +627,7 @@ watch(
 watch(
   activeExerciseSrc,
   (src) => {
+    if (!showDebugPanel.value) return
     if (!src) return
     void logModalEvent('info', 'active iframe src changed', {
       sourceType: 'url',

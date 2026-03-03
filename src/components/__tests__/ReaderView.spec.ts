@@ -118,6 +118,18 @@ describe('ReaderView', () => {
       cover: 'cover.jpg',
       sort_num: 1,
     }
+    appStore.config = {
+      system: {
+        language: 'en',
+        theme: 'system',
+        log_level: 'info',
+        enable_debug_tools: true,
+        enable_auto_check: false,
+        check_interval_mins: 5,
+      },
+      book_source: null,
+      database: null,
+    }
   })
 
   it('renders correctly and loads metadata', async () => {
@@ -210,6 +222,43 @@ describe('ReaderView', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.findComponent({ name: 'ReaderDebugModal' }).exists()).toBe(true)
+  })
+
+  it('hides debug modal and resets debugVisible when debug setting is disabled', async () => {
+    const wrapper = mount(ReaderView, {
+      global: {
+        stubs: {
+          BugOutlined: true,
+          'a-modal': {
+            template: '<div class="debug-modal"><slot /></div>',
+            props: ['open'],
+          },
+        },
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const appStore = useAppStore()
+    const readerStore = useReaderStore()
+    readerStore.debugVisible = true
+    appStore.config = {
+      system: {
+        language: 'en',
+        theme: 'system',
+        log_level: 'info',
+        enable_debug_tools: false,
+        enable_auto_check: false,
+        check_interval_mins: 5,
+      },
+      book_source: null,
+      database: null,
+    }
+
+    await wrapper.vm.$nextTick()
+
+    expect(readerStore.debugVisible).toBe(false)
+    expect(wrapper.findComponent({ name: 'ReaderDebugModal' }).exists()).toBe(false)
   })
 
   it('handles zoom keyboard shortcuts', async () => {

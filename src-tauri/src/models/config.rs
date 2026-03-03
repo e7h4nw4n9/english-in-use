@@ -36,6 +36,8 @@ pub struct SystemConfig {
     pub theme: String,
     #[serde(default = "default_log_level")]
     pub log_level: String,
+    #[serde(default = "default_enable_debug_tools")]
+    pub enable_debug_tools: bool,
     #[serde(default = "default_enable_auto_check")]
     pub enable_auto_check: bool,
     #[serde(default = "default_check_interval")]
@@ -51,6 +53,9 @@ fn default_theme() -> String {
 fn default_log_level() -> String {
     "info".to_string()
 }
+fn default_enable_debug_tools() -> bool {
+    false
+}
 fn default_enable_auto_check() -> bool {
     true
 }
@@ -64,6 +69,7 @@ impl Default for SystemConfig {
             language: "en".to_string(),
             theme: "system".to_string(),
             log_level: "info".to_string(),
+            enable_debug_tools: false,
             enable_auto_check: true,
             check_interval_mins: 5,
         }
@@ -106,6 +112,7 @@ mod tests {
         assert_eq!(config.system.language, "en");
         assert_eq!(config.system.theme, "system");
         assert_eq!(config.system.log_level, "info");
+        assert!(!config.system.enable_debug_tools);
     }
 
     #[test]
@@ -143,6 +150,7 @@ mod tests {
         // Note: SystemConfig Default impl is used by AppConfig Default.
         // But serde(default) on fields uses the function.
         assert_eq!(config.system.log_level, "info");
+        assert!(!config.system.enable_debug_tools);
         assert_eq!(config.system.check_interval_mins, 5);
     }
 }

@@ -58,6 +58,8 @@ describe('SystemSettings.vue', () => {
         language: 'en',
         themeMode: 'system',
         logLevel: 'info',
+        enableDebugTools: true,
+        debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,
         isCloudConfigured: true,
@@ -68,8 +70,29 @@ describe('SystemSettings.vue', () => {
     expect(wrapper.text()).toContain('config.language')
     expect(wrapper.text()).toContain('config.theme')
     expect(wrapper.text()).toContain('config.logLevel')
+    expect(wrapper.text()).toContain('config.enableDebugTools')
     expect(wrapper.text()).toContain('config.enableAutoCheck')
     expect(wrapper.text()).toContain('config.checkInterval')
+  })
+
+  it('hides debug switch when build disables debug features', () => {
+    const wrapper = mount(SystemSettings, {
+      props: {
+        language: 'en',
+        themeMode: 'system',
+        logLevel: 'info',
+        enableDebugTools: true,
+        debugFeaturesAvailable: false,
+        enableAutoCheck: true,
+        checkIntervalMins: 5,
+        isCloudConfigured: true,
+      },
+      global: { stubs: commonStubs },
+    })
+
+    expect(wrapper.text()).not.toContain('config.enableDebugTools')
+    const switchInputs = wrapper.findAll('.switch-stub')
+    expect(switchInputs).toHaveLength(1)
   })
 
   it('disables auto check switch when cloud is not configured', () => {
@@ -78,6 +101,8 @@ describe('SystemSettings.vue', () => {
         language: 'en',
         themeMode: 'system',
         logLevel: 'info',
+        enableDebugTools: false,
+        debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,
         isCloudConfigured: false,
@@ -85,8 +110,8 @@ describe('SystemSettings.vue', () => {
       global: { stubs: commonStubs },
     })
 
-    const switchInput = wrapper.find('.switch-stub')
-    expect((switchInput.element as HTMLInputElement).disabled).toBe(true)
+    const switchInputs = wrapper.findAll('.switch-stub')
+    expect((switchInputs[1].element as HTMLInputElement).disabled).toBe(true)
   })
 
   it('emits updates when values change', async () => {
@@ -95,6 +120,8 @@ describe('SystemSettings.vue', () => {
         language: 'en',
         themeMode: 'system',
         logLevel: 'info',
+        enableDebugTools: false,
+        debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,
         isCloudConfigured: true,
@@ -106,5 +133,10 @@ describe('SystemSettings.vue', () => {
     await langSelect.setValue('zh')
     expect(wrapper.emitted()).toHaveProperty('update:language')
     expect(wrapper.emitted()['update:language'][0]).toEqual(['zh'])
+
+    const switchInputs = wrapper.findAll('.switch-stub')
+    await switchInputs[0].setValue(true)
+    expect(wrapper.emitted()).toHaveProperty('update:enableDebugTools')
+    expect(wrapper.emitted()['update:enableDebugTools'][0]).toEqual([true])
   })
 })

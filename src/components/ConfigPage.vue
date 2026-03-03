@@ -62,11 +62,13 @@ const emit = defineEmits<{
 const activeTab = ref<string[]>(['system'])
 
 const currentTab = computed(() => activeTab.value[0])
+const debugFeaturesAvailable = __DEBUG_FEATURES__
 
 // System Config
 const language = ref(props.initialConfig?.system?.language || 'en')
 const themeMode = ref(props.initialConfig?.system?.theme || 'system')
 const logLevel = ref(props.initialConfig?.system?.log_level || 'info')
+const enableDebugTools = ref(props.initialConfig?.system?.enable_debug_tools ?? false)
 const isCloudConfigured = computed(
   () => sourceType.value === 'CloudflareR2' || dbType.value === 'CloudflareD1',
 )
@@ -160,8 +162,19 @@ function isAppleMobileDevice(): boolean {
   return isLegacyIos || isModernIpad
 }
 
-function isLikelyIcloudPath(path: string): boolean {
-  return /Mobile Documents|com~apple~CloudDocs/i.test(path)
+const cloudPathMarkers = [
+  'mobile documents',
+  'com~apple~clouddocs',
+  'onedrive -',
+  'onedrive',
+  'dropbox',
+  'google drive',
+  'googledrive',
+]
+
+function isCloudSyncedPath(path: string): boolean {
+  const normalized = normalizeDialogSelectedPath(path).toLowerCase()
+  return cloudPathMarkers.some((marker) => normalized.includes(marker))
 }
 
 function normalizeDialogSelectedPath(path: string): string {
@@ -181,6 +194,78 @@ function normalizeDialogSelectedPath(path: string): string {
   } catch {
     return trimmed
   }
+}
+
+async function resolveDefaultSqlitePathForFallback(reason: string): Promise<string | null> {
+  appendOperationDiagnostic(`SQLite 云盘路径命中，尝试回退默认路径（${reason}）`)
+  try {
+    const defaultPath = await withTimeout(getDefaultSqlitePath(), 8_000, '获取默认 SQLite 路径')
+    const normalizedDefaultPath = normalizeSqlitePath(defaultPath || '')
+    if (!normalizedDefaultPath) {
+      appendOperationDiagnostic('默认 SQLite 路径为空，无法回退')
+      antMessage.error(
+        t('config.sqliteCloudPathFallbackFailed' as any) || 'SQLite 云盘路径回退默认路径失败',
+      )
+      return null
+    }
+    if (isCloudSyncedPath(normalizedDefaultPath)) {
+      appendOperationDiagnostic(`默认 SQLite 路径仍命中云盘目录: ${normalizedDefaultPath}`)
+      antMessage.error(
+        t('config.sqliteCloudPathFallbackFailed' as any) || 'SQLite 云盘路径回退默认路径失败',
+      )
+      return null
+    }
+    sqlitePath.value = normalizedDefaultPath
+    antMessage.warning(
+      t('config.sqliteCloudPathAutoFallback' as any) ||
+        '检测到云盘 SQLite 路径，已自动回退到默认本地路径',
+    )
+    appendOperationDiagnostic(`SQLite 路径已回退默认路径: ${normalizedDefaultPath}`)
+    return normalizedDefaultPath
+  } catch (err) {
+    appendOperationDiagnostic(`回退默认 SQLite 路径失败: ${sanitizeErrorMessage(err)}`)
+    antMessage.error(
+      t('config.sqliteCloudPathFallbackFailed' as any) || 'SQLite 云盘路径回退默认路径失败',
+    )
+    return null
+  }
+}
+
+async function enforceSqliteCloudPathPolicy(
+  rawPath: string,
+  reason: string,
+): Promise<string | null> {
+  const normalizedPath = normalizeDialogSelectedPath(rawPath).trim()
+  if (!normalizedPath) {
+    return ''
+  }
+  if (!isCloudSyncedPath(normalizedPath)) {
+    return normalizedPath
+  }
+  return resolveDefaultSqlitePathForFallback(reason)
+}
+
+async function ensureConfigSqlitePathNotCloud(config: AppConfig, reason: string): Promise<boolean> {
+  if (config.database?.type !== 'SQLite') {
+    return true
+  }
+  const rawPath = String(config.database.details.path || '').trim()
+  const safePath = await enforceSqliteCloudPathPolicy(rawPath, reason)
+  if (safePath === null) {
+    return false
+  }
+  config.database.details.path = safePath
+  sqlitePath.value = safePath
+  return true
+}
+
+async function ensureCurrentSqlitePathNotCloud(reason: string): Promise<boolean> {
+  const safePath = await enforceSqliteCloudPathPolicy(sqlitePath.value, reason)
+  if (safePath === null) {
+    return false
+  }
+  sqlitePath.value = safePath
+  return true
 }
 
 function getParentPath(path: string): string {
@@ -330,8 +415,12 @@ async function copyToClipboard(text: string) {
 }
 
 watch(dbType, (newType) => {
-  if (newType === 'SQLite' && !sqlitePath.value) {
-    fetchDefaultSqlitePath()
+  if (newType === 'SQLite') {
+    if (!sqlitePath.value) {
+      fetchDefaultSqlitePath()
+      return
+    }
+    void ensureCurrentSqlitePathNotCloud('切换到 SQLite')
   }
 })
 
@@ -352,6 +441,10 @@ const shouldReloadHomeAfterConfigChange = ref(false)
 const showOperationDiagnostics = import.meta.env.DEV
 const operationDiagnostics = ref<string[]>([])
 const OPERATION_DIAGNOSTICS_LIMIT = 120
+
+if (dbType.value === 'SQLite' && sqlitePath.value.trim()) {
+  void ensureCurrentSqlitePathNotCloud('加载现有配置')
+}
 
 function handleBack() {
   emit('back', { reloadHome: shouldReloadHomeAfterConfigChange.value })
@@ -405,6 +498,7 @@ function updateFormFromConfig(config: AppConfig) {
     language.value = config.system.language
     themeMode.value = config.system.theme as 'system' | 'light' | 'dark'
     logLevel.value = config.system.log_level
+    enableDebugTools.value = config.system.enable_debug_tools ?? false
     enableAutoCheck.value = config.system.enable_auto_check
     checkIntervalMins.value = config.system.check_interval_mins
   }
@@ -433,6 +527,8 @@ function updateFormFromConfig(config: AppConfig) {
       sqlitePath.value = String(config.database.details.path || '').trim()
       if (!sqlitePath.value) {
         fetchDefaultSqlitePath()
+      } else {
+        void ensureCurrentSqlitePathNotCloud('更新配置表单')
       }
     } else if (config.database.type === 'CloudflareD1') {
       const details = config.database.details
@@ -581,7 +677,11 @@ async function ensureSqlitePathForImportIfNeeded(config: AppConfig): Promise<boo
 
   const currentPath = String(config.database.details.path || '').trim()
   if (currentPath) {
-    config.database.details.path = currentPath
+    const cloudPathAllowed = await ensureConfigSqlitePathNotCloud(config, '导入配置')
+    if (!cloudPathAllowed) {
+      appendOperationDiagnostic('导入配置失败：SQLite 路径位于云盘目录且回退失败')
+      return false
+    }
     return true
   }
 
@@ -592,6 +692,13 @@ async function ensureSqlitePathForImportIfNeeded(config: AppConfig): Promise<boo
     if (!normalizedDefaultPath) {
       appendOperationDiagnostic('获取默认 SQLite 路径失败：返回为空')
       antMessage.error(t('config.sqlitePathRequired' as any) || 'SQLite 数据库路径不能为空')
+      return false
+    }
+    if (isCloudSyncedPath(normalizedDefaultPath)) {
+      appendOperationDiagnostic(`默认 SQLite 路径命中云盘目录: ${normalizedDefaultPath}`)
+      antMessage.error(
+        t('config.sqliteCloudPathFallbackFailed' as any) || 'SQLite 云盘路径回退默认路径失败',
+      )
       return false
     }
     config.database.details.path = normalizedDefaultPath
@@ -621,30 +728,25 @@ async function validateSqlitePathIfNeeded(config: AppConfig): Promise<boolean> {
     return false
   }
 
+  const safePath = await enforceSqliteCloudPathPolicy(workingPath, '保存前校验')
+  if (safePath === null) {
+    appendOperationDiagnostic('SQLite 路径校验失败：命中云盘目录且回退失败')
+    return false
+  }
+  workingPath = safePath.trim()
+
+  if (!workingPath) {
+    appendOperationDiagnostic('SQLite 路径校验失败：路径为空')
+    antMessage.error(t('config.sqlitePathRequired' as any) || 'SQLite 数据库路径不能为空')
+    return false
+  }
+
   if (!isAbsolutePath(workingPath)) {
     appendOperationDiagnostic(`SQLite 路径校验失败：非绝对路径 (${workingPath})`)
     antMessage.error(
       t('config.sqlitePathAbsoluteRequired' as any) || 'SQLite 数据库路径必须是绝对路径',
     )
     return false
-  }
-
-  if (isAppleMobileDevice() && isLikelyIcloudPath(workingPath) && !hasFileExtension(workingPath)) {
-    appendOperationDiagnostic(
-      `检测到 iPadOS iCloud SQLite 目录路径，自动回退默认路径: ${sanitizeErrorMessage(workingPath)}`,
-    )
-    try {
-      const defaultPath = await withTimeout(getDefaultSqlitePath(), 8_000, '获取默认 SQLite 路径')
-      const normalizedDefaultPath = normalizeSqlitePath(defaultPath || '')
-      if (normalizedDefaultPath) {
-        config.database.details.path = normalizedDefaultPath
-        sqlitePath.value = normalizedDefaultPath
-        workingPath = normalizedDefaultPath
-        antMessage.info('iPadOS 已自动切换到应用默认 SQLite 路径，请重试保存')
-      }
-    } catch (err) {
-      appendOperationDiagnostic(`获取默认 SQLite 路径失败: ${sanitizeErrorMessage(err)}`)
-    }
   }
 
   const resolvedPath = await resolveSqlitePathForUsage(workingPath)
@@ -732,6 +834,14 @@ async function ensureAppleMobileLocalAuthorizationIfNeeded(config: AppConfig): P
       }
       config.database.details.path = authorizedSqlitePath
       sqlitePath.value = authorizedSqlitePath
+      const cloudPathAllowed = await ensureConfigSqlitePathNotCloud(
+        config,
+        'iPadOS SQLite 文件授权',
+      )
+      if (!cloudPathAllowed) {
+        appendOperationDiagnostic('iPadOS SQLite 文件授权失败：命中云盘目录且回退失败')
+        return false
+      }
       appendOperationDiagnostic(`iPadOS SQLite 文件授权完成: ${authorizedSqlitePath}`)
     }
   }
@@ -752,6 +862,7 @@ async function handleSave() {
         language: language.value,
         theme: themeMode.value as 'system' | 'light' | 'dark',
         log_level: logLevel.value as any,
+        enable_debug_tools: enableDebugTools.value,
         enable_auto_check: enableAutoCheck.value,
         check_interval_mins: checkIntervalMins.value,
       },
@@ -818,6 +929,7 @@ async function handleExport() {
         language: language.value,
         theme: themeMode.value as 'system' | 'light' | 'dark',
         log_level: logLevel.value as any,
+        enable_debug_tools: enableDebugTools.value,
         enable_auto_check: enableAutoCheck.value,
         check_interval_mins: checkIntervalMins.value,
       },
@@ -880,6 +992,7 @@ async function handleImport() {
       debug(`选择导入的文件: ${selected}`)
       appendOperationDiagnostic('开始读取导入配置')
       const config: AppConfig = await withTimeout(importConfig(selected), 15_000, '读取配置文件')
+      config.system.enable_debug_tools = config.system.enable_debug_tools ?? false
       appStore.setGlobalLoadingProgress(25)
       appendOperationDiagnostic('导入配置读取完成')
 
@@ -970,7 +1083,13 @@ async function testConnection() {
         return
       }
       if (connection.type === 'SQLite') {
-        const rawPath = String(connection.details.path || '').trim()
+        let rawPath = String(connection.details.path || '').trim()
+        const safePath = await enforceSqliteCloudPathPolicy(rawPath, '连接测试')
+        if (safePath === null) {
+          appendOperationDiagnostic('SQLite 连接测试阻止：命中云盘目录且回退失败')
+          return
+        }
+        rawPath = safePath.trim()
         if (!rawPath || !isAbsolutePath(rawPath)) {
           antMessage.error(
             t('config.sqlitePathAbsoluteRequired' as any) || 'SQLite 数据库路径必须是绝对路径',
@@ -1027,7 +1146,9 @@ async function selectSqliteDatabasePath() {
   if (isMobileApple) {
     const selectedPath = await pickSqliteFilePathOnAppleMobile(sqlitePath.value)
     if (selectedPath) {
-      sqlitePath.value = await resolveSqlitePathForUsage(selectedPath)
+      const safePath = await enforceSqliteCloudPathPolicy(selectedPath, '选择 SQLite 路径')
+      if (safePath === null) return
+      sqlitePath.value = await resolveSqlitePathForUsage(safePath)
       return
     }
 
@@ -1056,7 +1177,9 @@ async function selectSqliteDatabasePath() {
 
     if (selected && typeof selected === 'string') {
       const selectedPath = normalizeDialogSelectedPath(selected)
-      sqlitePath.value = await resolveSqlitePathForUsage(selectedPath)
+      const safePath = await enforceSqliteCloudPathPolicy(selectedPath, '选择 SQLite 路径')
+      if (safePath === null) return
+      sqlitePath.value = await resolveSqlitePathForUsage(safePath)
       return
     }
   } catch (err) {
@@ -1076,7 +1199,9 @@ async function selectSqliteDatabasePath() {
 
     if (selected && typeof selected === 'string') {
       const selectedPath = normalizeDialogSelectedPath(selected)
-      sqlitePath.value = await resolveSqlitePathForUsage(selectedPath)
+      const safePath = await enforceSqliteCloudPathPolicy(selectedPath, '选择 SQLite 路径')
+      if (safePath === null) return
+      sqlitePath.value = await resolveSqlitePathForUsage(safePath)
     }
   } catch (err) {
     console.error('Failed to select sqlite path:', err)
@@ -1222,8 +1347,10 @@ function getCurrentDatabase(): DatabaseConnection | null {
           v-model:language="language"
           v-model:themeMode="themeMode"
           v-model:logLevel="logLevel"
+          v-model:enableDebugTools="enableDebugTools"
           v-model:enableAutoCheck="enableAutoCheck"
           v-model:checkIntervalMins="checkIntervalMins"
+          :debug-features-available="debugFeaturesAvailable"
           :is-cloud-configured="isCloudConfigured"
         />
 

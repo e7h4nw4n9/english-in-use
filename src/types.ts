@@ -43,6 +43,7 @@ export interface SystemConfig {
   language: string
   theme: 'system' | 'light' | 'dark'
   log_level: 'trace' | 'debug' | 'info' | 'warn' | 'error'
+  enable_debug_tools: boolean
   enable_auto_check: boolean
   check_interval_mins: number
 }

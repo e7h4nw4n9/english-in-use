@@ -23,7 +23,7 @@ import ReaderDebugModal from './reader/ReaderDebugModal.vue'
 const appStore = useAppStore()
 const readerStore = useReaderStore()
 const { t } = useI18n()
-const { currentBook } = storeToRefs(appStore)
+const { currentBook, config } = storeToRefs(appStore)
 const readerRef = ref<HTMLElement | null>(null)
 const {
   currentPageLabel,
@@ -58,7 +58,10 @@ const {
 
 const { toggleAudio, stopAndResetAudio, cleanup: audioCleanup } = useReaderAudio()
 const fallbackUnitTitle = computed(() => currentBook.value?.title || '')
-const exerciseDebugPanelEnabled = true
+const effectiveDebugEnabled = computed(
+  () => __DEBUG_FEATURES__ && Boolean(config.value?.system.enable_debug_tools),
+)
+const exerciseDebugPanelEnabled = computed(() => effectiveDebugEnabled.value)
 const { currentUnitName, currentPageAudioFiles } = useReaderTocContext({
   metadata,
   currentPageLabel,
@@ -108,6 +111,16 @@ watch(currentPageLabel, (newLabel, oldLabel) => {
     stopAndResetAudio()
   }
 })
+
+watch(
+  effectiveDebugEnabled,
+  (enabled) => {
+    if (!enabled) {
+      readerStore.debugVisible = false
+    }
+  },
+  { immediate: true },
+)
 
 function handleToggleAudio(path: string) {
   if (currentBook.value) {
@@ -187,7 +200,11 @@ onUnmounted(() => {
       :enableDebugPanel="exerciseDebugPanelEnabled"
       :debugMeta="exerciseDebugMeta"
     />
-    <ReaderDebugModal :metadata="metadata" :sortedPageLabels="sortedPageLabels" />
+    <ReaderDebugModal
+      v-if="effectiveDebugEnabled"
+      :metadata="metadata"
+      :sortedPageLabels="sortedPageLabels"
+    />
   </div>
 </template>
 

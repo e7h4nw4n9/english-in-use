@@ -15,6 +15,8 @@ interface Props {
   language: string
   themeMode: string
   logLevel: string
+  enableDebugTools: boolean
+  debugFeaturesAvailable: boolean
   enableAutoCheck: boolean
   checkIntervalMins: number
   isCloudConfigured: boolean
@@ -26,6 +28,7 @@ const emit = defineEmits<{
   (e: 'update:language', value: string): void
   (e: 'update:themeMode', value: string): void
   (e: 'update:logLevel', value: string): void
+  (e: 'update:enableDebugTools', value: boolean): void
   (e: 'update:enableAutoCheck', value: boolean): void
   (e: 'update:checkIntervalMins', value: number): void
 }>()
@@ -110,6 +113,13 @@ onMounted(() => {
           <a-select-option value="warn">Warn</a-select-option>
           <a-select-option value="error">Error</a-select-option>
         </a-select>
+      </a-form-item>
+
+      <a-form-item v-if="debugFeaturesAvailable" :label="t('config.enableDebugTools')">
+        <a-switch
+          :checked="enableDebugTools"
+          @update:checked="emit('update:enableDebugTools', $event)"
+        />
       </a-form-item>
 
       <a-form-item :label="t('config.enableAutoCheck')">

@@ -22,7 +22,7 @@ const { token } = useToken()
 
 const appStore = useAppStore()
 const readerStore = useReaderStore()
-const { currentBook, connectionStatus: status } = storeToRefs(appStore)
+const { currentBook, connectionStatus: status, config } = storeToRefs(appStore)
 const { currentUnitName, debugVisible } = storeToRefs(readerStore)
 
 defineProps<{
@@ -70,6 +70,9 @@ const getStatusText = (s: ServiceStatusType) => {
 
 const isTesting = computed(
   () => status.value.r2.status === 'Testing' || status.value.d1.status === 'Testing',
+)
+const effectiveDebugEnabled = computed(
+  () => __DEBUG_FEATURES__ && Boolean(config.value?.system.enable_debug_tools),
 )
 const hasError = computed(
   () => status.value.r2.status === 'Disconnected' || status.value.d1.status === 'Disconnected',
@@ -148,7 +151,7 @@ onMounted(async () => {
         </a-tooltip>
 
         <a-button
-          v-if="currentBook"
+          v-if="currentBook && effectiveDebugEnabled"
           type="text"
           size="small"
           class="action-btn"
