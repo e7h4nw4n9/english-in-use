@@ -12,6 +12,28 @@
 2. **资源免责**：本项目**不包含也不提供**任何书籍的正文内容、音频、图片或相关受版权保护的电子资源。用户需自行拥有合法资源并导入使用。
 3. **使用限制**：本项目源代码仅供技术交流与个人学习使用，禁止用于任何商业用途。
 
+## 本地资源目录约定
+
+当图书来源配置为本地目录时，建议目录结构如下：
+
+```text
+<本地根目录>/
+  books/
+    <product_code>/
+      meta/definition.json
+      assets/imgbook-meta/book.json
+      assets/imgbook-meta/book-overlays.json
+      ...
+  courses/                       # 推荐；缺失时练习资源可能不可用
+    <course_id>/
+      meta/definition.json
+      assets/...
+```
+
+- `books/` 是必需目录；缺失时会在配置保存/导入阶段提示错误。
+- `courses/` 是推荐目录；缺失时会提示告警，阅读功能仍可使用。
+- 系统会拒绝包含 `..` 的非法相对路径，避免越界读取本地文件。
+
 ## 开发说明
 
 本项目使用 Tauri 2.0、Vue 3 开发。
@@ -44,3 +66,65 @@
 ```shell
 pnpm tauri build
 ```
+
+### iOS / iPad 测试
+
+本项目已使用 Tauri 2，支持 iOS（含 iPad）开发与测试。
+
+0. 确认 Xcode Developer Directory 已指向 Xcode（而非 CommandLineTools）：
+
+   ```shell
+   xcode-select -p
+   ```
+
+   切换到 Xcode：
+
+   ```shell
+   sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+   ```
+
+   重置为系统默认：
+
+   ```shell
+   sudo xcode-select --reset
+   ```
+
+1. 安装 iOS 目标（一次性）：
+
+   ```shell
+   rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+   ```
+
+2. 初始化 iOS 工程（一次性）：
+
+   ```shell
+   pnpm tauri:ios:init
+   ```
+
+   生成目录通常为 `src-tauri/gen/apple/`。
+
+3. 模拟器测试（推荐先跑）：
+
+   ```shell
+   pnpm tauri:ios:dev
+   ```
+
+   可先用 `xcrun simctl list devices available` 查看可用模拟器，再在 Xcode 中选择 iPad 机型运行。
+
+4. iPad/iPhone 真机测试：
+
+   由于真机无法访问 `localhost`，请把 `TAURI_DEV_HOST` 设为开发机局域网 IP（例如 `192.168.1.10`）：
+
+   ```shell
+   TAURI_DEV_HOST=192.168.1.10 pnpm tauri:ios:dev
+   ```
+
+   同时在 Xcode 中完成 Team/Signing 配置后，切换到真机运行。
+
+5. 生成 iOS 发布产物（可选）：
+
+   ```shell
+   pnpm tauri:ios:build
+   ```
+
+建议最少覆盖以下测试项：启动与渲染、核心业务路径、Rust command 错误分支、插件能力（dialog/fs/log/opener）和真机网络连通性。

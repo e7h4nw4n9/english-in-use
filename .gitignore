@@ -9,5 +9,19 @@ dist
 
 # IDE文件
 GEMINI.md
+AGENTS.md
+.gemini
 
+# 其他文件
+coverage
+design-system
+scripts
+specs
+todo.md
 
+# Tauri generated
+src-tauri/gen
+
+# Secrets / cert material
+src-tauri/certs/*
+!src-tauri/certs/README.md
