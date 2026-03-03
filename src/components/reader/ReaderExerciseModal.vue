@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { CloseOutlined, FullscreenExitOutlined, FullscreenOutlined } from '@ant-design/icons-vue'
 import { useReaderStore } from '../../stores/reader'
 import { useReaderExercise } from '../../composables/useReaderExercise'
+import { getPlatform } from '../../lib/api/system'
 import {
   extractExerciseRuntimePaths,
   type ExerciseRuntimeContext,
@@ -35,6 +36,7 @@ const {
   currentExerciseResourceId,
 } = storeToRefs(readerStore)
 
+const currentPlatform = ref<string>('unknown')
 const iframeRef = ref<HTMLIFrameElement | null>(null)
 const logPanelRef = ref<HTMLElement | null>(null)
 const debugLogLines = ref<string[]>([])
@@ -375,6 +377,9 @@ function handleWindowUnhandledRejection(event: PromiseRejectionEvent) {
 }
 
 const TOOLBAR_HEIGHT = 40
+const INITIAL_ASPECT_RATIO = 1.5
+const FIXED_MODAL_WIDTH = 350
+const FIXED_MODAL_HEIGHT = 650 // FIXED_MODAL_WIDTH * INITIAL_ASPECT_RATIO
 
 const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1280)
 const viewportHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 800)
@@ -389,6 +394,7 @@ const dragState = ref({
   startY: 0,
   originX: 0,
   originY: 0,
+  pointerId: null as number | null,
 })
 const resizeState = ref({
   resizing: false,
@@ -399,37 +405,72 @@ const resizeState = ref({
   pointerId: null as number | null,
 })
 
-const isPhone = computed(() => viewportWidth.value < 768)
-const isTablet = computed(() => viewportWidth.value >= 768 && viewportWidth.value < 1100)
+const isMobilePlatform = computed(() => ['android', 'ios'].includes(currentPlatform.value))
+const isPhone = computed(() => isMobilePlatform.value && viewportWidth.value < 768)
+const isTablet = computed(() =>
+  isMobilePlatform.value
+    ? viewportWidth.value >= 768
+    : viewportWidth.value >= 768 && viewportWidth.value < 1100,
+)
 const modalMarginRatio = computed(() => (isPhone.value ? 0.035 : isTablet.value ? 0.04 : 0.05))
 const modalMargin = computed(() =>
   Math.round(Math.min(viewportWidth.value, viewportHeight.value) * modalMarginRatio.value),
 )
 const availableWidth = computed(() => Math.max(0, viewportWidth.value - modalMargin.value * 2))
 const availableHeight = computed(() => Math.max(0, viewportHeight.value - modalMargin.value * 2))
-const minModalWidth = computed(() => availableWidth.value * (isPhone.value ? 0.88 : 0.25))
-const minModalHeight = computed(() => availableHeight.value * (isPhone.value ? 0.56 : 0.42))
-const defaultModalWidth = computed(() => availableWidth.value * (isPhone.value ? 1 : 1 / 3))
-const defaultModalHeight = computed(() => {
-  const heightRatio = isPhone.value ? 0.8 : isTablet.value ? 0.72 : 0.66
-  return availableHeight.value * heightRatio
+const minModalWidth = computed(() => availableWidth.value * (isPhone.value ? 0.88 : 0.15))
+const minModalHeight = computed(() => availableHeight.value * (isPhone.value ? 0.56 : 0.32))
+
+function fitSizeByAspect(maxWidth: number, maxHeight: number, heightPerWidth: number) {
+  if (maxWidth <= 0 || maxHeight <= 0 || heightPerWidth <= 0) {
+    return { width: 0, height: 0 }
+  }
+
+  let width = maxWidth
+  let height = width * heightPerWidth
+  if (height > maxHeight) {
+    height = maxHeight
+    width = height / heightPerWidth
+  }
+  return { width, height }
+}
+
+const defaultModalSize = computed(() => {
+  if (isPhone.value) {
+    // 手机：约 80% 窗口大小 (基于 availableWidth 计算)
+    const targetWidth = availableWidth.value * 0.85
+    const targetHeight = availableHeight.value * 0.85
+    return fitSizeByAspect(targetWidth, targetHeight, INITIAL_ASPECT_RATIO)
+  }
+
+  // 平板/电脑：固定大小，除非窗口缩放后更小
+  const targetWidth = Math.min(FIXED_MODAL_WIDTH, availableWidth.value)
+  const targetHeight = Math.min(FIXED_MODAL_HEIGHT, availableHeight.value)
+  return fitSizeByAspect(targetWidth, targetHeight, INITIAL_ASPECT_RATIO)
 })
+
+const defaultModalWidth = computed(() => defaultModalSize.value.width)
+const defaultModalHeight = computed(() => defaultModalSize.value.height)
 const canResize = computed(() => !isPhone.value && !isMaximized.value)
 
 const modalWidth = computed(() => {
   if (isMaximized.value) {
     return availableWidth.value
   }
-  const preferredWidth = manualSize.value?.width ?? defaultModalWidth.value
-  return Math.min(Math.max(preferredWidth, minModalWidth.value), availableWidth.value)
+  if (manualSize.value) {
+    return Math.min(Math.max(manualSize.value.width, minModalWidth.value), availableWidth.value)
+  }
+  return Math.min(Math.max(defaultModalWidth.value, 0), availableWidth.value)
 })
 
 const modalHeight = computed(() => {
   if (isMaximized.value) {
     return availableHeight.value
   }
-  const preferredHeight = manualSize.value?.height ?? defaultModalHeight.value
-  return Math.min(Math.max(preferredHeight, minModalHeight.value), availableHeight.value)
+  if (manualSize.value) {
+    return Math.min(Math.max(manualSize.value.height, minModalHeight.value), availableHeight.value)
+  }
+  return Math.min(Math.max(defaultModalHeight.value, 0), availableHeight.value)
 })
 
 const modalBodyHeight = computed(() => `${Math.max(0, modalHeight.value - TOOLBAR_HEIGHT)}px`)
@@ -457,11 +498,21 @@ function centerModal() {
   modalPosition.value = clampPosition(centeredX, centeredY)
 }
 
-function stopDragging() {
+function stopDragging(event?: PointerEvent) {
   if (!dragState.value.dragging) return
+  if (
+    event &&
+    dragState.value.pointerId !== null &&
+    event.pointerId !== dragState.value.pointerId
+  ) {
+    return
+  }
+
   dragState.value.dragging = false
-  window.removeEventListener('mousemove', onMouseMove)
-  window.removeEventListener('mouseup', stopDragging)
+  dragState.value.pointerId = null
+  window.removeEventListener('pointermove', onDragPointerMove)
+  window.removeEventListener('pointerup', stopDragging)
+  window.removeEventListener('pointercancel', stopDragging)
 }
 
 function stopResizing(event?: PointerEvent) {
@@ -516,8 +567,13 @@ function startResizing(event: PointerEvent) {
   window.addEventListener('pointercancel', stopResizing)
 }
 
-function onMouseMove(event: MouseEvent) {
+function onDragPointerMove(event: PointerEvent) {
   if (!dragState.value.dragging || isMaximized.value) return
+  if (dragState.value.pointerId !== null && event.pointerId !== dragState.value.pointerId) {
+    return
+  }
+
+  event.preventDefault()
   const deltaX = event.clientX - dragState.value.startX
   const deltaY = event.clientY - dragState.value.startY
   modalPosition.value = clampPosition(
@@ -526,17 +582,22 @@ function onMouseMove(event: MouseEvent) {
   )
 }
 
-function startDragging(event: MouseEvent) {
-  if (isMaximized.value || resizeState.value.resizing || event.button !== 0) return
+function startDragging(event: PointerEvent) {
+  if (isMaximized.value || resizeState.value.resizing) return
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+
+  event.preventDefault()
   dragState.value = {
     dragging: true,
     startX: event.clientX,
     startY: event.clientY,
     originX: modalPosition.value.x,
     originY: modalPosition.value.y,
+    pointerId: event.pointerId,
   }
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseup', stopDragging)
+  window.addEventListener('pointermove', onDragPointerMove, { passive: false })
+  window.addEventListener('pointerup', stopDragging)
+  window.addEventListener('pointercancel', stopDragging)
 }
 
 function closeModal() {
@@ -613,6 +674,7 @@ watch(
       isMaximized.value = false
       stopDragging()
       stopResizing()
+      manualSize.value = null
       centerModal()
       return
     }
@@ -637,7 +699,8 @@ watch(
   { immediate: true },
 )
 
-onMounted(() => {
+onMounted(async () => {
+  currentPlatform.value = await getPlatform()
   window.addEventListener('resize', onWindowResize)
   window.addEventListener('keydown', onWindowKeydown)
   window.addEventListener('message', handleWindowMessage)
@@ -672,8 +735,8 @@ onBeforeUnmount(() => {
   >
     <div class="relative w-full overflow-hidden rounded-lg bg-white">
       <div
-        class="flex h-10 cursor-move select-none items-center justify-between bg-slate-50 px-2"
-        @mousedown="startDragging"
+        class="flex h-10 cursor-move touch-none select-none items-center justify-between bg-slate-50 px-2"
+        @pointerdown="startDragging"
       >
         <div class="flex min-w-0 items-center gap-2 overflow-hidden text-[11px] text-slate-600">
           <span class="max-w-[180px] truncate font-medium text-slate-700">
@@ -692,7 +755,7 @@ onBeforeUnmount(() => {
             type="button"
             class="inline-flex h-6 w-6 items-center justify-center rounded bg-white text-slate-600 hover:bg-slate-100"
             :aria-label="isMaximized ? 'Restore' : 'Maximize'"
-            @mousedown.stop
+            @pointerdown.stop
             @click="toggleMaximize"
           >
             <FullscreenExitOutlined v-if="isMaximized" />
@@ -703,7 +766,7 @@ onBeforeUnmount(() => {
             type="button"
             class="inline-flex h-6 w-6 items-center justify-center rounded bg-white text-slate-600 hover:bg-slate-100"
             aria-label="Close"
-            @mousedown.stop
+            @pointerdown.stop
             @click="closeModal"
           >
             <CloseOutlined />

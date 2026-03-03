@@ -8,6 +8,13 @@ export async function restartApp(): Promise<void> {
 }
 
 /**
+ * 获取当前运行平台类型 (windows, macos, android, ios, linux)
+ */
+export async function getPlatform(): Promise<string> {
+  return await invoke<string>('get_platform')
+}
+
+/**
  * 示例 Greet 命令
  * @param name 姓名
  */

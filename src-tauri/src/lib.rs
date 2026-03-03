@@ -188,6 +188,7 @@ pub fn run() {
             commands::books::get_reading_progress,
             commands::books::update_reading_progress,
             commands::system::restart,
+            commands::system::get_platform,
             check_connection_status
         ])
         .run(context)
