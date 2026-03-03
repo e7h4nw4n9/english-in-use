@@ -10,40 +10,33 @@ pub struct ConfigState(pub RwLock<AppConfig>);
 
 pub fn get_config_path_from_context(context: &tauri::Context) -> PathBuf {
     let identifier = &context.config().identifier;
-    // This logic mimics tauri's internal resolution for app_config_dir
-    #[cfg(target_os = "macos")]
-    {
+    // This logic mimics tauri's internal resolution for app_config_dir.
+    let mut path = if cfg!(target_os = "macos") {
         if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
-            let mut path = home;
-            path.push("Library/Application Support");
-            path.push(identifier);
-            return path.join("config.toml");
+            let mut p = home;
+            p.push("Library/Application Support");
+            p
+        } else {
+            return PathBuf::from("config.toml");
         }
-    }
-    #[cfg(target_os = "windows")]
-    {
+    } else if cfg!(target_os = "windows") {
         if let Some(appdata) = std::env::var_os("APPDATA").map(PathBuf::from) {
-            let mut path = appdata;
-            path.push(identifier);
-            return path.join("config.toml");
+            appdata
+        } else {
+            return PathBuf::from("config.toml");
         }
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    {
-        let mut path =
-            if let Some(config_home) = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from) {
-                config_home
-            } else if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
-                let mut p = home;
-                p.push(".config");
-                p
-            } else {
-                PathBuf::from(".")
-            };
-        path.push(identifier);
-        return path.join("config.toml");
-    }
-    PathBuf::from("config.toml")
+    } else if let Some(config_home) = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from) {
+        config_home
+    } else if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+        let mut p = home;
+        p.push(".config");
+        p
+    } else {
+        PathBuf::from(".")
+    };
+
+    path.push(identifier);
+    path.join("config.toml")
 }
 
 pub fn load_initial(context: &tauri::Context) -> AppConfig {
@@ -108,7 +101,7 @@ impl AppConfigExt for AppConfig {
 mod tests {
     use super::*;
     use crate::models::BookSource;
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, tempdir};
 
     #[test]
     fn test_save_and_load_config() {
@@ -117,7 +110,7 @@ mod tests {
 
         let mut config = AppConfig::new();
         config.book_source = Some(BookSource::Local {
-            path: "/test/path".to_string(),
+            path: "test/path".to_string(),
         });
 
         config.save_to_path(path).expect("Failed to save config");
@@ -128,8 +121,9 @@ mod tests {
 
     #[test]
     fn test_load_non_existent() {
-        let path = Path::new("/tmp/non_existent_config_12345.toml");
-        let config = AppConfig::load_from_path(path).unwrap();
+        let temp_dir = tempdir().unwrap();
+        let path = temp_dir.path().join("non_existent_config.toml");
+        let config = AppConfig::load_from_path(&path).unwrap();
         assert_eq!(config, AppConfig::default());
     }
 }

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <script type="text/javascript" src="https://author-engine-production.avallain.net/buckminster-33.0.2/launcher-connector-channel.bundle.js"></script>
+     <script type="text/javascript">
+      A5 = {};
+      A5.LMS_APIS = 'Channel';
+      A5.ENGINE_ROOT = 'https://author-engine-production.avallain.net/buckminster-34.0.0/';
+      A5.SKIN_URL = '//author-assets-runtime-prod-cup.avallain.net/designpack/RDP_Base/372c54c94118409e0feed2c13225c749/';
+      A5.SKIN_TYPE= 'git';
+      A5.TOOLBELT_URL = '//cup-toolbelt-prod.avallain.net';
+      A5.GEOGEBRA = '//author-engine-production.avallain.net/geogebra/v5-0-398-0/HTML5/5.0/web/';
+      A5.MATHJAX = '//author-engine-production.avallain.net/mathjax/2.7.1/';
+      A5.CKEDITOR_RELATIVE = true;
+      A5.AUDIO_PREFER_HTML5 = true;
+
+      A5.WIRIS_QUIZ_VALIDATION_SERVICE_URL = '';
+      A5.AUDIO_FORMATS = 'mp3';
+      A5.ITEM_BANK_API_URL = 'https://api-cup-author-prod.avallain.net/api/v2/items_bank_items_for_engine';
+      A5.WIRIS_QUIZ_LIBRARY_RESOURCES_URL = '//author-engine-production.avallain.net/wirisquiz/4.2.2/resources';
+      A5.VIDEO_FORMATS = 'mp4';
+      
+      A5.AUDIO_URL_BUILDER = function(id, format) {
+        var cdn = (id.indexOf("r5_") === 0 ? "https://cup-author-prod-lnr-runtime-assets.s3.amazonaws.com" : "media");
+        return cdn + "/" + id + "." + format;
+      };      
+
+      A5.VIDEO_URL_BUILDER = function(id, format){
+    	  if (format=='hls') {
+			return "media/" + id + "/hls_playlist.m3u8";
+   		  } else {
+   			return "media/" + id + "." + format;
+   		  } 
+      };
+
+      LOInfo = {};
+     
+      LOInfo.assessmentOptions = ''
+      LOInfo.LOOptions = '<options data-author="options-v2"><option id="430"><key>off</key></option><option id="311"><key>afterAll</key></option><option id="512"><key>marking_and_feedback</key></option><option id="373"><key>off</key></option><option id="047"><key>false</key></option><option id="040"><key>normal</key></option><option id="335"><key>off</key></option><option id="432"><key>on</key></option><option id="025"><key>false</key></option><option id="050"><key>auto</key></option><option id="313"><key>off</key></option><option id="046"><key>1_point_action</key></option><option id="449"><key>off</key></option><option id="312"><key>off</key></option><option id="450"><key>off</key></option><option id="388"><key>off</key></option><option id="336"><key>afterCheckAnswers</key><value></value></option><option id="371"><key>dialog</key></option><option id="334"><key>off</key><value>       {&amp;quot;items&amp;quot;:[],&amp;quot;selection&amp;quot;:&amp;quot;off&amp;quot;}   </value></option><option id="396"><key>off</key></option><option id="380"><key>true</key></option><option id="381"><key>true</key></option><option id="385"><key>score</key></option><option id="391"><key>last</key></option><option id="393"><key>["2","5"]</key></option><option id="528"><key>off</key></option></options>';
+      LOInfo.mode = 'Normal';
+      LOInfo.title = 'EGIU_PP_U001_P013_x01_Aks';
+      
+        LOInfo.lotype = 'Standard';
+        LOInfo.mediaURL = '';
+        LOInfo.launcherTag = 'https://author-engine-production.avallain.net/buckminster-33.0.2/launcher-connector-channel.bundle.js';
+        LOInfo.toolBeltURL = '//cup-toolbelt-prod.avallain.net';
+        LOInfo.commServer = '{&#10;  red5: &quot;cup-lnr-prod.avallain.net&quot;,&#10;  cdn: &quot;https://cup-author-prod-lnr-runtime-assets.s3.amazonaws.com&quot;&#10;}';
+        LOInfo.UID = 'cup-prod_787978';
+        LOInfo.geoGebra = '//author-engine-production.avallain.net/geogebra/v5-0-398-0/HTML5/5.0/web/';
+        LOInfo.assetCDNURL = 'https://author-assets-runtime-prod-cup.avallain.net';
+        LOInfo.name = 'EGIU_PP_U001_P013_x01_Aks';
+        LOInfo.mathJAX = '//author-engine-production.avallain.net/mathjax/2.7.1/';
+        LOInfo.ID = '787978';
+        LOInfo.lang = 'en';
+                </script>
+    <script type="text/javascript" src="data.js"></script>
+   
+    <title>EGIU_PP_U001_P013_x01_Aks</title>
+  </head>
+  <body></body>
+</html>

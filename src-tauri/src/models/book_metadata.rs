@@ -27,6 +27,7 @@ pub struct DefinitionItems {
 pub struct TocItem {
     pub name: String,
     pub item_type: String,
+    pub item_code: Option<String>,
     pub resource: Option<String>,
     pub items: Option<Vec<TocItem>>,
     pub attribs: Option<TocItemAttribs>,
@@ -122,9 +123,19 @@ pub struct OverlayItem {
     pub w: f64,
     pub h: f64,
     #[serde(rename = "type")]
-    pub overlay_type: String, // "audio" or "page"
+    pub overlay_type: String, // "audio", "page", or "learning-object"
     pub audio: Option<OverlayAudio>,
     pub page: Option<OverlayTargetPage>,
+    #[serde(rename = "learning-object")]
+    pub learning_object: Option<LearningObject>,
+    pub exercise: Option<ExerciseInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct LearningObject {
+    pub course_id: String,
+    pub module_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

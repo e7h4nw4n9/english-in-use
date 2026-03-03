@@ -1,25 +1,49 @@
-use crate::models::book_metadata::{PageIndex, TocNode};
 use crate::models::{Book, BookGroup, BookSource, ReadingProgress};
-use crate::services::book_metadata::MetadataService;
 use crate::utils::cache::CacheKey;
-use log::{error, info};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
+use log::info;
+use std::future::Future;
+use std::path::Path;
 use tauri::{AppHandle, Manager, Runtime, State};
+
+mod application;
+mod infrastructure;
+
+pub use application::BookMetadataResponse;
 
 pub struct BookCacheState {
     pub cache: moka::future::Cache<String, Vec<Book>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BookMetadataResponse {
-    pub toc: Vec<TocNode>,
-    pub pages: HashMap<String, PageIndex>,
-    pub page_labels: Vec<String>,
-    pub page_width: f64,
-    pub page_height: f64,
+async fn read_cached_or_fetch_and_store<F, Fut>(
+    local_path: &Path,
+    fetch_remote: F,
+) -> Result<Vec<u8>, String>
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = Result<Vec<u8>, String>>,
+{
+    if local_path.exists()
+        && std::fs::metadata(local_path)
+            .map(|m| m.len() > 0)
+            .unwrap_or(false)
+    {
+        return tokio::fs::read(local_path)
+            .await
+            .map_err(|e| format!("读取缓存文件失败 (path: {}): {}", local_path.display(), e));
+    }
+
+    let bytes = fetch_remote().await?;
+
+    if let Some(parent) = local_path.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("创建缓存目录失败 (path: {}): {}", parent.display(), e))?;
+    }
+    tokio::fs::write(local_path, &bytes)
+        .await
+        .map_err(|e| format!("写入缓存文件失败 (path: {}): {}", local_path.display(), e))?;
+
+    Ok(bytes)
 }
 
 #[tauri::command]
@@ -28,198 +52,7 @@ pub async fn get_book_metadata<R: Runtime>(
     config_state: State<'_, crate::services::config::ConfigState>,
     product_code: String,
 ) -> Result<BookMetadataResponse, String> {
-    info!("正在获取书籍元数据 (product_code: {})", product_code);
-
-    let (book_source, base_path) = {
-        let config = config_state.0.read().map_err(|e| e.to_string())?;
-        let source = config.book_source.clone();
-        let path = match &source {
-            Some(BookSource::Local { path }) => PathBuf::from(path).join("books"),
-            _ => {
-                let cache_dir = app
-                    .path()
-                    .app_cache_dir()
-                    .map_err(|e| format!("无法获取缓存目录: {}", e))?;
-                cache_dir.join("books")
-            }
-        };
-        (source, path)
-    };
-
-    // 尝试可能的路径：single (product_code)
-    let ebook_path_target = base_path.join(&product_code);
-    let def_path = ebook_path_target.join("meta").join("definition.json");
-    let book_json_path = ebook_path_target
-        .join("assets")
-        .join("imgbook-meta")
-        .join("book.json");
-
-    let mut ebook_path = if def_path.exists() && book_json_path.exists() {
-        Some(ebook_path_target.clone())
-    } else {
-        None
-    };
-
-    if ebook_path.is_none() {
-        if let Some(BookSource::CloudflareR2 { bucket_name, .. }) = &book_source {
-            info!("元数据缺失，尝试从 R2 下载...");
-            let r2_state = app.state::<crate::utils::r2::R2ClientState>();
-            let client = crate::utils::r2::get_client(&config_state, &r2_state).await?;
-
-            // 统一下载到 single 结构
-            let target_path = ebook_path_target.clone();
-            let def_path = target_path.join("meta").join("definition.json");
-            let bj_path = target_path
-                .join("assets")
-                .join("imgbook-meta")
-                .join("book.json");
-            let ov_path = target_path
-                .join("assets")
-                .join("imgbook-meta")
-                .join("book-overlays.json");
-
-            // 仅尝试 single key 模式
-            let def_key = format!("books/{}/meta/definition.json", product_code);
-
-            if let Ok(data) = crate::utils::r2::get_object(&client, bucket_name, &def_key).await {
-                std::fs::create_dir_all(def_path.parent().unwrap()).map_err(|e| e.to_string())?;
-                std::fs::write(&def_path, data).map_err(|e| e.to_string())?;
-
-                // 下载 book.json
-                let bj_key = format!("books/{}/assets/imgbook-meta/book.json", product_code);
-                if let Ok(data) = crate::utils::r2::get_object(&client, bucket_name, &bj_key).await
-                {
-                    std::fs::create_dir_all(bj_path.parent().unwrap())
-                        .map_err(|e| e.to_string())?;
-                    std::fs::write(&bj_path, data).map_err(|e| e.to_string())?;
-                }
-
-                // 尝试下载可选的 overlays
-                let ov_key = format!(
-                    "books/{}/assets/imgbook-meta/book-overlays.json",
-                    product_code
-                );
-                if let Ok(data) = crate::utils::r2::get_object(&client, bucket_name, &ov_key).await
-                {
-                    std::fs::create_dir_all(ov_path.parent().unwrap())
-                        .map_err(|e| e.to_string())?;
-                    std::fs::write(&ov_path, data).map_err(|e| e.to_string())?;
-                }
-            } else {
-                return Err(format!("从 R2 下载书籍元数据失败。Key: {}", def_key));
-            }
-
-            if def_path.exists() && bj_path.exists() {
-                ebook_path = Some(target_path);
-            }
-        }
-    }
-
-    let ebook_path = ebook_path.ok_or_else(|| {
-        format!(
-            "找不到书籍资源文件。请确认路径正确且包含 definition.json 和 book.json。尝试过的路径: {:?}",
-            def_path
-        )
-    })?;
-
-    let def_path = ebook_path.join("meta").join("definition.json");
-    let book_json_path = ebook_path
-        .join("assets")
-        .join("imgbook-meta")
-        .join("book.json");
-    let overlay_path = ebook_path
-        .join("assets")
-        .join("imgbook-meta")
-        .join("book-overlays.json");
-
-    let definition = MetadataService::parse_definition(&def_path)
-        .map_err(|e| format!("解析 definition.json 失败: {}", e))?;
-    let book_json = MetadataService::parse_book_json(&book_json_path)
-        .map_err(|e| format!("解析 book.json 失败: {}", e))?;
-
-    let overlay_config = match MetadataService::parse_overlays(&overlay_path) {
-        Ok(config) => {
-            info!("成功解析叠加层配置 (pages: {})", config.pages.page.len());
-            Some(config)
-        }
-        Err(e) => {
-            error!(
-                "解析 book-overlays.json 失败 (路径: {:?}): {}",
-                overlay_path, e
-            );
-            None
-        }
-    };
-
-    let container_code = format!("{}con", product_code);
-    let courses_base_path = match &book_source {
-        Some(BookSource::Local { path }) => PathBuf::from(path).join("courses"),
-        _ => {
-            let cache_dir = app
-                .path()
-                .app_cache_dir()
-                .map_err(|e| format!("无法获取缓存目录: {}", e))?;
-            cache_dir.join("courses")
-        }
-    };
-
-    let ebook_con_path_target = courses_base_path.join(&container_code);
-    let mut con_def_path = {
-        let p = ebook_con_path_target.join("meta").join("definition.json");
-        if p.exists() { Some(p) } else { None }
-    };
-
-    if con_def_path.is_none() {
-        if let Some(BookSource::CloudflareR2 { bucket_name, .. }) = &book_source {
-            let r2_state = app.state::<crate::utils::r2::R2ClientState>();
-            let client = crate::utils::r2::get_client(&config_state, &r2_state).await?;
-            // 统一下载到 single 结构
-            let target_con_path = ebook_con_path_target.clone();
-            let p = target_con_path.join("meta").join("definition.json");
-
-            let con_def_key = format!("courses/{}/meta/definition.json", container_code);
-
-            if let Ok(data) = crate::utils::r2::get_object(&client, bucket_name, &con_def_key).await
-            {
-                std::fs::create_dir_all(p.parent().unwrap()).map_err(|e| e.to_string())?;
-                std::fs::write(&p, data).map_err(|e| e.to_string())?;
-                con_def_path = Some(p);
-            }
-        }
-    }
-
-    let exercise_mapping = if let Some(path) = con_def_path {
-        if let Ok(con_def) = MetadataService::parse_definition(&path) {
-            Some(MetadataService::build_exercise_mapping(&con_def))
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    let page_labels: Vec<String> = book_json
-        .pages
-        .page
-        .iter()
-        .map(|p| p.pagelabel.clone())
-        .collect();
-
-    let toc = MetadataService::parse_toc(&definition, overlay_config.as_ref());
-    let pages = MetadataService::build_page_index(
-        &definition,
-        &book_json,
-        exercise_mapping.as_ref(),
-        overlay_config.as_ref(),
-    );
-
-    Ok(BookMetadataResponse {
-        toc,
-        pages,
-        page_labels,
-        page_width: book_json.page_width,
-        page_height: book_json.page_height,
-    })
+    application::get_book_metadata(app, config_state, product_code).await
 }
 
 #[tauri::command]
@@ -229,85 +62,7 @@ pub async fn resolve_page_resource<R: Runtime>(
     product_code: String,
     page_label: String,
 ) -> Result<String, String> {
-    let (book_source, base_path) = {
-        let config = config_state.0.read().map_err(|e| e.to_string())?;
-        let source = config.book_source.clone();
-        let path = match &source {
-            Some(BookSource::Local { path }) => PathBuf::from(path).join("books"),
-            _ => {
-                let cache_dir = app
-                    .path()
-                    .app_cache_dir()
-                    .map_err(|e| format!("无法获取缓存目录: {}", e))?;
-                cache_dir.join("books")
-            }
-        };
-        (source, path)
-    };
-
-    let ebook_path = base_path.join(&product_code);
-    if !ebook_path.exists() {
-        return Err(format!("找不到书籍资源路径: {:?}", ebook_path));
-    }
-
-    let book_json_path = ebook_path
-        .join("assets")
-        .join("imgbook-meta")
-        .join("book.json");
-
-    let book_json = MetadataService::parse_book_json(&book_json_path)
-        .map_err(|e| format!("解析 book.json 失败: {}", e))?;
-
-    let page_info = book_json
-        .pages
-        .page
-        .iter()
-        .find(|p| p.pagelabel == page_label)
-        .ok_or_else(|| format!("未找到页码标签: {}", page_label))?;
-
-    let image_rel_path_raw = format!(
-        "assets/{}{}",
-        book_json.paths.pagexl_lrg_img_folder, page_info.bgimage
-    );
-
-    // 解码路径以处理 %20 等字符，确保在本地文件系统和 R2 Key 中使用原始字符
-    let image_rel_path = urlencoding::decode(&image_rel_path_raw)
-        .map(|s| s.into_owned())
-        .unwrap_or(image_rel_path_raw);
-
-    let image_path = ebook_path.join(&image_rel_path);
-
-    if !image_path.exists() {
-        if let Some(BookSource::CloudflareR2 { bucket_name, .. }) = book_source {
-            info!("资源文件缺失，尝试从 R2 下载: {}", image_rel_path);
-            let r2_state = app.state::<crate::utils::r2::R2ClientState>();
-            let client = crate::utils::r2::get_client(&config_state, &r2_state).await?;
-
-            let key = format!("books/{}/{}", product_code, image_rel_path);
-
-            if let Ok(data) = crate::utils::r2::get_object(&client, &bucket_name, &key).await {
-                std::fs::create_dir_all(image_path.parent().unwrap()).map_err(|e| e.to_string())?;
-                std::fs::write(&image_path, data).map_err(|e| e.to_string())?;
-            } else {
-                return Err(format!("从 R2 下载资源文件失败。Key: {}", key));
-            }
-        } else {
-            return Err(format!("图片文件不存在且未配置云端源: {:?}", image_path));
-        }
-    }
-
-    #[cfg(not(test))]
-    {
-        Ok(image_path
-            .to_str()
-            .ok_or("Invalid path encoding")?
-            .to_string())
-    }
-    #[cfg(test)]
-    {
-        let _ = app;
-        Ok(image_path.to_str().unwrap().to_string())
-    }
+    application::resolve_page_resource(app, config_state, product_code, page_label).await
 }
 
 #[tauri::command]
@@ -317,100 +72,7 @@ pub async fn resolve_book_asset<R: Runtime>(
     product_code: String,
     relative_path: String,
 ) -> Result<String, String> {
-    let (book_source, base_path) = {
-        let config = config_state.0.read().map_err(|e| e.to_string())?;
-        let source = config.book_source.clone();
-        let path = match &source {
-            Some(BookSource::Local { path }) => PathBuf::from(path).join("books"),
-            _ => {
-                let cache_dir = app
-                    .path()
-                    .app_cache_dir()
-                    .map_err(|e| format!("无法获取缓存目录: {}", e))?;
-                cache_dir.join("books")
-            }
-        };
-        (source, path)
-    };
-
-    let ebook_path = base_path.join(&product_code);
-
-    // 处理 URL 编码的路径
-    let safe_rel_path = urlencoding::decode(&relative_path)
-        .map(|s| s.into_owned())
-        .unwrap_or(relative_path);
-
-    // 尝试两个可能的本地路径：直接路径和 assets/ 下的路径
-    let paths_to_try = [
-        ebook_path.join(&safe_rel_path),
-        ebook_path.join("assets").join(&safe_rel_path),
-    ];
-
-    let mut asset_path = None;
-    for path in &paths_to_try {
-        if path.exists() {
-            asset_path = Some(path.clone());
-            break;
-        }
-    }
-
-    if asset_path.is_none() {
-        if let Some(BookSource::CloudflareR2 { bucket_name, .. }) = book_source {
-            info!("资源文件缺失，尝试从 R2 下载: {}", safe_rel_path);
-            let r2_state = app.state::<crate::utils::r2::R2ClientState>();
-            let client = crate::utils::r2::get_client(&config_state, &r2_state).await?;
-
-            // 尝试下载两个可能的 Key：直接路径和 assets/ 下的路径
-            let keys = [
-                format!("books/{}/assets/{}", product_code, safe_rel_path),
-                format!("books/{}/{}", product_code, safe_rel_path),
-            ];
-
-            let mut img_data = None;
-            let mut final_path = None;
-
-            for (i, key) in keys.iter().enumerate() {
-                if let Ok(data) = crate::utils::r2::get_object(&client, &bucket_name, key).await {
-                    img_data = Some(data);
-                    // 如果是用 assets/ 开头的 Key 下载成功的，保存到 assets/ 子目录
-                    final_path = Some(if i == 0 {
-                        &paths_to_try[1]
-                    } else {
-                        &paths_to_try[0]
-                    });
-                    break;
-                }
-            }
-
-            if let (Some(data), Some(path)) = (img_data, final_path) {
-                std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
-                std::fs::write(path, data).map_err(|e| e.to_string())?;
-                asset_path = Some(path.clone());
-            } else {
-                return Err(format!("从 R2 下载资源文件失败。尝试过的 Key: {:?}", keys));
-            }
-        } else {
-            return Err(format!(
-                "资源文件不存在且未配置云端源。尝试过的本地路径: {:?}",
-                paths_to_try
-            ));
-        }
-    }
-
-    let final_asset_path = asset_path.ok_or("无法定位资源文件")?;
-
-    #[cfg(not(test))]
-    {
-        Ok(final_asset_path
-            .to_str()
-            .ok_or("Invalid path encoding")?
-            .to_string())
-    }
-    #[cfg(test)]
-    {
-        let _ = app;
-        Ok(final_asset_path.to_str().unwrap().to_string())
-    }
+    application::resolve_book_asset(app, config_state, product_code, relative_path).await
 }
 
 #[tauri::command]
@@ -420,72 +82,18 @@ pub async fn resolve_exercise_resource<R: Runtime>(
     product_code: String,
     resource_id: String,
 ) -> Result<String, String> {
-    let base_path = {
-        let config = config_state.0.read().map_err(|e| e.to_string())?;
-        match &config.book_source {
-            Some(BookSource::Local { path }) => PathBuf::from(path).join("courses"),
-            _ => {
-                let cache_dir = app
-                    .path()
-                    .app_cache_dir()
-                    .map_err(|e| format!("无法获取缓存目录: {}", e))?;
-                cache_dir.join("courses")
-            }
-        }
-    };
-
-    let container_code = format!("{}con", product_code);
-    let container_path = base_path.join(&container_code);
-    if !container_path.exists() {
-        return Err(format!("找不到练习资源路径: {:?}", container_path));
-    }
-
-    let con_def_path = container_path.join("meta").join("definition.json");
-
-    let con_def = MetadataService::parse_definition(&con_def_path)
-        .map_err(|e| format!("解析练习容器定义失败: {}", e))?;
-
-    let resource = con_def
-        .resources
-        .generic
-        .get(&resource_id)
-        .ok_or_else(|| format!("未找到练习资源 ID: {}", resource_id))?;
-
-    let _xapi_data = resource.imgbook_unit.as_ref().and_then(|_| {
-        // This is a bit of a hack, because in our current model
-        // ext-cup-xapi is not yet fully defined in the struct.
-        // I should have checked the JSON more carefully.
-        None as Option<String>
-    });
-
-    // Actually I should look at the generic resource properly.
-    // Let's assume the path is assets/{url}/index.html as seen in grep.
-
-    // Manual JSON value access since our struct might not have the field yet
-    let content = std::fs::read_to_string(&con_def_path).map_err(|e| e.to_string())?;
-    let v: serde_json::Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-    let url = v["resources"]["generic"][&resource_id]["ext-cup-xapi"]["url"]
-        .as_str()
-        .ok_or_else(|| format!("资源 ID {} 缺少 ext-cup-xapi url", resource_id))?;
-
-    let index_path = container_path.join("assets").join(url).join("index.html");
-
-    // In a real app we'd also handle downloading the zip and extracting it here if missing.
-
-    #[cfg(not(test))]
-    {
-        Ok(index_path
-            .to_str()
-            .ok_or("Invalid path encoding")?
-            .to_string())
-    }
-    #[cfg(test)]
-    {
-        let _ = app;
-        Ok(index_path.to_str().unwrap().to_string())
-    }
+    application::resolve_exercise_resource(app, config_state, product_code, resource_id).await
 }
 
+#[tauri::command]
+pub async fn get_exercise_html<R: Runtime>(
+    app: AppHandle<R>,
+    config_state: State<'_, crate::services::config::ConfigState>,
+    product_code: String,
+    resource_id: String,
+) -> Result<application::ExerciseHtmlResponse, String> {
+    application::get_exercise_html(app, config_state, product_code, resource_id).await
+}
 #[tauri::command]
 pub async fn get_reading_progress(
     state: State<'_, crate::database::DbState>,
@@ -588,22 +196,48 @@ pub async fn get_book_cover(
     };
 
     let cover_name = book.cover.as_ref().ok_or("Book cover not defined")?;
-    let relative_path = format!("/books/{}/assets/{}", book.product_code, cover_name);
+    let relative_path = format!("books/{}/assets/{}", book.product_code, cover_name);
 
     match source {
         BookSource::Local { path } => {
-            info!("正在从本地读取封面: {}/{}", path, relative_path);
+            let base = std::path::PathBuf::from(&path);
+            crate::utils::local::ensure_path_not_in_project_temp(&base, "book_source.local.path")?;
+            info!(
+                "读取封面（本地源）: product_code={}, path={}/{}",
+                book.product_code, path, relative_path
+            );
             crate::utils::local::read_file(&path, &relative_path).await
         }
         BookSource::CloudflareR2 { bucket_name, .. } => {
-            let r2_state = app.state::<crate::utils::r2::R2ClientState>();
-            let client = crate::utils::r2::get_client(&state, &r2_state).await?;
+            let cache_dir = app
+                .path()
+                .app_cache_dir()
+                .map_err(|e| format!("无法获取缓存目录: {}", e))?;
+            let cache_cover_path = cache_dir.join(&relative_path);
+            let key = relative_path.clone();
+            let product_code = book.product_code.clone();
 
             info!(
-                "正在从 R2 读取封面: bucket={}, key={}",
-                bucket_name, relative_path
+                "读取封面（R2 源，本地优先）: product_code={}, bucket={}, key={}, cache_path={}",
+                product_code,
+                bucket_name,
+                key,
+                cache_cover_path.display()
             );
-            crate::utils::r2::get_object(&client, &bucket_name, &relative_path).await
+
+            read_cached_or_fetch_and_store(&cache_cover_path, || async {
+                let r2_state = app.state::<crate::utils::r2::R2ClientState>();
+                let client = crate::utils::r2::get_client(&state, &r2_state).await?;
+                crate::utils::r2::get_object(&client, &bucket_name, &key)
+                    .await
+                    .map_err(|e| {
+                        format!(
+                            "从 R2 下载封面失败 (product_code: {}, bucket: {}, key: {}): {}",
+                            product_code, bucket_name, key, e
+                        )
+                    })
+            })
+            .await
         }
     }
 }
@@ -632,7 +266,14 @@ mod tests {
     use super::*;
     use crate::database::{Database, SqliteDatabase};
     use crate::models::BookGroup;
+    use std::path::PathBuf;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use tempfile::NamedTempFile;
+
+    fn fixture_root() -> PathBuf {
+        PathBuf::from("tests").join("fixtures")
+    }
 
     #[tokio::test]
     async fn test_get_books_logic() {
@@ -772,11 +413,7 @@ mod tests {
         let app = mock_app();
 
         let mut config = AppConfig::default();
-        let base_path = std::env::current_dir()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("test_data");
+        let base_path = fixture_root();
         config.book_source = Some(BookSource::Local {
             path: base_path.to_str().unwrap().to_string(),
         });
@@ -794,6 +431,8 @@ mod tests {
 
         assert!(!result.toc.is_empty());
         assert!(!result.pages.is_empty());
+        assert!(result.exercise_toc.is_some());
+        assert!(!result.exercise_toc.as_ref().unwrap().is_empty());
         assert!(result.pages.contains_key("13"));
         assert!(result.page_width > 0.0);
     }
@@ -808,11 +447,7 @@ mod tests {
         let app = mock_app();
 
         let mut config = AppConfig::default();
-        let base_path = std::env::current_dir()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("test_data");
+        let base_path = fixture_root();
         config.book_source = Some(BookSource::Local {
             path: base_path.to_str().unwrap().to_string(),
         });
@@ -850,11 +485,7 @@ mod tests {
         let app = mock_app();
 
         let mut config = AppConfig::default();
-        let base_path = std::env::current_dir()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("test_data");
+        let base_path = fixture_root();
         config.book_source = Some(BookSource::Local {
             path: base_path.to_str().unwrap().to_string(),
         });
@@ -893,6 +524,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_resolve_book_asset_rejects_parent_dir_traversal() {
+        use crate::models::AppConfig;
+        use crate::services::config::ConfigState;
+        use std::sync::RwLock;
+        use tauri::test::mock_app;
+
+        let app = mock_app();
+
+        let mut config = AppConfig::default();
+        let base_path = fixture_root();
+        config.book_source = Some(BookSource::Local {
+            path: base_path.to_str().unwrap().to_string(),
+        });
+
+        app.manage(ConfigState(RwLock::new(config)));
+        let handle = app.app_handle();
+        let config_state = app.state::<ConfigState>();
+
+        let result = resolve_book_asset(
+            handle.clone(),
+            config_state,
+            "essgiuebk".to_string(),
+            "../secrets.txt".to_string(),
+        )
+        .await;
+
+        let err = result.expect_err("parent traversal should be rejected");
+        assert!(err.contains("[ERR_PATH_OUTSIDE_BASE]"));
+    }
+
+    #[tokio::test]
     async fn test_resolve_exercise_resource_command() {
         use crate::models::AppConfig;
         use crate::services::config::ConfigState;
@@ -902,11 +564,7 @@ mod tests {
         let app = mock_app();
 
         let mut config = AppConfig::default();
-        let base_path = std::env::current_dir()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("test_data");
+        let base_path = fixture_root();
         config.book_source = Some(BookSource::Local {
             path: base_path.to_str().unwrap().to_string(),
         });
@@ -924,7 +582,64 @@ mod tests {
                 .await
                 .unwrap();
 
+        let expected_prefix = base_path
+            .join("courses")
+            .join("essgiuebkcon")
+            .to_string_lossy()
+            .to_string();
         assert!(result.contains("index.html"));
         assert!(result.contains("07cf7db0991e11ecb1d45b87d87d8905"));
+        assert!(
+            result.starts_with(&expected_prefix),
+            "resolve_exercise_resource should use fixtures under tests/, got: {}",
+            result
+        );
+        let uses_temp_dir = PathBuf::from(&result)
+            .components()
+            .any(|component| component.as_os_str() == std::ffi::OsStr::new("temp"));
+        assert!(
+            !uses_temp_dir,
+            "resolve_exercise_resource should not fallback to temp directory in tests, got: {}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_read_cached_or_fetch_and_store_prefers_local_cache() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("books/essgiuebk/assets/cover.jpg");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, b"cached-cover").unwrap();
+
+        let remote_called = Arc::new(AtomicUsize::new(0));
+        let remote_called_clone = remote_called.clone();
+        let bytes = read_cached_or_fetch_and_store(&path, move || async move {
+            remote_called_clone.fetch_add(1, Ordering::SeqCst);
+            Ok::<Vec<u8>, String>(b"remote-cover".to_vec())
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(bytes, b"cached-cover");
+        assert_eq!(remote_called.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn test_read_cached_or_fetch_and_store_fetches_and_persists_when_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("books/essgiuebk/assets/cover.jpg");
+
+        let remote_called = Arc::new(AtomicUsize::new(0));
+        let remote_called_clone = remote_called.clone();
+        let bytes = read_cached_or_fetch_and_store(&path, move || async move {
+            remote_called_clone.fetch_add(1, Ordering::SeqCst);
+            Ok::<Vec<u8>, String>(b"remote-cover".to_vec())
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(bytes, b"remote-cover");
+        assert_eq!(remote_called.load(Ordering::SeqCst), 1);
+        assert_eq!(std::fs::read(&path).unwrap(), b"remote-cover");
     }
 }

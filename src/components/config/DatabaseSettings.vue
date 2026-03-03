@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { CopyOutlined } from '@ant-design/icons-vue'
+import { CopyOutlined, FolderOpenOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import type { DatabaseType } from '../../types'
 
 const { t } = useI18n()
@@ -20,6 +20,9 @@ defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'update:dbType', value: DatabaseType): void
+  (e: 'update:sqlitePath', value: string): void
+  (e: 'choose-sqlite-path'): void
+  (e: 'restore-default-sqlite-path'): void
   (e: 'copy-path', value: string): void
   (e: 'test-connection'): void
 }>()
@@ -49,16 +52,36 @@ const emit = defineEmits<{
           <a-tooltip :title="sqlitePath" placement="topLeft">
             <a-input
               :value="sqlitePath"
-              readonly
+              :placeholder="t('config.filePath')"
               autocomplete="off"
               autocapitalize="none"
               autocorrect="off"
               spellcheck="false"
+              @update:value="emit('update:sqlitePath', $event)"
             >
               <template #addonAfter>
-                <a-tooltip :title="t('common.copy' as any) || 'Copy'">
-                  <CopyOutlined @click="emit('copy-path', sqlitePath)" class="cursor-pointer" />
-                </a-tooltip>
+                <span class="sqlite-action-icons">
+                  <a-tooltip :title="t('config.browse')">
+                    <FolderOpenOutlined
+                      @click="emit('choose-sqlite-path')"
+                      class="choose-path-icon cursor-pointer"
+                    />
+                  </a-tooltip>
+                  <a-tooltip
+                    :title="t('config.restoreDefaultPath' as any) || 'Restore Default Path'"
+                  >
+                    <ReloadOutlined
+                      @click="emit('restore-default-sqlite-path')"
+                      class="restore-default-icon cursor-pointer"
+                    />
+                  </a-tooltip>
+                  <a-tooltip :title="t('common.copy' as any) || 'Copy'">
+                    <CopyOutlined
+                      @click="emit('copy-path', sqlitePath)"
+                      class="copy-path-icon cursor-pointer"
+                    />
+                  </a-tooltip>
+                </span>
               </template>
             </a-input>
           </a-tooltip>
@@ -124,5 +147,11 @@ const emit = defineEmits<{
 
 .cursor-pointer:hover {
   color: #1677ff;
+}
+
+.sqlite-action-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

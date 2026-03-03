@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useReaderStore } from '../../stores/reader'
 import { useReaderAudio } from '../../composables/useReaderAudio'
 import {
   PlayCircleFilled,
   PauseCircleFilled,
+  LoadingOutlined,
   CloseOutlined,
   StepBackwardOutlined,
   StepForwardOutlined,
@@ -14,12 +15,15 @@ import {
   PlusOutlined,
 } from '@ant-design/icons-vue'
 import { theme } from 'ant-design-vue'
+import { useI18n } from 'vue-i18n'
 
 const { useToken } = theme
 const { token } = useToken()
+const { t } = useI18n()
 
 const readerStore = useReaderStore()
-const { isPlaying, audioCurrentTime, audioDuration, currentAudioPath } = storeToRefs(readerStore)
+const { isPlaying, audioCurrentTime, audioDuration, currentAudioPath, isAudioLoading, audioError } =
+  storeToRefs(readerStore)
 
 const {
   seekAudio,
@@ -31,24 +35,68 @@ const {
 const isCollapsed = ref(false)
 const isDragging = ref(false)
 const isSeeking = ref(false)
+const playerRef = ref<HTMLElement | null>(null)
 const progressRef = ref<HTMLElement | null>(null)
 const startPos = ref({ x: 0, y: 0 })
 
 const COLLAPSED_WIDTH = 56
-const EXPANDED_WIDTH = 240
+const EXPANDED_WIDTH = 280
+const VIEWPORT_MARGIN = 12
+const DEFAULT_TOP = 80
 
 // Use state for position to survive re-renders
-const position = ref({ x: window.innerWidth - EXPANDED_WIDTH - 20, y: 80 })
+const position = ref({ x: window.innerWidth - EXPANDED_WIDTH - VIEWPORT_MARGIN, y: DEFAULT_TOP })
 const lastExpandedPosition = ref({ x: position.value.x, y: position.value.y })
 
+function getPlayerSize() {
+  const fallbackWidth = isCollapsed.value ? COLLAPSED_WIDTH : EXPANDED_WIDTH
+  const fallbackHeight = isCollapsed.value ? 116 : 164
+
+  return {
+    width: playerRef.value?.offsetWidth ?? fallbackWidth,
+    height: playerRef.value?.offsetHeight ?? fallbackHeight,
+  }
+}
+
+function clampPosition(nextPosition: { x: number; y: number }) {
+  const { width, height } = getPlayerSize()
+  const minX = VIEWPORT_MARGIN
+  const minY = VIEWPORT_MARGIN
+  const maxX = Math.max(minX, window.innerWidth - width - VIEWPORT_MARGIN)
+  const maxY = Math.max(minY, window.innerHeight - height - VIEWPORT_MARGIN)
+
+  return {
+    x: Math.min(Math.max(nextPosition.x, minX), maxX),
+    y: Math.min(Math.max(nextPosition.y, minY), maxY),
+  }
+}
+
+async function keepPlayerInViewport() {
+  await nextTick()
+  position.value = clampPosition(position.value)
+  lastExpandedPosition.value = clampPosition(lastExpandedPosition.value)
+}
+
 // Handle position memory and auto-snap
-watch(isCollapsed, (val) => {
+watch(isCollapsed, async (val) => {
   if (val) {
     lastExpandedPosition.value = { ...position.value }
-    position.value.x = window.innerWidth - COLLAPSED_WIDTH
-  } else {
-    position.value = { ...lastExpandedPosition.value }
+    await nextTick()
+    const collapsedWidth = playerRef.value?.offsetWidth ?? COLLAPSED_WIDTH
+    position.value = clampPosition({
+      x: window.innerWidth - collapsedWidth - VIEWPORT_MARGIN,
+      y: position.value.y,
+    })
+    return
   }
+
+  position.value = { ...lastExpandedPosition.value }
+  await keepPlayerInViewport()
+})
+
+watch(currentAudioPath, async (path) => {
+  if (!path) return
+  await keepPlayerInViewport()
 })
 
 const formatTime = (seconds: number) => {
@@ -79,10 +127,7 @@ const onDragMove = (e: PointerEvent) => {
   if (!isDragging.value) return
   let newX = e.clientX - startPos.value.x
   let newY = e.clientY - startPos.value.y
-  const width = isCollapsed.value ? COLLAPSED_WIDTH : EXPANDED_WIDTH
-  newX = Math.max(0, Math.min(window.innerWidth - width, newX))
-  newY = Math.max(0, Math.min(window.innerHeight - 100, newY))
-  position.value = { x: newX, y: newY }
+  position.value = clampPosition({ x: newX, y: newY })
 }
 
 const onDragEnd = (e: PointerEvent) => {
@@ -97,7 +142,7 @@ const onDragEnd = (e: PointerEvent) => {
 
 // Seek logic
 const handleSeek = (e: PointerEvent) => {
-  if (!progressRef.value || audioDuration.value === 0) return
+  if (isAudioLoading.value || !progressRef.value || audioDuration.value === 0) return
   const rect = progressRef.value.getBoundingClientRect()
   const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
   const percentage = x / rect.width
@@ -114,6 +159,11 @@ const onProgressMouseDown = (e: PointerEvent) => {
   el.addEventListener('pointermove', onProgressMouseMove as any)
   el.addEventListener('pointerup', onProgressMouseUp as any)
   el.addEventListener('pointercancel', onProgressMouseUp as any)
+}
+
+const onProgressPointerDown = (e: PointerEvent) => {
+  if (isAudioLoading.value) return
+  onProgressMouseDown(e)
 }
 
 const onProgressMouseMove = (e: PointerEvent) => {
@@ -140,11 +190,28 @@ function closePlayer() {
   pauseAudio()
   readerStore.resetAudio()
 }
+
+const onViewportResize = () => {
+  position.value = clampPosition(position.value)
+  lastExpandedPosition.value = clampPosition(lastExpandedPosition.value)
+}
+
+onMounted(() => {
+  window.addEventListener('resize', onViewportResize)
+  window.addEventListener('orientationchange', onViewportResize)
+  onViewportResize()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onViewportResize)
+  window.removeEventListener('orientationchange', onViewportResize)
+})
 </script>
 
 <template>
   <Transition name="fade">
     <div
+      ref="playerRef"
       v-if="currentAudioPath"
       class="reader-audio-player fixed transition-all duration-300"
       :class="{ 'is-dragging': isDragging, 'is-collapsed': isCollapsed }"
@@ -190,8 +257,14 @@ function closePlayer() {
       <div v-if="!isCollapsed" class="player-content px-5 pb-5 pt-1">
         <!-- Main Controls -->
         <div class="mb-4 mt-1 flex items-center justify-center gap-4" @pointerdown.stop>
-          <a-button type="text" shape="circle" class="control-btn" @click="seekAudio(-3)">
-            <template #icon><StepBackwardOutlined style="font-size: 16px" /></template>
+          <a-button
+            type="text"
+            shape="circle"
+            class="control-btn"
+            :disabled="isAudioLoading"
+            @click="seekAudio(-3)"
+          >
+            <template #icon><StepBackwardOutlined style="font-size: 20px" /></template>
           </a-button>
 
           <button
@@ -199,12 +272,23 @@ function closePlayer() {
             :style="{ backgroundColor: token.colorPrimary }"
             @click="handleTogglePlay"
           >
+            <LoadingOutlined
+              v-if="isAudioLoading"
+              class="spin-icon"
+              style="font-size: 22px; color: white"
+            />
             <PauseCircleFilled v-if="isPlaying" style="font-size: 24px; color: white" />
-            <PlayCircleFilled v-else style="font-size: 24px; color: white" />
+            <PlayCircleFilled v-else-if="!isAudioLoading" style="font-size: 24px; color: white" />
           </button>
 
-          <a-button type="text" shape="circle" class="control-btn" @click="seekAudio(3)">
-            <template #icon><StepForwardOutlined style="font-size: 16px" /></template>
+          <a-button
+            type="text"
+            shape="circle"
+            class="control-btn"
+            :disabled="isAudioLoading"
+            @click="seekAudio(3)"
+          >
+            <template #icon><StepForwardOutlined style="font-size: 20px" /></template>
           </a-button>
         </div>
 
@@ -216,8 +300,12 @@ function closePlayer() {
 
           <div
             ref="progressRef"
-            class="group/progress no-drag flex h-3 flex-1 cursor-pointer items-center"
-            @pointerdown.stop="onProgressMouseDown"
+            class="group/progress no-drag flex h-3 flex-1 items-center"
+            :class="{
+              'cursor-not-allowed opacity-60': isAudioLoading,
+              'cursor-pointer': !isAudioLoading,
+            }"
+            @pointerdown.stop="onProgressPointerDown"
           >
             <div
               class="relative h-1 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10"
@@ -234,6 +322,13 @@ function closePlayer() {
             formatTime(audioDuration)
           }}</span>
         </div>
+
+        <p v-if="isAudioLoading" class="mt-2 text-center text-[10px] font-medium opacity-60">
+          {{ t('reader.audioLoading') }}
+        </p>
+        <p v-if="audioError" class="mt-2 text-center text-[10px] font-medium text-red-500">
+          {{ t('reader.audioLoadFailed') }}: {{ audioError }}
+        </p>
       </div>
 
       <!-- Mini Mode (Collapsed) -->
@@ -261,8 +356,13 @@ function closePlayer() {
           @pointerdown.stop
           @click="handleTogglePlay"
         >
+          <LoadingOutlined
+            v-if="isAudioLoading"
+            class="spin-icon"
+            :style="{ color: token.colorPrimary, fontSize: '22px' }"
+          />
           <PauseCircleFilled
-            v-if="isPlaying"
+            v-else-if="isPlaying"
             :style="{ color: token.colorPrimary, fontSize: '24px' }"
           />
           <PlayCircleFilled v-else :style="{ color: token.colorPrimary, fontSize: '24px' }" />
@@ -274,7 +374,8 @@ function closePlayer() {
 
 <style scoped>
 .reader-audio-player {
-  width: 240px;
+  width: min(280px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
   border-radius: 16px;
   border: 1px solid;
   user-select: none;
@@ -335,8 +436,8 @@ function closePlayer() {
   color: v-bind('token.colorTextSecondary');
   opacity: 0.4;
   transition: all 0.2s ease;
-  height: 32px;
-  width: 32px;
+  height: 40px;
+  width: 40px;
 }
 
 .control-btn:hover {
@@ -349,6 +450,10 @@ function closePlayer() {
   animation: bar-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+.spin-icon {
+  animation: spin 0.9s linear infinite;
+}
+
 @keyframes bar-pulse {
   0%,
   100% {
@@ -356,6 +461,15 @@ function closePlayer() {
   }
   50% {
     opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 

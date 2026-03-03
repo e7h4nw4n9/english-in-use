@@ -1,0 +1,2802 @@
+{
+  "meta": {
+    "schema": 1,
+    "thumbnailsmall": "cover.jpg",
+    "thumbnaillarge": "cover.jpg",
+    "producttype": "imgbook",
+    "model": {
+      "ebook-page-layout": "width",
+      "type": "imgbook",
+      "ebook-page-spread": "double",
+      "cup-options": {
+        "dictionary": {
+          "code": "none",
+          "title": "None"
+        }
+      }
+    },
+    "author": "",
+    "title": "eBook",
+    "code": "essgiuebk",
+    "constraints": {
+      "loRequired": false
+    },
+    "productcode": "essgiuebk",
+    "ext_product_id": "9781009246002",
+    "versions": {
+      "content-items": 24
+    }
+  },
+  "definition": {
+    "learning-objectives": {},
+    "tags": {}
+  },
+  "items": {
+    "default": [
+      {
+        "name": "Title",
+        "item-type": "folder",
+        "item-code": "1652766081276",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "i",
+          "start-page-no": "i",
+          "end-page-no": "i",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Imprint",
+        "item-type": "folder",
+        "item-code": "1652766081277",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "ii",
+          "start-page-no": "ii",
+          "end-page-no": "ii",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Contents",
+        "item-type": "folder",
+        "item-code": "1652766081278",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "iii",
+          "start-page-no": "iii",
+          "end-page-no": "vi",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Acknowledgements ",
+        "item-type": "folder",
+        "item-code": "1652766081279",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "vii",
+          "start-page-no": "vii",
+          "end-page-no": "vii",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "To the Student ",
+        "item-type": "folder",
+        "item-code": "1652766081280",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "viii",
+          "start-page-no": "viii",
+          "end-page-no": "ix",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "To the Teacher ",
+        "item-type": "folder",
+        "item-code": "1652766081281",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "x",
+          "start-page-no": "x",
+          "end-page-no": "x",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "eBook",
+        "item-type": "folder",
+        "item-code": "1652766081282",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "xi",
+          "start-page-no": "xi",
+          "end-page-no": "xi",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Blank page",
+        "item-type": "folder",
+        "item-code": "1652766081283",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "xii",
+          "start-page-no": "xii",
+          "end-page-no": "xii",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Present",
+        "item-type": "folder",
+        "item-code": "1652766081284",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "12",
+          "start-page-no": "12",
+          "end-page-no": "29",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "am/is/are",
+            "item-type": "resource",
+            "resource": "RE_0001",
+            "item-code": "1652766081284/1652766081285",
+            "tracking": true
+          },
+          {
+            "name": "am/is/are (questions)",
+            "item-type": "resource",
+            "resource": "RE_0002",
+            "item-code": "1652766081284/1652766081286",
+            "tracking": true
+          },
+          {
+            "name": "I am doing (present continuous)",
+            "item-type": "resource",
+            "resource": "RE_0003",
+            "item-code": "1652766081284/1652766081287",
+            "tracking": true
+          },
+          {
+            "name": "are you doing? (present continuous questions)",
+            "item-type": "resource",
+            "resource": "RE_0004",
+            "item-code": "1652766081284/1652766081288",
+            "tracking": true
+          },
+          {
+            "name": "I do/work/like etc. (present simple)",
+            "item-type": "resource",
+            "resource": "RE_0005",
+            "item-code": "1652766081284/1652766081289",
+            "tracking": true
+          },
+          {
+            "name": "I don’t ... (present simple negative)",
+            "item-type": "resource",
+            "resource": "RE_0006",
+            "item-code": "1652766081284/1652766081290",
+            "tracking": true
+          },
+          {
+            "name": "Do you ... ? (present simple questions)",
+            "item-type": "resource",
+            "resource": "RE_0007",
+            "item-code": "1652766081284/1652766081291",
+            "tracking": true
+          },
+          {
+            "name": "I am doing (present continuous) and I do (present simple)",
+            "item-type": "resource",
+            "resource": "RE_0008",
+            "item-code": "1652766081284/1652766081292",
+            "tracking": true
+          },
+          {
+            "name": "I have ... and I’ve got …",
+            "item-type": "resource",
+            "resource": "RE_0009",
+            "item-code": "1652766081284/1652766081293",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Past",
+        "item-type": "folder",
+        "item-code": "1652766081294",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "30",
+          "start-page-no": "30",
+          "end-page-no": "39",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "was/were",
+            "item-type": "resource",
+            "resource": "RE_00010",
+            "item-code": "1652766081294/1652766081295",
+            "tracking": true
+          },
+          {
+            "name": "worked/got/went etc. (past simple)",
+            "item-type": "resource",
+            "resource": "RE_00011",
+            "item-code": "1652766081294/1652766081296",
+            "tracking": true
+          },
+          {
+            "name": "I didn’t ...Did you ... ? (past simple negative and questions)",
+            "item-type": "resource",
+            "resource": "RE_00012",
+            "item-code": "1652766081294/1652766081297",
+            "tracking": true
+          },
+          {
+            "name": "I was doing (past continuous)",
+            "item-type": "resource",
+            "resource": "RE_00013",
+            "item-code": "1652766081294/1652766081298",
+            "tracking": true
+          },
+          {
+            "name": "I was doing (past continuous) and I did (past simple)",
+            "item-type": "resource",
+            "resource": "RE_00014",
+            "item-code": "1652766081294/1652766081299",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Present perfect",
+        "item-type": "folder",
+        "item-code": "1652766081300",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "40",
+          "start-page-no": "40",
+          "end-page-no": "51",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "I have done (present perfect 1)",
+            "item-type": "resource",
+            "resource": "RE_00015",
+            "item-code": "1652766081300/1652766081301",
+            "tracking": true
+          },
+          {
+            "name": "I’ve just ...I’ve already ... I haven’t ... yet (present perfect 2)",
+            "item-type": "resource",
+            "resource": "RE_00016",
+            "item-code": "1652766081300/1652766081302",
+            "tracking": true
+          },
+          {
+            "name": "Have you ever ... ? (present perfect 3)",
+            "item-type": "resource",
+            "resource": "RE_00017",
+            "item-code": "1652766081300/1652766081303",
+            "tracking": true
+          },
+          {
+            "name": "How long have you ... ? (present perfect 4)",
+            "item-type": "resource",
+            "resource": "RE_00018",
+            "item-code": "1652766081300/1652766081304",
+            "tracking": true
+          },
+          {
+            "name": "for since ago",
+            "item-type": "resource",
+            "resource": "RE_00019",
+            "item-code": "1652766081300/1652766081305",
+            "tracking": true
+          },
+          {
+            "name": "I have done (present perfect) and I did (past)",
+            "item-type": "resource",
+            "resource": "RE_00020",
+            "item-code": "1652766081300/1652766081306",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Passive",
+        "item-type": "folder",
+        "item-code": "1652766081307",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "52",
+          "start-page-no": "52",
+          "end-page-no": "55",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "is done was done (passive 1)",
+            "item-type": "resource",
+            "resource": "RE_00021",
+            "item-code": "1652766081307/1652766081308",
+            "tracking": true
+          },
+          {
+            "name": "is being done has been done (passive 2)",
+            "item-type": "resource",
+            "resource": "RE_00022",
+            "item-code": "1652766081307/1652766081309",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Verb forms",
+        "item-type": "folder",
+        "item-code": "1652766081310",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "56",
+          "start-page-no": "56",
+          "end-page-no": "59",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "be/have/do in present and past tenses",
+            "item-type": "resource",
+            "resource": "RE_00023",
+            "item-code": "1652766081310/1652766081311",
+            "tracking": true
+          },
+          {
+            "name": "Regular and irregular verbs",
+            "item-type": "resource",
+            "resource": "RE_00024",
+            "item-code": "1652766081310/1652766081312",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Future",
+        "item-type": "folder",
+        "item-code": "1652766081313",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "60",
+          "start-page-no": "60",
+          "end-page-no": "67",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "What are you doing tomorrow?",
+            "item-type": "resource",
+            "resource": "RE_00025",
+            "item-code": "1652766081313/1652766081314",
+            "tracking": true
+          },
+          {
+            "name": "I’m going to ...",
+            "item-type": "resource",
+            "resource": "RE_00026",
+            "item-code": "1652766081313/1652766081315",
+            "tracking": true
+          },
+          {
+            "name": "will/shall 1",
+            "item-type": "resource",
+            "resource": "RE_00027",
+            "item-code": "1652766081313/1652766081316",
+            "tracking": true
+          },
+          {
+            "name": "will/shall 2",
+            "item-type": "resource",
+            "resource": "RE_00028",
+            "item-code": "1652766081313/1652766081317",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Modals, imperative etc.",
+        "item-type": "folder",
+        "item-code": "1652766081318",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "68",
+          "start-page-no": "68",
+          "end-page-no": "83",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "might",
+            "item-type": "resource",
+            "resource": "RE_00029",
+            "item-code": "1652766081318/1652766081319",
+            "tracking": true
+          },
+          {
+            "name": "can and could",
+            "item-type": "resource",
+            "resource": "RE_00030",
+            "item-code": "1652766081318/1652766081320",
+            "tracking": true
+          },
+          {
+            "name": "must mustn’t don’t need to",
+            "item-type": "resource",
+            "resource": "RE_00031",
+            "item-code": "1652766081318/1652766081321",
+            "tracking": true
+          },
+          {
+            "name": "should",
+            "item-type": "resource",
+            "resource": "RE_00032",
+            "item-code": "1652766081318/1652766081322",
+            "tracking": true
+          },
+          {
+            "name": "I have to ...",
+            "item-type": "resource",
+            "resource": "RE_00033",
+            "item-code": "1652766081318/1652766081323",
+            "tracking": true
+          },
+          {
+            "name": "Would you like ... ? I’d like ...",
+            "item-type": "resource",
+            "resource": "RE_00034",
+            "item-code": "1652766081318/1652766081324",
+            "tracking": true
+          },
+          {
+            "name": "Do this! Don’t do that! Let’s do this!",
+            "item-type": "resource",
+            "resource": "RE_00035",
+            "item-code": "1652766081318/1652766081325",
+            "tracking": true
+          },
+          {
+            "name": "I used to ...",
+            "item-type": "resource",
+            "resource": "RE_00036",
+            "item-code": "1652766081318/1652766081326",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "There and it",
+        "item-type": "folder",
+        "item-code": "1652766081327",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "84",
+          "start-page-no": "84",
+          "end-page-no": "89",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "there is there are",
+            "item-type": "resource",
+            "resource": "RE_00037",
+            "item-code": "1652766081327/1652766081328",
+            "tracking": true
+          },
+          {
+            "name": "there was/were there has/have been there will be",
+            "item-type": "resource",
+            "resource": "RE_00038",
+            "item-code": "1652766081327/1652766081329",
+            "tracking": true
+          },
+          {
+            "name": "It …",
+            "item-type": "resource",
+            "resource": "RE_00039",
+            "item-code": "1652766081327/1652766081330",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Auxiliary verbs",
+        "item-type": "folder",
+        "item-code": "1652766081331",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "90",
+          "start-page-no": "90",
+          "end-page-no": "97",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "I am, I don’t etc.",
+            "item-type": "resource",
+            "resource": "RE_00040",
+            "item-code": "1652766081331/1652766081332",
+            "tracking": true
+          },
+          {
+            "name": "Have you? Are you? Don’t you? etc.",
+            "item-type": "resource",
+            "resource": "RE_00041",
+            "item-code": "1652766081331/1652766081333",
+            "tracking": true
+          },
+          {
+            "name": "too/either so am I / neither do I etc.",
+            "item-type": "resource",
+            "resource": "RE_00042",
+            "item-code": "1652766081331/1652766081334",
+            "tracking": true
+          },
+          {
+            "name": "isn’t, haven’t, don’t etc. (negatives)",
+            "item-type": "resource",
+            "resource": "RE_00043",
+            "item-code": "1652766081331/1652766081335",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Questions",
+        "item-type": "folder",
+        "item-code": "1652766081336",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "98",
+          "start-page-no": "98",
+          "end-page-no": "109",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "is it ... ? have you ... ? do they ... ? etc. (questions 1)",
+            "item-type": "resource",
+            "resource": "RE_00044",
+            "item-code": "1652766081336/1652766081337",
+            "tracking": true
+          },
+          {
+            "name": "Who saw you? Who did you see? (questions 2)",
+            "item-type": "resource",
+            "resource": "RE_00045",
+            "item-code": "1652766081336/1652766081338",
+            "tracking": true
+          },
+          {
+            "name": "Who is she talking to? What is it like? (questions 3)",
+            "item-type": "resource",
+            "resource": "RE_00046",
+            "item-code": "1652766081336/1652766081339",
+            "tracking": true
+          },
+          {
+            "name": "What ... ? Which ... ? How ... ? (questions 4)",
+            "item-type": "resource",
+            "resource": "RE_00047",
+            "item-code": "1652766081336/1652766081340",
+            "tracking": true
+          },
+          {
+            "name": "How long does it take ... ?",
+            "item-type": "resource",
+            "resource": "RE_00048",
+            "item-code": "1652766081336/1652766081341",
+            "tracking": true
+          },
+          {
+            "name": "Do you know where ... ? I don’t know what ... etc.",
+            "item-type": "resource",
+            "resource": "RE_00049",
+            "item-code": "1652766081336/1652766081342",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Reported speech",
+        "item-type": "folder",
+        "item-code": "1652766081343",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "110",
+          "start-page-no": "110",
+          "end-page-no": "111",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "She said that ... He told me that ...",
+            "item-type": "resource",
+            "resource": "RE_00050",
+            "item-code": "1652766081343/1652766081344",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "–ing and to ...",
+        "item-type": "folder",
+        "item-code": "1652766081345",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "112",
+          "start-page-no": "112",
+          "end-page-no": "119",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "work/working go/going do/doing",
+            "item-type": "resource",
+            "resource": "RE_00051",
+            "item-code": "1652766081345/1652766081346",
+            "tracking": true
+          },
+          {
+            "name": "to ... (I want to do) and –ing (I enjoy doing)",
+            "item-type": "resource",
+            "resource": "RE_00052",
+            "item-code": "1652766081345/1652766081347",
+            "tracking": true
+          },
+          {
+            "name": "I want you to ... I told you to ...",
+            "item-type": "resource",
+            "resource": "RE_00053",
+            "item-code": "1652766081345/1652766081348",
+            "tracking": true
+          },
+          {
+            "name": "I went to the shop to ...",
+            "item-type": "resource",
+            "resource": "RE_00054",
+            "item-code": "1652766081345/1652766081349",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Go, get, do, make and have",
+        "item-type": "folder",
+        "item-code": "1652766081350",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "120",
+          "start-page-no": "120",
+          "end-page-no": "127",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "go to ... go on ... go for ... go –ing",
+            "item-type": "resource",
+            "resource": "RE_00055",
+            "item-code": "1652766081350/1652766081351",
+            "tracking": true
+          },
+          {
+            "name": "get",
+            "item-type": "resource",
+            "resource": "RE_00056",
+            "item-code": "1652766081350/1652766081352",
+            "tracking": true
+          },
+          {
+            "name": "do and make",
+            "item-type": "resource",
+            "resource": "RE_00057",
+            "item-code": "1652766081350/1652766081353",
+            "tracking": true
+          },
+          {
+            "name": "have",
+            "item-type": "resource",
+            "resource": "RE_00058",
+            "item-code": "1652766081350/1652766081354",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Pronouns and possessives",
+        "item-type": "folder",
+        "item-code": "1652766081355",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "128",
+          "start-page-no": "128",
+          "end-page-no": "139",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "I/me he/him they/them etc.",
+            "item-type": "resource",
+            "resource": "RE_00059",
+            "item-code": "1652766081355/1652766081356",
+            "tracking": true
+          },
+          {
+            "name": "my/his/their etc.",
+            "item-type": "resource",
+            "resource": "RE_00060",
+            "item-code": "1652766081355/1652766081357",
+            "tracking": true
+          },
+          {
+            "name": "Whose is this? It’s mine/yours/hers etc.",
+            "item-type": "resource",
+            "resource": "RE_00061",
+            "item-code": "1652766081355/1652766081358",
+            "tracking": true
+          },
+          {
+            "name": "I/me/my/mine",
+            "item-type": "resource",
+            "resource": "RE_00062",
+            "item-code": "1652766081355/1652766081359",
+            "tracking": true
+          },
+          {
+            "name": "myself/yourself/themselves etc.",
+            "item-type": "resource",
+            "resource": "RE_00063",
+            "item-code": "1652766081355/1652766081360",
+            "tracking": true
+          },
+          {
+            "name": "–’s (Kate’s camera / my brother’s car etc.)",
+            "item-type": "resource",
+            "resource": "RE_00064",
+            "item-code": "1652766081355/1652766081361",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "A and the",
+        "item-type": "folder",
+        "item-code": "1652766081362",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "140",
+          "start-page-no": "140",
+          "end-page-no": "157",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "a/an ...",
+            "item-type": "resource",
+            "resource": "RE_00065",
+            "item-code": "1652766081362/1652766081363",
+            "tracking": true
+          },
+          {
+            "name": "train(s) bus(es) (singular and plural)",
+            "item-type": "resource",
+            "resource": "RE_00066",
+            "item-code": "1652766081362/1652766081364",
+            "tracking": true
+          },
+          {
+            "name": "a bottle / some water (countable/uncountable 1)",
+            "item-type": "resource",
+            "resource": "RE_00067",
+            "item-code": "1652766081362/1652766081365",
+            "tracking": true
+          },
+          {
+            "name": "a cake / some cake / some cakes (countable/uncountable 2)",
+            "item-type": "resource",
+            "resource": "RE_00068",
+            "item-code": "1652766081362/1652766081366",
+            "tracking": true
+          },
+          {
+            "name": "a/an and the",
+            "item-type": "resource",
+            "resource": "RE_00069",
+            "item-code": "1652766081362/1652766081367",
+            "tracking": true
+          },
+          {
+            "name": "the ...",
+            "item-type": "resource",
+            "resource": "RE_00070",
+            "item-code": "1652766081362/1652766081368",
+            "tracking": true
+          },
+          {
+            "name": "go to work go home go to the cinema",
+            "item-type": "resource",
+            "resource": "RE_00071",
+            "item-code": "1652766081362/1652766081369",
+            "tracking": true
+          },
+          {
+            "name": "I like music I hate exams",
+            "item-type": "resource",
+            "resource": "RE_00072",
+            "item-code": "1652766081362/1652766081370",
+            "tracking": true
+          },
+          {
+            "name": "the ... (names of places)",
+            "item-type": "resource",
+            "resource": "RE_00073",
+            "item-code": "1652766081362/1652766081371",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Determiners and pronouns",
+        "item-type": "folder",
+        "item-code": "1652766081372",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "158",
+          "start-page-no": "158",
+          "end-page-no": "179",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "this/that/these/those",
+            "item-type": "resource",
+            "resource": "RE_00074",
+            "item-code": "1652766081372/1652766081373",
+            "tracking": true
+          },
+          {
+            "name": "one/ones",
+            "item-type": "resource",
+            "resource": "RE_00075",
+            "item-code": "1652766081372/1652766081374",
+            "tracking": true
+          },
+          {
+            "name": "some and any",
+            "item-type": "resource",
+            "resource": "RE_00076",
+            "item-code": "1652766081372/1652766081375",
+            "tracking": true
+          },
+          {
+            "name": "not + any no none",
+            "item-type": "resource",
+            "resource": "RE_00077",
+            "item-code": "1652766081372/1652766081376",
+            "tracking": true
+          },
+          {
+            "name": "not + anybody/anyone/anything nobody/no–one/nothing",
+            "item-type": "resource",
+            "resource": "RE_00078",
+            "item-code": "1652766081372/1652766081377",
+            "tracking": true
+          },
+          {
+            "name": "somebody/anything/nowhere etc.",
+            "item-type": "resource",
+            "resource": "RE_00079",
+            "item-code": "1652766081372/1652766081378",
+            "tracking": true
+          },
+          {
+            "name": "every and all",
+            "item-type": "resource",
+            "resource": "RE_00080",
+            "item-code": "1652766081372/1652766081379",
+            "tracking": true
+          },
+          {
+            "name": "all most some any no/none",
+            "item-type": "resource",
+            "resource": "RE_00081",
+            "item-code": "1652766081372/1652766081380",
+            "tracking": true
+          },
+          {
+            "name": "both either neither",
+            "item-type": "resource",
+            "resource": "RE_00082",
+            "item-code": "1652766081372/1652766081381",
+            "tracking": true
+          },
+          {
+            "name": "a lot much many",
+            "item-type": "resource",
+            "resource": "RE_00083",
+            "item-code": "1652766081372/1652766081382",
+            "tracking": true
+          },
+          {
+            "name": "(a) little (a) few",
+            "item-type": "resource",
+            "resource": "RE_00084",
+            "item-code": "1652766081372/1652766081383",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Adjectives and adverbs",
+        "item-type": "folder",
+        "item-code": "1652766081384",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "180",
+          "start-page-no": "180",
+          "end-page-no": "195",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "old/nice/interesting etc. (adjectives)",
+            "item-type": "resource",
+            "resource": "RE_00085",
+            "item-code": "1652766081384/1652766081385",
+            "tracking": true
+          },
+          {
+            "name": "quickly/badly/suddenly etc. (adverbs)",
+            "item-type": "resource",
+            "resource": "RE_00086",
+            "item-code": "1652766081384/1652766081386",
+            "tracking": true
+          },
+          {
+            "name": "old/older expensive / more expensive",
+            "item-type": "resource",
+            "resource": "RE_00087",
+            "item-code": "1652766081384/1652766081387",
+            "tracking": true
+          },
+          {
+            "name": "older than ... more expensive than ...",
+            "item-type": "resource",
+            "resource": "RE_00088",
+            "item-code": "1652766081384/1652766081388",
+            "tracking": true
+          },
+          {
+            "name": "not as ... as",
+            "item-type": "resource",
+            "resource": "RE_00089",
+            "item-code": "1652766081384/1652766081389",
+            "tracking": true
+          },
+          {
+            "name": "the oldest the most expensive",
+            "item-type": "resource",
+            "resource": "RE_00090",
+            "item-code": "1652766081384/1652766081390",
+            "tracking": true
+          },
+          {
+            "name": "enough",
+            "item-type": "resource",
+            "resource": "RE_00091",
+            "item-code": "1652766081384/1652766081391",
+            "tracking": true
+          },
+          {
+            "name": "too",
+            "item-type": "resource",
+            "resource": "RE_00092",
+            "item-code": "1652766081384/1652766081392",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Word order",
+        "item-type": "folder",
+        "item-code": "1652766081393",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "196",
+          "start-page-no": "196",
+          "end-page-no": "203",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "He speaks English very well. (word order 1)",
+            "item-type": "resource",
+            "resource": "RE_00093",
+            "item-code": "1652766081393/1652766081394",
+            "tracking": true
+          },
+          {
+            "name": "always/usually/often etc. (word order 2)",
+            "item-type": "resource",
+            "resource": "RE_00094",
+            "item-code": "1652766081393/1652766081395",
+            "tracking": true
+          },
+          {
+            "name": "still yet already",
+            "item-type": "resource",
+            "resource": "RE_00095",
+            "item-code": "1652766081393/1652766081396",
+            "tracking": true
+          },
+          {
+            "name": "Give me that book! Give it to me!",
+            "item-type": "resource",
+            "resource": "RE_00096",
+            "item-code": "1652766081393/1652766081397",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Conjunctions and clauses",
+        "item-type": "folder",
+        "item-code": "1652766081398",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "204",
+          "start-page-no": "204",
+          "end-page-no": "215",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "and but or so because",
+            "item-type": "resource",
+            "resource": "RE_00097",
+            "item-code": "1652766081398/1652766081399",
+            "tracking": true
+          },
+          {
+            "name": "When ...",
+            "item-type": "resource",
+            "resource": "RE_00098",
+            "item-code": "1652766081398/1652766081400",
+            "tracking": true
+          },
+          {
+            "name": "If we go ... If you see ... etc.",
+            "item-type": "resource",
+            "resource": "RE_00099",
+            "item-code": "1652766081398/1652766081401",
+            "tracking": true
+          },
+          {
+            "name": "If I had ... If we went ... etc.",
+            "item-type": "resource",
+            "resource": "RE_000100",
+            "item-code": "1652766081398/1652766081402",
+            "tracking": true
+          },
+          {
+            "name": "a person who ... a thing that/which ... (relative clauses 1)",
+            "item-type": "resource",
+            "resource": "RE_000101",
+            "item-code": "1652766081398/1652766081403",
+            "tracking": true
+          },
+          {
+            "name": "the people we met the hotel you stayed at (relative clauses 2)",
+            "item-type": "resource",
+            "resource": "RE_000102",
+            "item-code": "1652766081398/1652766081404",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Prepositions",
+        "item-type": "folder",
+        "item-code": "1652766081405",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "216",
+          "start-page-no": "216",
+          "end-page-no": "237",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "at 8 o’clock on Monday in April",
+            "item-type": "resource",
+            "resource": "RE_000103",
+            "item-code": "1652766081405/1652766081406",
+            "tracking": true
+          },
+          {
+            "name": "from ... to until since for",
+            "item-type": "resource",
+            "resource": "RE_000104",
+            "item-code": "1652766081405/1652766081407",
+            "tracking": true
+          },
+          {
+            "name": "before after during while",
+            "item-type": "resource",
+            "resource": "RE_000105",
+            "item-code": "1652766081405/1652766081408",
+            "tracking": true
+          },
+          {
+            "name": "in at on (places 1)",
+            "item-type": "resource",
+            "resource": "RE_000106",
+            "item-code": "1652766081405/1652766081409",
+            "tracking": true
+          },
+          {
+            "name": "in at on (places 2)",
+            "item-type": "resource",
+            "resource": "RE_000107",
+            "item-code": "1652766081405/1652766081410",
+            "tracking": true
+          },
+          {
+            "name": "to in at (places 3)",
+            "item-type": "resource",
+            "resource": "RE_000108",
+            "item-code": "1652766081405/1652766081411",
+            "tracking": true
+          },
+          {
+            "name": "under, behind, opposite etc.",
+            "item-type": "resource",
+            "resource": "RE_000109",
+            "item-code": "1652766081405/1652766081412",
+            "tracking": true
+          },
+          {
+            "name": "up, over, through etc.",
+            "item-type": "resource",
+            "resource": "RE_000110",
+            "item-code": "1652766081405/1652766081413",
+            "tracking": true
+          },
+          {
+            "name": "on at by with about",
+            "item-type": "resource",
+            "resource": "RE_000111",
+            "item-code": "1652766081405/1652766081414",
+            "tracking": true
+          },
+          {
+            "name": "good at ... , interested in ... etc. of/at/for etc. (prepositions) + –ing",
+            "item-type": "resource",
+            "resource": "RE_000112",
+            "item-code": "1652766081405/1652766081415",
+            "tracking": true
+          },
+          {
+            "name": "listen to ... , look at ... etc. (verb + preposition)",
+            "item-type": "resource",
+            "resource": "RE_000113",
+            "item-code": "1652766081405/1652766081416",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Phrasal verbs",
+        "item-type": "folder",
+        "item-code": "1652766081417",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "238",
+          "start-page-no": "238",
+          "end-page-no": "241",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "go in, fall off , run away etc. (phrasal verbs 1)",
+            "item-type": "resource",
+            "resource": "RE_000114",
+            "item-code": "1652766081417/1652766081418",
+            "tracking": true
+          },
+          {
+            "name": "put on your shoes put your shoes on (phrasal verbs 2)",
+            "item-type": "resource",
+            "resource": "RE_000115",
+            "item-code": "1652766081417/1652766081419",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Appendices",
+        "item-type": "folder",
+        "item-code": "1652766081420",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "242",
+          "start-page-no": "242",
+          "end-page-no": "251",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": [
+          {
+            "name": "Appendix 1 Active and passive ",
+            "item-type": "resource",
+            "resource": "RE_000116",
+            "item-code": "1652766081420/1652766081421",
+            "tracking": true
+          },
+          {
+            "name": "Appendix 2 List of irregular verbs",
+            "item-type": "resource",
+            "resource": "RE_000117",
+            "item-code": "1652766081420/1652766081422",
+            "tracking": true
+          },
+          {
+            "name": "Appendix 3 Irregular verbs in groups",
+            "item-type": "resource",
+            "resource": "RE_000118",
+            "item-code": "1652766081420/1652766081423",
+            "tracking": true
+          },
+          {
+            "name": "Appendix 4 Short forms (h e ’s / I ’d / don’t etc.)",
+            "item-type": "resource",
+            "resource": "RE_000119",
+            "item-code": "1652766081420/1652766081424",
+            "tracking": true
+          },
+          {
+            "name": "Appendix 5 Spelling",
+            "item-type": "resource",
+            "resource": "RE_000120",
+            "item-code": "1652766081420/1652766081425",
+            "tracking": true
+          },
+          {
+            "name": "Appendix 6 Phrasal verbs (take off / give up etc.)",
+            "item-type": "resource",
+            "resource": "RE_000121",
+            "item-code": "1652766081420/1652766081426",
+            "tracking": true
+          },
+          {
+            "name": "Appendix 7 Phrasal verbs + object (put out a fi re / give up your job etc.) ",
+            "item-type": "resource",
+            "resource": "RE_000122",
+            "item-code": "1652766081420/1652766081427",
+            "tracking": true
+          }
+        ]
+      },
+      {
+        "name": "Additional exercises",
+        "item-type": "folder",
+        "item-code": "1652766081428",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "252",
+          "start-page-no": "252",
+          "end-page-no": "270",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Study guide",
+        "item-type": "folder",
+        "item-code": "1652766081429",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "271",
+          "start-page-no": "271",
+          "end-page-no": "282",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Key to Exercises",
+        "item-type": "folder",
+        "item-code": "1652766081430",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "283",
+          "start-page-no": "283",
+          "end-page-no": "309",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Key to Additional exercises",
+        "item-type": "folder",
+        "item-code": "1652766081431",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "310",
+          "start-page-no": "310",
+          "end-page-no": "312",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Key to Study guide",
+        "item-type": "folder",
+        "item-code": "1652766081432",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "313",
+          "start-page-no": "313",
+          "end-page-no": "314",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      },
+      {
+        "name": "Index",
+        "item-type": "folder",
+        "item-code": "1652766081433",
+        "sub-type": "default",
+        "attribs": {
+          "page-no": "315",
+          "start-page-no": "315",
+          "end-page-no": "322",
+          "model": {
+            "sectiontype": "normal"
+          }
+        },
+        "items": []
+      }
+    ]
+  },
+  "resources": {
+    "generic": {
+      "RE_0001": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "12",
+          "start-page-no": "12",
+          "end-page-no": "13"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_0002": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "14",
+          "start-page-no": "14",
+          "end-page-no": "15"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_0003": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "16",
+          "start-page-no": "16",
+          "end-page-no": "17"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_0004": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "18",
+          "start-page-no": "18",
+          "end-page-no": "19"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_0005": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "20",
+          "start-page-no": "20",
+          "end-page-no": "21"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_0006": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "22",
+          "start-page-no": "22",
+          "end-page-no": "23"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_0007": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "24",
+          "start-page-no": "24",
+          "end-page-no": "25"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_0008": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "26",
+          "start-page-no": "26",
+          "end-page-no": "27"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_0009": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "28",
+          "start-page-no": "28",
+          "end-page-no": "29"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00010": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "30",
+          "start-page-no": "30",
+          "end-page-no": "31"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00011": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "32",
+          "start-page-no": "32",
+          "end-page-no": "33"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00012": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "34",
+          "start-page-no": "34",
+          "end-page-no": "35"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00013": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "36",
+          "start-page-no": "36",
+          "end-page-no": "37"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00014": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "38",
+          "start-page-no": "38",
+          "end-page-no": "39"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00015": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "40",
+          "start-page-no": "40",
+          "end-page-no": "41"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00016": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "42",
+          "start-page-no": "42",
+          "end-page-no": "43"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00017": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "44",
+          "start-page-no": "44",
+          "end-page-no": "45"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00018": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "46",
+          "start-page-no": "46",
+          "end-page-no": "47"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00019": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "48",
+          "start-page-no": "48",
+          "end-page-no": "49"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00020": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "50",
+          "start-page-no": "50",
+          "end-page-no": "51"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00021": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "52",
+          "start-page-no": "52",
+          "end-page-no": "53"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00022": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "54",
+          "start-page-no": "54",
+          "end-page-no": "55"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00023": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "56",
+          "start-page-no": "56",
+          "end-page-no": "57"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00024": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "58",
+          "start-page-no": "58",
+          "end-page-no": "59"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00025": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "60",
+          "start-page-no": "60",
+          "end-page-no": "61"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00026": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "62",
+          "start-page-no": "62",
+          "end-page-no": "63"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00027": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "64",
+          "start-page-no": "64",
+          "end-page-no": "65"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00028": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "66",
+          "start-page-no": "66",
+          "end-page-no": "67"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00029": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "68",
+          "start-page-no": "68",
+          "end-page-no": "69"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00030": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "70",
+          "start-page-no": "70",
+          "end-page-no": "71"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00031": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "72",
+          "start-page-no": "72",
+          "end-page-no": "73"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00032": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "74",
+          "start-page-no": "74",
+          "end-page-no": "75"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00033": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "76",
+          "start-page-no": "76",
+          "end-page-no": "77"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00034": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "78",
+          "start-page-no": "78",
+          "end-page-no": "79"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00035": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "80",
+          "start-page-no": "80",
+          "end-page-no": "81"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00036": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "82",
+          "start-page-no": "82",
+          "end-page-no": "83"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00037": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "84",
+          "start-page-no": "84",
+          "end-page-no": "85"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00038": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "86",
+          "start-page-no": "86",
+          "end-page-no": "87"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00039": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "88",
+          "start-page-no": "88",
+          "end-page-no": "89"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00040": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "90",
+          "start-page-no": "90",
+          "end-page-no": "91"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00041": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "92",
+          "start-page-no": "92",
+          "end-page-no": "93"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00042": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "94",
+          "start-page-no": "94",
+          "end-page-no": "95"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00043": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "96",
+          "start-page-no": "96",
+          "end-page-no": "97"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00044": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "98",
+          "start-page-no": "98",
+          "end-page-no": "99"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00045": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "100",
+          "start-page-no": "100",
+          "end-page-no": "101"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00046": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "102",
+          "start-page-no": "102",
+          "end-page-no": "103"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00047": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "104",
+          "start-page-no": "104",
+          "end-page-no": "105"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00048": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "106",
+          "start-page-no": "106",
+          "end-page-no": "107"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00049": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "108",
+          "start-page-no": "108",
+          "end-page-no": "109"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00050": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "110",
+          "start-page-no": "110",
+          "end-page-no": "111"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00051": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "112",
+          "start-page-no": "112",
+          "end-page-no": "113"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00052": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "114",
+          "start-page-no": "114",
+          "end-page-no": "115"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00053": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "116",
+          "start-page-no": "116",
+          "end-page-no": "117"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00054": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "118",
+          "start-page-no": "118",
+          "end-page-no": "119"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00055": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "120",
+          "start-page-no": "120",
+          "end-page-no": "121"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00056": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "122",
+          "start-page-no": "122",
+          "end-page-no": "123"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00057": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "124",
+          "start-page-no": "124",
+          "end-page-no": "125"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00058": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "126",
+          "start-page-no": "126",
+          "end-page-no": "127"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00059": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "128",
+          "start-page-no": "128",
+          "end-page-no": "129"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00060": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "130",
+          "start-page-no": "130",
+          "end-page-no": "131"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00061": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "132",
+          "start-page-no": "132",
+          "end-page-no": "133"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00062": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "134",
+          "start-page-no": "134",
+          "end-page-no": "135"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00063": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "136",
+          "start-page-no": "136",
+          "end-page-no": "137"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00064": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "138",
+          "start-page-no": "138",
+          "end-page-no": "139"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00065": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "140",
+          "start-page-no": "140",
+          "end-page-no": "141"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00066": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "142",
+          "start-page-no": "142",
+          "end-page-no": "143"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00067": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "144",
+          "start-page-no": "144",
+          "end-page-no": "145"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00068": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "146",
+          "start-page-no": "146",
+          "end-page-no": "147"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00069": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "148",
+          "start-page-no": "148",
+          "end-page-no": "149"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00070": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "150",
+          "start-page-no": "150",
+          "end-page-no": "151"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00071": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "152",
+          "start-page-no": "152",
+          "end-page-no": "153"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00072": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "154",
+          "start-page-no": "154",
+          "end-page-no": "155"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00073": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "156",
+          "start-page-no": "156",
+          "end-page-no": "157"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00074": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "158",
+          "start-page-no": "158",
+          "end-page-no": "159"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00075": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "160",
+          "start-page-no": "160",
+          "end-page-no": "161"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00076": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "162",
+          "start-page-no": "162",
+          "end-page-no": "163"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00077": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "164",
+          "start-page-no": "164",
+          "end-page-no": "165"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00078": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "166",
+          "start-page-no": "166",
+          "end-page-no": "167"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00079": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "168",
+          "start-page-no": "168",
+          "end-page-no": "169"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00080": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "170",
+          "start-page-no": "170",
+          "end-page-no": "171"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00081": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "172",
+          "start-page-no": "172",
+          "end-page-no": "173"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00082": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "174",
+          "start-page-no": "174",
+          "end-page-no": "175"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00083": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "176",
+          "start-page-no": "176",
+          "end-page-no": "177"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00084": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "178",
+          "start-page-no": "178",
+          "end-page-no": "179"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00085": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "180",
+          "start-page-no": "180",
+          "end-page-no": "181"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00086": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "182",
+          "start-page-no": "182",
+          "end-page-no": "183"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00087": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "184",
+          "start-page-no": "184",
+          "end-page-no": "185"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00088": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "186",
+          "start-page-no": "186",
+          "end-page-no": "187"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00089": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "188",
+          "start-page-no": "188",
+          "end-page-no": "189"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00090": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "190",
+          "start-page-no": "190",
+          "end-page-no": "191"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00091": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "192",
+          "start-page-no": "192",
+          "end-page-no": "193"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00092": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "194",
+          "start-page-no": "194",
+          "end-page-no": "195"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00093": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "196",
+          "start-page-no": "196",
+          "end-page-no": "197"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00094": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "198",
+          "start-page-no": "198",
+          "end-page-no": "199"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00095": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "200",
+          "start-page-no": "200",
+          "end-page-no": "201"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00096": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "202",
+          "start-page-no": "202",
+          "end-page-no": "203"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00097": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "204",
+          "start-page-no": "204",
+          "end-page-no": "205"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00098": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "206",
+          "start-page-no": "206",
+          "end-page-no": "207"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_00099": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "208",
+          "start-page-no": "208",
+          "end-page-no": "209"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000100": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "210",
+          "start-page-no": "210",
+          "end-page-no": "211"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000101": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "212",
+          "start-page-no": "212",
+          "end-page-no": "213"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000102": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "214",
+          "start-page-no": "214",
+          "end-page-no": "215"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000103": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "216",
+          "start-page-no": "216",
+          "end-page-no": "217"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000104": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "218",
+          "start-page-no": "218",
+          "end-page-no": "219"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000105": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "220",
+          "start-page-no": "220",
+          "end-page-no": "221"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000106": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "222",
+          "start-page-no": "222",
+          "end-page-no": "223"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000107": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "224",
+          "start-page-no": "224",
+          "end-page-no": "225"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000108": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "226",
+          "start-page-no": "226",
+          "end-page-no": "227"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000109": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "228",
+          "start-page-no": "228",
+          "end-page-no": "229"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000110": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "230",
+          "start-page-no": "230",
+          "end-page-no": "231"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000111": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "232",
+          "start-page-no": "232",
+          "end-page-no": "233"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000112": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "234",
+          "start-page-no": "234",
+          "end-page-no": "235"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000113": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "236",
+          "start-page-no": "236",
+          "end-page-no": "237"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000114": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "238",
+          "start-page-no": "238",
+          "end-page-no": "239"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000115": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "240",
+          "start-page-no": "240",
+          "end-page-no": "241"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000116": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "243",
+          "start-page-no": "243",
+          "end-page-no": "243"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000117": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "244",
+          "start-page-no": "244",
+          "end-page-no": "244"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000118": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "245",
+          "start-page-no": "245",
+          "end-page-no": "245"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000119": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "246",
+          "start-page-no": "246",
+          "end-page-no": "247"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000120": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "248",
+          "start-page-no": "248",
+          "end-page-no": "249"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000121": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "250",
+          "start-page-no": "250",
+          "end-page-no": "250"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      },
+      "RE_000122": {
+        "sub-type": "imgbook_unit",
+        "imgbook_unit": {
+          "page-no": "251",
+          "start-page-no": "251",
+          "end-page-no": "251"
+        },
+        "tags": [],
+        "description": "",
+        "learning-objectives": []
+      }
+    },
+    "test": {},
+    "ebook": {}
+  }
+}

@@ -1,8 +1,6 @@
 <template>
   <div class="book-list-container h-full">
-    <div v-if="loading" class="flex h-full min-h-[400px] items-center justify-center">
-      <a-spin :tip="t('app.loading')" />
-    </div>
+    <LoadingBlock v-if="loading" min-height="400px" :message="t('app.loading')" />
 
     <div
       v-else-if="groupedBooks.length === 0"
@@ -93,6 +91,7 @@ import { useI18n } from 'vue-i18n'
 import { getBooks, getBookCover, bytesToImageUrl } from '../lib/api'
 import { Book, BookGroup } from '../types'
 import { useAppStore } from '../stores/app'
+import LoadingBlock from './common/loading/LoadingBlock.vue'
 
 const { t } = useI18n()
 const appStore = useAppStore()

@@ -83,10 +83,10 @@ mod tests {
     async fn test_run_check_logic_configured() {
         let mut config = AppConfig::default();
         config.book_source = Some(BookSource::Local {
-            path: "/tmp".to_string(),
+            path: "tmp".to_string(),
         });
         config.database = Some(DatabaseConnection::SQLite {
-            path: "/tmp/test.db".to_string(),
+            path: "tmp/test.db".to_string(),
         });
 
         let status = run_check_logic_internal(

@@ -5,10 +5,19 @@ import path from 'path'
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST
+const buildStamp = new Date()
+  .toISOString()
+  .replace(/\..+$/, '')
+  .replace(/-/g, '')
+  .replace(/:/g, '')
+  .replace('T', '-')
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [vue()],
+  define: {
+    __BUILD_STAMP__: JSON.stringify(buildStamp),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

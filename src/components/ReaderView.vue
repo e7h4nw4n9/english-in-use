@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watchEffect, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAppStore } from '../stores/app'
 import { useReaderStore } from '../stores/reader'
 import { useReaderAudio } from '../composables/useReaderAudio'
 import { useReaderMetadata } from '../composables/useReaderMetadata'
-import { resolveExerciseResource } from '../lib/api/books'
-import type { TocNode, ExerciseInfo } from '../types'
+import { useReaderShortcuts } from '../composables/reader/useReaderShortcuts'
+import { useReaderTocContext } from '../composables/reader/useReaderTocContext'
+import { useReaderExerciseLoader } from '../composables/reader/useReaderExerciseLoader'
+import { useReaderViewportMode } from '../composables/reader/useReaderViewportMode'
+import { useReaderOverlayActions } from '../composables/reader/useReaderOverlayActions'
+import { useI18n } from 'vue-i18n'
 
 // Components
 import ReaderTOC from './reader/ReaderTOC.vue'
@@ -18,18 +22,21 @@ import ReaderDebugModal from './reader/ReaderDebugModal.vue'
 
 const appStore = useAppStore()
 const readerStore = useReaderStore()
+const { t } = useI18n()
 const { currentBook } = storeToRefs(appStore)
 const readerRef = ref<HTMLElement | null>(null)
 const {
   currentPageLabel,
   viewMode,
+  zoomLevel,
   exerciseVisible,
   currentExerciseUrl,
+  currentExerciseHtml,
   currentExerciseTitle,
+  currentExerciseResourceId,
   showHotspots,
   isUiVisible,
   isPlaying,
-  currentAudioPath,
   isSidebarCollapsed,
 } = storeToRefs(readerStore)
 
@@ -49,161 +56,58 @@ const {
   goForward,
 } = useReaderMetadata()
 
-const { toggleAudio, pauseAudio, cleanup: audioCleanup } = useReaderAudio()
-
-// Responsive View Mode
-const isNarrow = ref(false)
-const resizeObserver = new ResizeObserver((entries) => {
-  for (const entry of entries) {
-    const { width } = entry.contentRect
-    isNarrow.value = width < 768
-    if (isNarrow.value && viewMode.value === 'spread') {
-      viewMode.value = 'single'
-    }
-  }
+const { toggleAudio, stopAndResetAudio, cleanup: audioCleanup } = useReaderAudio()
+const fallbackUnitTitle = computed(() => currentBook.value?.title || '')
+const exerciseDebugPanelEnabled = true
+const { currentUnitName, currentPageAudioFiles } = useReaderTocContext({
+  metadata,
+  currentPageLabel,
+  leftPageLabel,
+  rightPageLabel,
+  viewMode,
+  sortedPageLabels,
+  fallbackUnitTitle,
+})
+const { openExercise } = useReaderExerciseLoader({
+  currentBook,
+  appStore,
+  exerciseVisible,
+  currentExerciseUrl,
+  currentExerciseHtml,
+  currentExerciseTitle,
+  currentExerciseResourceId,
+  t,
+})
+const exerciseDebugMeta = computed(() => ({
+  productCode: currentBook.value?.product_code || '',
+  pageLabel: currentPageLabel.value || '',
+  unitName: currentUnitName.value || fallbackUnitTitle.value || '',
+}))
+const { handleOverlayClick } = useReaderOverlayActions({
+  currentBook,
+  currentPageLabel,
+  openExercise,
+  toggleAudio,
 })
 
-// Shortcuts
-function handleKeyDown(e: KeyboardEvent) {
-  // Navigation
-  if (e.key === 'ArrowLeft') goBack()
-  if (e.key === 'ArrowRight') goForward()
-  if (e.key === ' ') {
-    e.preventDefault()
-    isPlaying.value = !isPlaying.value
-  }
-  if (e.key === 'Escape') closeReader()
-
-  // Zoom
-  if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
-    e.preventDefault()
-    readerStore.zoomIn()
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key === '-') {
-    e.preventDefault()
-    readerStore.zoomOut()
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key === '0') {
-    e.preventDefault()
-    readerStore.resetZoom()
-  }
-}
-
-// Watch for unit name changes
-watchEffect(() => {
-  if (!metadata.value || !currentPageLabel.value) {
-    readerStore.currentUnitName = ''
-    return
-  }
-
-  const pageIdx = sortedPageLabels.value.indexOf(leftPageLabel.value)
-  const search = (nodes: TocNode[]): string | null => {
-    for (const node of nodes) {
-      if (node.startPage && node.endPage) {
-        const sIdx = sortedPageLabels.value.indexOf(node.startPage)
-        const eIdx = sortedPageLabels.value.indexOf(node.endPage)
-        if (sIdx !== -1 && eIdx !== -1 && pageIdx >= sIdx && pageIdx <= eIdx) {
-          // Found matching node, but check children for more specific one
-          if (node.children) {
-            const childTitle = search(node.children)
-            if (childTitle) return childTitle
-          }
-          return node.title
-        }
-      } else if (node.children) {
-        const childTitle = search(node.children)
-        if (childTitle) return childTitle
-      }
-    }
-    return null
-  }
-
-  readerStore.currentUnitName = search(metadata.value.toc) || currentBook.value?.title || ''
+const { isNarrow, observe, disconnect } = useReaderViewportMode({
+  viewMode,
+  zoomLevel,
 })
 
-// Computed logic for cross-component interactions
-const currentPageExercises = computed(() => {
-  const left = metadata.value?.pages[leftPageLabel.value]?.exercises || []
-  const right =
-    viewMode.value === 'spread' && rightPageLabel.value
-      ? metadata.value?.pages[rightPageLabel.value]?.exercises || []
-      : []
-  return [...left, ...right]
-})
+watch(
+  currentUnitName,
+  (unitName) => {
+    readerStore.currentUnitName = unitName
+  },
+  { immediate: true },
+)
 
-const currentPageAudioFiles = computed(() => {
-  if (!metadata.value || !currentPageLabel.value) return []
-  const labelsToCheck = [leftPageLabel.value]
-  if (viewMode.value === 'spread' && rightPageLabel.value) {
-    labelsToCheck.push(rightPageLabel.value)
-  }
-
-  const findNodeForPage = (label: string): TocNode | null => {
-    const pageIdx = sortedPageLabels.value.indexOf(label)
-    if (pageIdx === -1) return null
-
-    const search = (nodes: TocNode[]): TocNode | null => {
-      let found: TocNode | null = null
-      for (const node of nodes) {
-        if (node.startPage && node.endPage) {
-          const sIdx = sortedPageLabels.value.indexOf(node.startPage)
-          const eIdx = sortedPageLabels.value.indexOf(node.endPage)
-          if (sIdx !== -1 && eIdx !== -1 && pageIdx >= sIdx && pageIdx <= eIdx) {
-            if (node.audioFiles?.length) found = node
-            if (node.children) {
-              const childMatch = search(node.children)
-              if (childMatch) found = childMatch
-            }
-            if (found) break
-          }
-        } else if (node.children) {
-          const childMatch = search(node.children)
-          if (childMatch) return childMatch
-        }
-      }
-      return found
-    }
-    return search(metadata.value!.toc)
-  }
-
-  for (let i = labelsToCheck.length - 1; i >= 0; i--) {
-    const node = findNodeForPage(labelsToCheck[i])
-    if (node?.audioFiles?.length) return node.audioFiles
-  }
-  return []
-})
-
-// Watch for page changes to stop audio if it's no longer on the current page
-watch(currentPageAudioFiles, (newAudioFiles) => {
-  if (isPlaying.value && currentAudioPath.value) {
-    const isStillAvailable = newAudioFiles.some((file) => file.path === currentAudioPath.value)
-    if (!isStillAvailable) {
-      pauseAudio()
-    }
+watch(currentPageLabel, (newLabel, oldLabel) => {
+  if (newLabel !== oldLabel) {
+    stopAndResetAudio()
   }
 })
-
-async function handleOverlayClick(overlay: any) {
-  if (overlay.type === 'page' && overlay.page) {
-    currentPageLabel.value = overlay.page.pagelabel
-  } else if (overlay.type === 'audio' && overlay.audio) {
-    if (currentBook.value) {
-      await toggleAudio(currentBook.value.product_code, overlay.audio.path)
-    }
-  }
-}
-
-async function openExercise(ex: ExerciseInfo) {
-  if (!currentBook.value) return
-  try {
-    const url = await resolveExerciseResource(currentBook.value.product_code, ex.resource_id)
-    currentExerciseUrl.value = url
-    currentExerciseTitle.value = ex.name
-    exerciseVisible.value = true
-  } catch (e) {
-    console.error('Failed to resolve exercise:', e)
-  }
-}
 
 function handleToggleAudio(path: string) {
   if (currentBook.value) {
@@ -215,17 +119,27 @@ function closeReader() {
   appStore.currentBook = null
 }
 
+useReaderShortcuts({
+  goBack,
+  goForward,
+  togglePlayback: () => {
+    isPlaying.value = !isPlaying.value
+  },
+  closeReader,
+  zoomIn: () => readerStore.zoomIn(),
+  zoomOut: () => readerStore.zoomOut(),
+  resetZoom: () => readerStore.resetZoom(),
+})
+
 onMounted(() => {
   loadMetadata()
-  window.addEventListener('keydown', handleKeyDown)
-  if (readerRef.value) resizeObserver.observe(readerRef.value)
+  observe(readerRef.value)
   readerStore.showUi()
 })
 
 onUnmounted(() => {
   audioCleanup()
-  window.removeEventListener('keydown', handleKeyDown)
-  resizeObserver.disconnect()
+  disconnect()
   readerStore.hideUi()
 })
 </script>
@@ -259,7 +173,6 @@ onUnmounted(() => {
         :displayIndex="displayIndex"
         :sortedPageLabels="sortedPageLabels"
         :currentPageAudioFiles="currentPageAudioFiles"
-        :currentPageExercises="currentPageExercises"
         :isNarrow="isNarrow"
         @toggleAudio="handleToggleAudio"
         @openExercise="openExercise"
@@ -270,7 +183,10 @@ onUnmounted(() => {
 
     <ReaderAudioPlayer />
 
-    <ReaderExerciseModal />
+    <ReaderExerciseModal
+      :enableDebugPanel="exerciseDebugPanelEnabled"
+      :debugMeta="exerciseDebugMeta"
+    />
     <ReaderDebugModal :metadata="metadata" :sortedPageLabels="sortedPageLabels" />
   </div>
 </template>

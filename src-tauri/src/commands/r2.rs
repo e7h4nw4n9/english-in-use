@@ -3,6 +3,7 @@ use crate::services::config::ConfigState;
 use crate::utils::r2::R2ClientState;
 use log::{error, info};
 use tauri::State;
+use tokio::time::{Duration, timeout};
 
 #[tauri::command]
 pub async fn test_r2_connection(
@@ -14,24 +15,81 @@ pub async fn test_r2_connection(
 }
 
 pub async fn test_r2_connection_internal(
-    config_state: State<'_, ConfigState>,
-    r2_state: State<'_, R2ClientState>,
+    _config_state: State<'_, ConfigState>,
+    _r2_state: State<'_, R2ClientState>,
     source: BookSource,
     endpoint_override: Option<String>,
 ) -> Result<Vec<String>, String> {
     info!("正在测试 Cloudflare R2 连接...");
+    const R2_CLIENT_CREATE_TIMEOUT_SECS: u64 = 15;
+    const R2_LIST_TIMEOUT_SECS: u64 = 15;
     match &source {
         BookSource::CloudflareR2 { bucket_name, .. } => {
-            let client = if let Some(url) = endpoint_override {
-                crate::utils::r2::create_r2_client_internal(&source, Some(url)).await?
+            let source_owned = source.clone();
+            let bucket_name_owned = bucket_name.clone();
+            let endpoint_for_create = endpoint_override.clone();
+
+            info!("R2 连接检查步骤 1/2: 创建客户端");
+            let create_task = tokio::spawn(async move {
+                if let Some(url) = endpoint_for_create {
+                    crate::utils::r2::create_r2_client_internal(&source_owned, Some(url)).await
+                } else {
+                    crate::utils::r2::create_r2_client(&source_owned).await
+                }
+            });
+
+            let client = timeout(
+                Duration::from_secs(R2_CLIENT_CREATE_TIMEOUT_SECS),
+                create_task,
+            )
+            .await
+            .map_err(|_| {
+                let msg = format!("R2 客户端创建超时（{} 秒）", R2_CLIENT_CREATE_TIMEOUT_SECS);
+                error!("{}", msg);
+                msg
+            })?
+            .map_err(|join_err| {
+                if join_err.is_panic() {
+                    let msg = "R2 客户端创建任务发生 panic".to_string();
+                    error!("{}: {}", msg, join_err);
+                    msg
+                } else {
+                    let msg = format!("R2 客户端创建任务失败: {}", join_err);
+                    error!("{}", msg);
+                    msg
+                }
+            })??;
+
+            info!("R2 连接检查步骤 2/2: 列出存储桶文件夹");
+            let list_task = tokio::spawn(async move {
+                crate::utils::r2::list_folders(&client, &bucket_name_owned).await
+            });
+
+            let result = timeout(Duration::from_secs(R2_LIST_TIMEOUT_SECS), list_task)
+                .await
+                .map_err(|_| {
+                    let msg = format!("R2 文件夹列表检查超时（{} 秒）", R2_LIST_TIMEOUT_SECS);
+                    error!("{}", msg);
+                    msg
+                })?
+                .map_err(|join_err| {
+                    if join_err.is_panic() {
+                        let msg = "R2 文件夹列表任务发生 panic".to_string();
+                        error!("{}: {}", msg, join_err);
+                        msg
+                    } else {
+                        let msg = format!("R2 文件夹列表任务失败: {}", join_err);
+                        error!("{}", msg);
+                        msg
+                    }
+                })?;
+
+            if let Err(e) = &result {
+                error!("Cloudflare R2 连接测试失败: {}", e);
             } else {
-                crate::utils::r2::get_client(&config_state, &r2_state).await?
-            };
-            let result = crate::utils::r2::list_folders(&client, bucket_name).await;
-            match &result {
-                Ok(_) => info!("Cloudflare R2 连接测试成功"),
-                Err(e) => error!("Cloudflare R2 连接测试失败: {}", e),
+                info!("Cloudflare R2 连接测试成功");
             }
+
             result
         }
         _ => {
@@ -64,7 +122,7 @@ pub async fn list_r2_objects_internal(
             } else {
                 crate::utils::r2::get_client(&config_state, &r2_state).await?
             };
-            let result = crate::utils::r2::list_objects(&client, bucket_name).await;
+            let result = crate::utils::r2::list_objects(&client, bucket_name, None).await;
             if let Err(e) = &result {
                 error!("列出 R2 对象失败: {}", e);
             }

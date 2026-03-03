@@ -21,6 +21,7 @@
     "folderPath": "Folder Path",
     "filePath": "File Path",
     "browse": "Browse",
+    "restoreDefaultPath": "Restore Default Path",
     "accountId": "Account ID",
     "bucketName": "Bucket Name",
     "databaseId": "Database ID",
@@ -33,8 +34,13 @@
     "saveConfig": "Save Configuration",
     "exportConfig": "Export Config",
     "importConfig": "Import Config",
+    "savingConfig": "Saving configuration...",
+    "importingConfig": "Importing configuration...",
+    "checkingConnections": "Checking cloud connections...",
+    "initializingDatabase": "Initializing database...",
     "saving": "Saving...",
     "savedSuccess": "Configuration saved successfully!",
+    "returnToBookListConfirm": "Saved successfully. Return to book list?",
     "saveError": "Error saving config: {error}",
     "exportSuccess": "Configuration exported successfully!",
     "exportError": "Error exporting config: {error}",
@@ -43,7 +49,12 @@
     "testing": "Testing connection...",
     "testSuccess": "Connection test successful!",
     "testSuccessWithFolders": "Connection test successful! Found the following folders:",
+    "connectionCheckWarning": "{service} connection check failed (config already saved): {error}",
     "connectionFailed": "Connection failed: {error}",
+    "databaseInitWarning": "Database initialization failed (config already saved): {error}",
+    "sqlitePathRequired": "SQLite database path is required",
+    "sqlitePathAbsoluteRequired": "SQLite database path must be an absolute path",
+    "sqlitePathAutoFilled": "SQLite path was empty and has been auto-filled with the default path",
     "restartNotice": "Application needs to restart to apply configuration changes. Click OK to restart now.",
     "dbMigration": "DB Migration",
     "currentVersion": "Current Version",
@@ -58,6 +69,8 @@
   },
   "common": {
     "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
     "cancel": "Cancel",
     "copy": "Copy",
     "copied": "Copied to clipboard"
@@ -91,6 +104,7 @@
   },
   "reader": {
     "toc": "TOC",
+    "exercises": "Exercises",
     "search": "Search chapters...",
     "noResults": "No results found",
     "noContent": "No content",
@@ -102,6 +116,11 @@
     "viewSpread": "Spread Mode",
     "showHotspots": "Show Hotspots",
     "hideHotspots": "Hide Hotspots",
-    "resetZoom": "Reset Zoom"
+    "resetZoom": "Reset Zoom",
+    "loadingExercise": "Downloading exercise resources...",
+    "loadingExerciseDeps": "Downloading shared engine",
+    "loadingExercisePackage": "Downloading exercise package",
+    "audioLoading": "Loading audio...",
+    "audioLoadFailed": "Unable to play audio"
   }
 }

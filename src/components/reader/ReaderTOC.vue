@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useReaderStore } from '../../stores/reader'
 import { useReaderTOC } from '../../composables/useReaderTOC'
 import type { BookMetadata, TocNode } from '../../types'
-import { CloseOutlined, SearchOutlined, UnorderedListOutlined } from '@ant-design/icons-vue'
+import { CloseOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
@@ -20,8 +20,8 @@ const { tocSearchText, expandedKeys, filteredToc } = useReaderTOC(computed(() =>
 const containerRef = ref()
 
 // 自动滚动到当前活跃项
-watch(isSidebarCollapsed, async (collapsed) => {
-  if (!collapsed) {
+watch([isSidebarCollapsed], async () => {
+  if (!isSidebarCollapsed.value) {
     await nextTick()
     const activeItem = document.querySelector('.toc-item.is-active')
     if (activeItem) {
@@ -30,11 +30,12 @@ watch(isSidebarCollapsed, async (collapsed) => {
   }
 })
 
-function handleItemClick(node: TocNode) {
+async function handleItemClick(node: TocNode) {
   const hasChildren = !!(node.children && node.children.length > 0)
 
   if (hasChildren) return
 
+  // 跳转书页
   if (node.startPage) {
     currentPageLabel.value = node.startPage
 
@@ -95,6 +96,7 @@ function handleItemClick(node: TocNode) {
 
       <div class="custom-scrollbar flex-1 overflow-y-auto" ref="containerRef">
         <div class="py-1">
+          <!-- 目录内容 -->
           <template v-for="item in filteredToc" :key="item.key">
             <a-collapse
               v-if="item.children && item.children.length > 0"
@@ -192,12 +194,14 @@ function handleItemClick(node: TocNode) {
               </div>
             </div>
           </template>
-        </div>
-        <div
-          v-if="filteredToc.length === 0"
-          class="flex flex-col items-center justify-center px-4 py-20 text-slate-400"
-        >
-          <p class="text-xs">{{ tocSearchText ? t('reader.noResults') : t('reader.noContent') }}</p>
+          <div
+            v-if="filteredToc.length === 0"
+            class="flex flex-col items-center justify-center px-4 py-20 text-slate-400"
+          >
+            <p class="text-xs">
+              {{ tocSearchText ? t('reader.noResults') : t('reader.noContent') }}
+            </p>
+          </div>
         </div>
       </div>
 

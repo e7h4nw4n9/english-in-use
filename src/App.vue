@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { SyncOutlined } from '@ant-design/icons-vue'
 import AppHeader from './components/AppHeader.vue'
 import ConfigPage from './components/ConfigPage.vue'
 import BookList from './components/BookList.vue'
 import ReaderView from './components/ReaderView.vue'
+import LoadingOverlay from './components/common/loading/LoadingOverlay.vue'
 import type { AppInitProgress } from './types'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from './composables/useTheme'
@@ -18,10 +18,21 @@ const { t, locale } = useI18n()
 const { isDark, setTheme } = useTheme()
 const appStore = useAppStore()
 const readerStore = useReaderStore()
-const { config, isLoading, loadingMessage, isConfigValid, currentBook } = storeToRefs(appStore)
+const {
+  config,
+  isLoading,
+  loadingMessage,
+  globalLoading,
+  globalLoadingMessage,
+  globalLoadingProgress,
+  isConfigValid,
+  currentBook,
+} = storeToRefs(appStore)
 const { isUiVisible } = storeToRefs(readerStore)
 
 const showConfig = ref(false)
+const homeReloadKey = ref(0)
+const shouldReloadHomeAfterConfigChange = ref(false)
 
 let unlistenOpenSettings: UnlistenFn | null = null
 let unlistenProgress: UnlistenFn | null = null
@@ -41,6 +52,13 @@ const currentTitle = computed(() => {
   const titleKey = showConfig.value ? 'config.title' : 'app.title'
   return t(titleKey)
 })
+
+const shouldShowHeader = computed(() => {
+  // Config page should always keep the app header visible
+  return showConfig.value || isUiVisible.value || !currentBook.value
+})
+
+const buildStamp = __BUILD_STAMP__
 
 // Apply settings from config whenever it changes
 watch(
@@ -69,20 +87,35 @@ watch(
   { immediate: true },
 )
 
-async function onConfigSaved() {
-  await appStore.refreshConfig()
-  if (isConfigValid.value) {
-    showConfig.value = false
-  }
+function onConfigSaved() {
+  shouldReloadHomeAfterConfigChange.value = true
 }
 
-function goHome() {
+function onConfigImported() {
+  shouldReloadHomeAfterConfigChange.value = true
+}
+
+async function goHome() {
+  if (shouldReloadHomeAfterConfigChange.value) {
+    await appStore.refreshConfig()
+    homeReloadKey.value += 1
+    shouldReloadHomeAfterConfigChange.value = false
+  }
+
   if (currentBook.value) {
     currentBook.value = null
   }
   if (showConfig.value) {
     showConfig.value = false
   }
+}
+
+async function onConfigBack(options?: { reloadHome?: boolean }) {
+  if (options?.reloadHome) {
+    await goHome()
+    return
+  }
+  showConfig.value = false
 }
 
 onMounted(async () => {
@@ -108,8 +141,9 @@ onUnmounted(() => {
     <div class="app-layout">
       <Transition name="slide-up">
         <AppHeader
-          v-show="isUiVisible || !currentBook"
+          v-show="shouldShowHeader"
           :title="currentTitle"
+          :build-stamp="buildStamp"
           :is-sub-page="showConfig"
           @home="goHome"
         />
@@ -117,41 +151,43 @@ onUnmounted(() => {
 
       <main class="app-main-container" :style="containerStyle">
         <Transition name="fade" mode="out-in">
-          <div v-if="isLoading" class="loading-container">
-            <div
-              class="loading-card flex flex-col items-center gap-6 rounded-3xl bg-white/50 p-12 backdrop-blur-xl dark:bg-black/20"
-            >
-              <a-spin size="large">
-                <template #indicator>
-                  <SyncOutlined spin style="font-size: 32px" />
-                </template>
-              </a-spin>
-              <div class="flex flex-col items-center gap-1">
-                <span class="text-sm font-bold uppercase tracking-widest text-blue-500">{{
-                  t('app.loading')
-                }}</span>
-                <span class="text-xs font-medium text-gray-400 dark:text-gray-500">{{
-                  loadingMessage
-                }}</span>
-              </div>
-            </div>
-          </div>
+          <LoadingOverlay
+            v-if="isLoading"
+            :title="t('app.loading')"
+            :message="loadingMessage"
+            tone="soft"
+            backdrop="soft"
+          />
 
           <ConfigPage
             v-else-if="showConfig"
             :initial-config="config || undefined"
             :allow-back="isConfigValid"
+            @config-imported="onConfigImported"
             @config-saved="onConfigSaved"
-            @back="showConfig = false"
+            @back="onConfigBack"
           />
 
           <ReaderView v-else-if="currentBook" />
 
-          <div v-else class="main-content">
+          <div v-else :key="homeReloadKey" class="main-content">
             <BookList />
           </div>
         </Transition>
       </main>
+
+      <Transition name="fade">
+        <LoadingOverlay
+          v-if="globalLoading && !isLoading"
+          fullscreen
+          :z-index="1200"
+          :title="t('app.loading')"
+          :message="globalLoadingMessage"
+          :progress="globalLoadingProgress"
+          tone="strong"
+          backdrop="strong"
+        />
+      </Transition>
     </div>
   </a-config-provider>
 </template>
@@ -175,21 +211,6 @@ onUnmounted(() => {
   width: 100%;
   overflow: hidden;
   position: relative;
-}
-
-.loading-container {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 50;
-  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
-}
-
-.loading-card {
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .main-content {

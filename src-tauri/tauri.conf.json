@@ -21,16 +21,19 @@
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self' asset: eiuasset: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' asset: eiuasset: blob: https:; style-src 'self' 'unsafe-inline' asset: eiuasset: https:; img-src 'self' asset: eiuasset: blob: data: https:; connect-src 'self' asset: eiuasset: https:; frame-src 'self' asset: eiuasset: blob: https:;",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": ["**", "$APPCACHE/**"]
       }
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
+    "iOS": {
+      "developmentTeam": "7F55A5M7G5"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

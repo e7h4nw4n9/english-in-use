@@ -112,12 +112,12 @@ mod tests {
     fn test_serialization() {
         let mut config = AppConfig::new();
         config.book_source = Some(BookSource::Local {
-            path: "/tmp/books".to_string(),
+            path: "tmp/books".to_string(),
         });
 
         let toml_str = toml::to_string(&config).unwrap();
         assert!(toml_str.contains("type = \"Local\""));
-        assert!(toml_str.contains("path = \"/tmp/books\""));
+        assert!(toml_str.contains("path = \"tmp/books\""));
     }
 
     #[test]

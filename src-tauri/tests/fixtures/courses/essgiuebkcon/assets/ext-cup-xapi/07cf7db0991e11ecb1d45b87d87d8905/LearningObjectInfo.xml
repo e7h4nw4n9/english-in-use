@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?><LearningObjectInfo>
+    <UID>cup-prod_787978</UID>
+    <uuid>2d12048c-f1fa-4c5d-9c4a-31205ef168e9</uuid>
+    <ID>787978</ID>
+    <timestamp>2022-02-16T10:42Z</timestamp>
+    <mediaURL/>
+    <name>EGIU_PP_U001_P013_x01_Aks</name>
+    <xmls/>
+    <screens>
+        <screen>
+            <uuid>b060b08e-9855-424c-801a-d074f42bae4a</uuid>
+            <name>cat2715680.xml</name>
+            <metadata>
+                <lom>
+                    <group name="General"/>
+                    <group name="Lifecycle"/>
+                    <group name="Technical"/>
+                    <group name="Educational"/>
+                    <group name="Relation"/>
+                    <group name="Classification"/>
+                </lom>
+            </metadata>
+            <helpText/>
+            <resources/>
+        </screen>
+    </screens>
+    <metadata>
+        <lom>
+            <group name="General"/>
+            <group name="Lifecycle"/>
+            <group name="Technical"/>
+            <group name="Educational"/>
+            <group name="Relation"/>
+            <group name="Classification"/>
+        </lom>
+    </metadata>
+    <LOOptions>&lt;options data-author="options-v2"&gt;&lt;option id="430"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;option id="311"&gt;&lt;key&gt;afterAll&lt;/key&gt;&lt;/option&gt;&lt;option id="512"&gt;&lt;key&gt;marking_and_feedback&lt;/key&gt;&lt;/option&gt;&lt;option id="373"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;option id="047"&gt;&lt;key&gt;false&lt;/key&gt;&lt;/option&gt;&lt;option id="040"&gt;&lt;key&gt;normal&lt;/key&gt;&lt;/option&gt;&lt;option id="335"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;option id="432"&gt;&lt;key&gt;on&lt;/key&gt;&lt;/option&gt;&lt;option id="025"&gt;&lt;key&gt;false&lt;/key&gt;&lt;/option&gt;&lt;option id="050"&gt;&lt;key&gt;auto&lt;/key&gt;&lt;/option&gt;&lt;option id="313"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;option id="046"&gt;&lt;key&gt;1_point_action&lt;/key&gt;&lt;/option&gt;&lt;option id="449"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;option id="312"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;option id="450"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;option id="388"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;option id="336"&gt;&lt;key&gt;afterCheckAnswers&lt;/key&gt;&lt;value&gt;&lt;/value&gt;&lt;/option&gt;&lt;option id="371"&gt;&lt;key&gt;dialog&lt;/key&gt;&lt;/option&gt;&lt;option id="334"&gt;&lt;key&gt;off&lt;/key&gt;&lt;value&gt;
+ 
+ 
+  {&amp;amp;quot;items&amp;amp;quot;:[],&amp;amp;quot;selection&amp;amp;quot;:&amp;amp;quot;off&amp;amp;quot;}
+ 
+&lt;/value&gt;&lt;/option&gt;&lt;option id="396"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;option id="380"&gt;&lt;key&gt;true&lt;/key&gt;&lt;/option&gt;&lt;option id="381"&gt;&lt;key&gt;true&lt;/key&gt;&lt;/option&gt;&lt;option id="385"&gt;&lt;key&gt;score&lt;/key&gt;&lt;/option&gt;&lt;option id="391"&gt;&lt;key&gt;last&lt;/key&gt;&lt;/option&gt;&lt;option id="393"&gt;&lt;key&gt;["2","5"]&lt;/key&gt;&lt;/option&gt;&lt;option id="528"&gt;&lt;key&gt;off&lt;/key&gt;&lt;/option&gt;&lt;/options&gt;</LOOptions>
+    <skin>RDP_Base</skin>
+    <mode>Normal</mode>
+    <title>EGIU_PP_U001_P013_x01_Aks</title>
+    <assetCDNURL>media</assetCDNURL>
+    <type>Standard</type>
+    <toolbeltServer>//cup-toolbelt-prod.avallain.net</toolbeltServer>
+    <geoGebra>//author-engine-production.avallain.net/geogebra/v5-0-398-0/HTML5/5.0/web/</geoGebra>
+    <mathJAX>//author-engine-production.avallain.net/mathjax/2.7.1/</mathJAX>
+    <tts>
+        <voice>female-1</voice>
+        <service>https://tts.avallain.net/sync_converter</service>
+        <lang/>
+    </tts>
+    <lnrCDNURL>https://cup-author-prod-lnr-runtime-assets.s3.amazonaws.com</lnrCDNURL>
+    <lnrServer>cup-lnr-prod.avallain.net</lnrServer>
+    <ckeditorRelative>false</ckeditorRelative>
+    <lang>en</lang>
+    <lmsApis>Channel</lmsApis>
+    <maximumscore>0</maximumscore>
+    <engine>
+        <version>buckminster-34.0.0</version>
+        <downloadURL>https://author-engine-production.avallain.net/buckminster-34.0.0/engine.zip</downloadURL>
+        <root>https://author-engine-production.avallain.net/buckminster-34.0.0/</root>
+    </engine>
+    <designPack>
+        <version>cup-rdp-base-0.52.3</version>
+        <downloadURL>//author-assets-runtime-prod-cup.avallain.net/designpack/RDP_Base/372c54c94118409e0feed2c13225c749</downloadURL>
+        <root>//author-assets-runtime-prod-cup.avallain.net/designpack/RDP_Base/372c54c94118409e0feed2c13225c749/</root>
+        <type>git</type>
+    </designPack>
+    <resources/>
+    <dependencies/>
+    <profiles/>
+    <assets/>
+    <pages/>
+    <solution-pages/>
+    <audio>mp3</audio>
+    <video>mp4</video>
+</LearningObjectInfo>

@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useReaderStore } from '../../stores/reader'
 import type { BookMetadata } from '../../types'
-import {
-  LeftOutlined,
-  RightOutlined,
-  CustomerServiceOutlined,
-  LinkOutlined,
-} from '@ant-design/icons-vue'
+import LoadingOverlay from '../common/loading/LoadingOverlay.vue'
+import { CustomerServiceOutlined, LinkOutlined, KeyOutlined } from '@ant-design/icons-vue'
 
 const props = defineProps<{
   metadata: BookMetadata | null
@@ -27,9 +24,27 @@ const emit = defineEmits<{
   (e: 'goBack'): void
   (e: 'goForward'): void
 }>()
+const { t } = useI18n()
 
 const readerStore = useReaderStore()
 const { viewMode, zoomLevel } = storeToRefs(readerStore)
+const scrollContainerRef = ref<HTMLElement | null>(null)
+const pinchStartDistance = ref<number | null>(null)
+const pinchStartZoom = ref(1)
+const pinchLastDistance = ref<number | null>(null)
+const pinchPendingZoom = ref<number | null>(null)
+const pinchDebounceTimer = ref<number | null>(null)
+const swipeStartPoint = ref<{ x: number; y: number } | null>(null)
+const swipeDirectionLock = ref<'horizontal' | 'vertical' | null>(null)
+const swipeTriggered = ref(false)
+const gestureEvents = ['gesturestart', 'gesturechange', 'gestureend'] as const
+const PINCH_DEBOUNCE_MS = 16
+const PINCH_DISTANCE_DEADZONE = 2
+const PINCH_SCALE_SENSITIVITY = 0.85
+const PINCH_SMOOTHING_FACTOR = 0.35
+const SWIPE_LOCK_THRESHOLD = 10
+const SWIPE_TRIGGER_DISTANCE = 56
+const SWIPE_MAX_VERTICAL_DRIFT = 48
 
 function handleWheel(e: WheelEvent) {
   if (e.ctrlKey || e.metaKey) {
@@ -42,13 +57,192 @@ function handleWheel(e: WheelEvent) {
   }
 }
 
+function getTouchDistance(touches: TouchList) {
+  if (touches.length < 2) return 0
+  const dx = touches[0].clientX - touches[1].clientX
+  const dy = touches[0].clientY - touches[1].clientY
+  return Math.hypot(dx, dy)
+}
+
+function clearPinchDebounceTimer() {
+  if (pinchDebounceTimer.value !== null) {
+    window.clearTimeout(pinchDebounceTimer.value)
+    pinchDebounceTimer.value = null
+  }
+}
+
+function applyPendingPinchZoom(force = false) {
+  if (pinchPendingZoom.value === null) return
+
+  const targetZoom = pinchPendingZoom.value
+  pinchPendingZoom.value = null
+
+  if (force) {
+    readerStore.setZoomLevel(targetZoom)
+    return
+  }
+
+  const delta = targetZoom - zoomLevel.value
+  if (Math.abs(delta) < 0.001) {
+    readerStore.setZoomLevel(targetZoom)
+    return
+  }
+
+  readerStore.setZoomLevel(zoomLevel.value + delta * PINCH_SMOOTHING_FACTOR)
+}
+
+function queuePinchZoom(targetZoom: number) {
+  pinchPendingZoom.value = targetZoom
+  if (pinchDebounceTimer.value !== null) return
+
+  pinchDebounceTimer.value = window.setTimeout(() => {
+    pinchDebounceTimer.value = null
+    applyPendingPinchZoom()
+  }, PINCH_DEBOUNCE_MS)
+}
+
+function resetPinchState() {
+  pinchStartDistance.value = null
+  pinchLastDistance.value = null
+  pinchPendingZoom.value = null
+  clearPinchDebounceTimer()
+}
+
+function resetSwipeState() {
+  swipeStartPoint.value = null
+  swipeDirectionLock.value = null
+  swipeTriggered.value = false
+}
+
+function isAppleTouchDevice() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  const isLegacyIos = /iPad|iPhone|iPod/i.test(ua)
+  const isIpadOs = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+  return isLegacyIos || isIpadOs
+}
+
+function shouldHandleSwipeNavigation() {
+  return isAppleTouchDevice() && zoomLevel.value <= 1.02
+}
+
+function handleTouchStart(e: TouchEvent) {
+  if (e.touches.length === 1) {
+    const touch = e.touches[0]
+    swipeStartPoint.value = { x: touch.clientX, y: touch.clientY }
+    swipeDirectionLock.value = null
+    swipeTriggered.value = false
+  } else {
+    resetSwipeState()
+  }
+
+  if (e.touches.length !== 2) return
+  pinchStartDistance.value = getTouchDistance(e.touches)
+  pinchStartZoom.value = zoomLevel.value
+  pinchLastDistance.value = pinchStartDistance.value
+  pinchPendingZoom.value = null
+  clearPinchDebounceTimer()
+}
+
+function handleTouchMove(e: TouchEvent) {
+  if (e.touches.length === 1 && swipeStartPoint.value && !pinchStartDistance.value) {
+    if (!shouldHandleSwipeNavigation()) return
+
+    const touch = e.touches[0]
+    const deltaX = touch.clientX - swipeStartPoint.value.x
+    const deltaY = touch.clientY - swipeStartPoint.value.y
+    const absDeltaX = Math.abs(deltaX)
+    const absDeltaY = Math.abs(deltaY)
+
+    if (
+      !swipeDirectionLock.value &&
+      (absDeltaX > SWIPE_LOCK_THRESHOLD || absDeltaY > SWIPE_LOCK_THRESHOLD)
+    ) {
+      swipeDirectionLock.value = absDeltaX > absDeltaY ? 'horizontal' : 'vertical'
+    }
+
+    if (swipeDirectionLock.value !== 'horizontal') return
+    if (absDeltaY > SWIPE_MAX_VERTICAL_DRIFT) return
+
+    // Keep iOS from scrolling horizontally while user is swiping pages.
+    e.preventDefault()
+
+    if (swipeTriggered.value || absDeltaX < SWIPE_TRIGGER_DISTANCE) return
+
+    if (deltaX < 0 && props.canGoForward) {
+      emit('goForward')
+      swipeTriggered.value = true
+    } else if (deltaX > 0 && props.canGoBack) {
+      emit('goBack')
+      swipeTriggered.value = true
+    }
+    return
+  }
+
+  if (e.touches.length !== 2 || !pinchStartDistance.value) return
+
+  const distance = getTouchDistance(e.touches)
+  if (!distance) return
+  if (pinchLastDistance.value !== null) {
+    const distanceDelta = Math.abs(distance - pinchLastDistance.value)
+    if (distanceDelta < PINCH_DISTANCE_DEADZONE) return
+  }
+
+  e.preventDefault()
+  pinchLastDistance.value = distance
+
+  const pinchRatio = distance / pinchStartDistance.value
+  const adjustedRatio = 1 + (pinchRatio - 1) * PINCH_SCALE_SENSITIVITY
+  queuePinchZoom(pinchStartZoom.value * adjustedRatio)
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  if (e.touches.length < 2) {
+    applyPendingPinchZoom(true)
+    resetPinchState()
+  }
+  if (e.touches.length === 0) {
+    resetSwipeState()
+  }
+}
+
+function handleTouchCancel() {
+  resetPinchState()
+  resetSwipeState()
+}
+
+function preventNativePinchZoom(e: Event) {
+  e.preventDefault()
+}
+
+onMounted(() => {
+  const container = scrollContainerRef.value
+  if (!container) return
+
+  for (const eventName of gestureEvents) {
+    container.addEventListener(eventName, preventNativePinchZoom, { passive: false })
+  }
+})
+
+onUnmounted(() => {
+  const container = scrollContainerRef.value
+  clearPinchDebounceTimer()
+  if (!container) return
+
+  for (const eventName of gestureEvents) {
+    container.removeEventListener(eventName, preventNativePinchZoom)
+  }
+})
+
 const pageSurfaceStyle = computed(() => {
   if (!props.metadata) return {}
   const ratio = props.metadata.pageWidth / props.metadata.pageHeight
+  const isSingleView = viewMode.value === 'single'
   return {
     aspectRatio: `${ratio}`,
-    width: viewMode.value === 'spread' ? '0' : '100%',
-    flex: viewMode.value === 'spread' ? '1 1 0' : 'none',
+    width: isSingleView ? '100%' : '0',
+    maxWidth: isSingleView ? '100%' : undefined,
+    flex: isSingleView ? '1 1 100%' : '1 1 0',
     height: 'auto',
     flexShrink: 0,
   }
@@ -75,16 +269,25 @@ function getOverlayStyle(overlay: any) {
 
 <template>
   <div class="relative flex flex-1 flex-col overflow-hidden">
-    <div
-      v-if="loading"
-      class="absolute inset-0 z-20 flex items-center justify-center bg-white/50 dark:bg-black/50"
-    >
-      <a-spin size="large" tip="正在加载内容..." />
-    </div>
+    <LoadingOverlay
+      :visible="loading"
+      :message="t('app.loading')"
+      mode="inline"
+      backdrop="soft"
+      :z-index="60"
+    />
 
-    <div class="custom-scrollbar flex flex-1 justify-center overflow-auto" @wheel="handleWheel">
+    <div
+      ref="scrollContainerRef"
+      class="pinch-zoom-surface custom-scrollbar flex flex-1 justify-center overflow-auto"
+      @wheel="handleWheel"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+      @touchcancel="handleTouchCancel"
+    >
       <div
-        class="reader-content-container flex w-full origin-top items-start justify-center gap-4 px-0 py-1 transition-transform duration-200"
+        class="reader-content-container flex w-full origin-top items-start justify-center gap-4 px-0 py-1 transition-transform duration-150 ease-out"
         :style="{ transform: `scale(${zoomLevel})` }"
       >
         <!-- Left Page -->
@@ -106,8 +309,16 @@ function getOverlayStyle(overlay: any) {
               :style="getOverlayStyle(overlay)"
               @click.stop="emit('overlayClick', overlay)"
             >
-              <div class="icon-wrapper flex h-9 w-9 items-center justify-center rounded-full">
+              <div
+                class="icon-wrapper flex h-9 w-9 items-center justify-center rounded-full"
+                :class="{
+                  'is-exercise': overlay.type === 'exercise' || overlay.type === 'learning-object',
+                }"
+              >
                 <CustomerServiceOutlined v-if="overlay.type === 'audio'" />
+                <KeyOutlined
+                  v-else-if="overlay.type === 'exercise' || overlay.type === 'learning-object'"
+                />
                 <LinkOutlined v-else-if="overlay.type === 'page'" />
               </div>
             </div>
@@ -145,8 +356,16 @@ function getOverlayStyle(overlay: any) {
               :style="getOverlayStyle(overlay)"
               @click.stop="emit('overlayClick', overlay)"
             >
-              <div class="icon-wrapper flex h-9 w-9 items-center justify-center rounded-full">
+              <div
+                class="icon-wrapper flex h-9 w-9 items-center justify-center rounded-full"
+                :class="{
+                  'is-exercise': overlay.type === 'exercise' || overlay.type === 'learning-object',
+                }"
+              >
                 <CustomerServiceOutlined v-if="overlay.type === 'audio'" />
+                <KeyOutlined
+                  v-else-if="overlay.type === 'exercise' || overlay.type === 'learning-object'"
+                />
                 <LinkOutlined v-else-if="overlay.type === 'page'" />
               </div>
             </div>
@@ -163,6 +382,16 @@ function getOverlayStyle(overlay: any) {
 </template>
 
 <style scoped>
+.pinch-zoom-surface {
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+}
+
+.reader-content-container {
+  will-change: transform;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .page-surface {
   display: flex;
   justify-content: center;
@@ -185,6 +414,24 @@ function getOverlayStyle(overlay: any) {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.icon-wrapper.is-exercise {
+  background: rgba(224, 242, 254, 0.8); /* 浅蓝色背景 (sky-100) */
+  border-color: rgba(186, 230, 253, 0.6);
+}
+
+.dark .icon-wrapper.is-exercise {
+  background: rgba(7, 89, 133, 0.6); /* 深色模式下的深蓝色 */
+  border-color: rgba(12, 74, 110, 0.4);
+}
+
+.icon-wrapper.is-exercise .anticon {
+  color: #0369a1; /* 深天蓝色图标 */
+}
+
+.dark .icon-wrapper.is-exercise .anticon {
+  color: #e0f2fe;
 }
 
 .dark .icon-wrapper {

@@ -24,7 +24,7 @@ const commonStubs = {
       '<button class="radio-button-stub" @click="$parent.$emit(\'update:value\', value)"><slot /></button>',
   },
   'a-input': {
-    props: ['value'],
+    props: ['value', 'placeholder'],
     template:
       '<div><input class="input-stub" :value="value" @input="$emit(\'update:value\', $event.target.value)" /><slot name="addonAfter" /></div>',
   },
@@ -41,6 +41,12 @@ const commonStubs = {
     template: '<div class="tooltip-stub" :title="title"><slot /></div>',
   },
   CopyOutlined: { template: '<span class="copy-icon-stub" @click="$emit(\'click\')" />' },
+  FolderOpenOutlined: {
+    template: '<span class="choose-path-icon-stub" @click="$emit(\'click\')" />',
+  },
+  ReloadOutlined: {
+    template: '<span class="restore-default-icon-stub" @click="$emit(\'click\')" />',
+  },
 }
 
 describe('DatabaseSettings.vue', () => {
@@ -116,6 +122,52 @@ describe('DatabaseSettings.vue', () => {
     await wrapper.find('.copy-icon-stub').trigger('click')
     expect(wrapper.emitted()).toHaveProperty('copy-path')
     expect(wrapper.emitted()['copy-path'][0]).toEqual(['/test/path'])
+  })
+
+  it('emits update:sqlitePath when sqlite path is edited', async () => {
+    const wrapper = mount(DatabaseSettings, {
+      props: {
+        dbType: 'SQLite',
+        sqlitePath: '/test/path.db',
+        d1Config,
+        isTesting: false,
+      },
+      global: { stubs: commonStubs },
+    })
+
+    await wrapper.find('input.input-stub').setValue('/custom/new-path')
+    expect(wrapper.emitted()).toHaveProperty('update:sqlitePath')
+    expect(wrapper.emitted()['update:sqlitePath'][0]).toEqual(['/custom/new-path'])
+  })
+
+  it('emits choose-sqlite-path when choose icon is clicked', async () => {
+    const wrapper = mount(DatabaseSettings, {
+      props: {
+        dbType: 'SQLite',
+        sqlitePath: '/test/path.db',
+        d1Config,
+        isTesting: false,
+      },
+      global: { stubs: commonStubs },
+    })
+
+    await wrapper.find('.choose-path-icon-stub').trigger('click')
+    expect(wrapper.emitted()).toHaveProperty('choose-sqlite-path')
+  })
+
+  it('emits restore-default-sqlite-path when restore icon is clicked', async () => {
+    const wrapper = mount(DatabaseSettings, {
+      props: {
+        dbType: 'SQLite',
+        sqlitePath: '/test/path.db',
+        d1Config,
+        isTesting: false,
+      },
+      global: { stubs: commonStubs },
+    })
+
+    await wrapper.find('.restore-default-icon-stub').trigger('click')
+    expect(wrapper.emitted()).toHaveProperty('restore-default-sqlite-path')
   })
 
   it('emits test-connection when test button is clicked', async () => {

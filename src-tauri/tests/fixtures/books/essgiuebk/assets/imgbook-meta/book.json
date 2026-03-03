@@ -1,0 +1,1435 @@
+{
+  "bookid": "essgiuebk",
+  "pageWidth": 555.84,
+  "pageHeight": 748.08,
+  "pagecount": 324,
+  "paths": {
+    "pageSmImgFolder": "images/sm/",
+    "pageMedImgFolder": "images/med/",
+    "pageLrgImgFolder": "images/lrg/",
+    "pageThumbImgFolder": "images/thumbnail/",
+    "pagexlLrgImgFolder": "images/xlrg/",
+    "pageTextDataFolder": "json/",
+    "mediaFolder": "overlay-assets/"
+  },
+  "overlay-config": {
+    "background-color": "#747474",
+    "border-color": "#000000",
+    "icon-color": "#FFFFFF",
+    "hover-color": "#403939",
+    "invisible-hotspot-border": "#AAAAAA",
+    "audio": {
+      "delay-between-audios": 1000
+    },
+    "external-base-urls": {}
+  },
+  "imageConfig": [
+    {
+      "category": "xlarge",
+      "width": 3825,
+      "height": 4898,
+      "dpi": 450,
+      "dJPEQQ": 85,
+      "folderRef": "xlrg"
+    },
+    {
+      "category": "large",
+      "width": 2550,
+      "height": 3265,
+      "dpi": 300,
+      "dJPEQQ": 85,
+      "folderRef": "lrg"
+    },
+    {
+      "category": "medium",
+      "width": 1275,
+      "height": 1633,
+      "dpi": 150,
+      "dJPEQQ": 85,
+      "folderRef": "med"
+    },
+    {
+      "category": "small",
+      "width": 500,
+      "height": 1045,
+      "dpi": 96,
+      "dJPEQQ": 85,
+      "folderRef": "sm"
+    },
+    {
+      "category": "thumbnail",
+      "width": 400,
+      "height": 784,
+      "dpi": 72,
+      "dJPEQQ": 20,
+      "folderRef": "thumbnail"
+    }
+  ],
+  "zoomingStateData": [
+    {
+      "pcwidth": 300,
+      "singlePage": "true",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 400,
+      "singlePage": "true",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 500,
+      "singlePage": "true",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 600,
+      "singlePage": "true",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 768,
+      "singlePage": "true",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 910,
+      "singlePage": "true",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 1120,
+      "singlePage": "false",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 1280,
+      "singlePage": "false",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 1440,
+      "singlePage": "false",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 1800,
+      "singlePage": "false",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 2400,
+      "singlePage": "false",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 3000,
+      "singlePage": "false",
+      "singlePageFitFactor": 1
+    },
+    {
+      "pcwidth": 3600,
+      "singlePage": "false",
+      "singlePageFitFactor": 1
+    }
+  ],
+  "pages": {
+    "page": [
+      {
+        "bgimage": "cover.jpg",
+        "pagelabel": "Cover"
+      },
+      {
+        "bgimage": "9781107480551book-updated1.jpg",
+        "pagelabel": "i"
+      },
+      {
+        "bgimage": "9781107480551book-updated2.jpg",
+        "pagelabel": "ii"
+      },
+      {
+        "bgimage": "9781107480551book-updated3.jpg",
+        "pagelabel": "iii"
+      },
+      {
+        "bgimage": "9781107480551book-updated4.jpg",
+        "pagelabel": "iv"
+      },
+      {
+        "bgimage": "9781107480551book-updated5.jpg",
+        "pagelabel": "v"
+      },
+      {
+        "bgimage": "9781107480551book-updated6.jpg",
+        "pagelabel": "vi"
+      },
+      {
+        "bgimage": "9781107480551book-updated7.jpg",
+        "pagelabel": "vii"
+      },
+      {
+        "bgimage": "9781107480551book-updated8.jpg",
+        "pagelabel": "viii"
+      },
+      {
+        "bgimage": "9781107480551book-updated9.jpg",
+        "pagelabel": "ix"
+      },
+      {
+        "bgimage": "9781107480551book-updated10.jpg",
+        "pagelabel": "x"
+      },
+      {
+        "bgimage": "9781107480551book-updated11.jpg",
+        "pagelabel": "xi"
+      },
+      {
+        "bgimage": "9781107480551book-updated12.jpg",
+        "pagelabel": "xii"
+      },
+      {
+        "bgimage": "9781107480551book-updated13.jpg",
+        "pagelabel": "12"
+      },
+      {
+        "bgimage": "9781107480551book-updated14.jpg",
+        "pagelabel": "13"
+      },
+      {
+        "bgimage": "9781107480551book-updated15.jpg",
+        "pagelabel": "14"
+      },
+      {
+        "bgimage": "9781107480551book-updated16.jpg",
+        "pagelabel": "15"
+      },
+      {
+        "bgimage": "9781107480551book-updated17.jpg",
+        "pagelabel": "16"
+      },
+      {
+        "bgimage": "9781107480551book-updated18.jpg",
+        "pagelabel": "17"
+      },
+      {
+        "bgimage": "9781107480551book-updated19.jpg",
+        "pagelabel": "18"
+      },
+      {
+        "bgimage": "9781107480551book-updated20.jpg",
+        "pagelabel": "19"
+      },
+      {
+        "bgimage": "9781107480551book-updated21.jpg",
+        "pagelabel": "20"
+      },
+      {
+        "bgimage": "9781107480551book-updated22.jpg",
+        "pagelabel": "21"
+      },
+      {
+        "bgimage": "9781107480551book-updated23.jpg",
+        "pagelabel": "22"
+      },
+      {
+        "bgimage": "9781107480551book-updated24.jpg",
+        "pagelabel": "23"
+      },
+      {
+        "bgimage": "9781107480551book-updated25.jpg",
+        "pagelabel": "24"
+      },
+      {
+        "bgimage": "9781107480551book-updated26.jpg",
+        "pagelabel": "25"
+      },
+      {
+        "bgimage": "9781107480551book-updated27.jpg",
+        "pagelabel": "26"
+      },
+      {
+        "bgimage": "9781107480551book-updated28.jpg",
+        "pagelabel": "27"
+      },
+      {
+        "bgimage": "9781107480551book-updated29.jpg",
+        "pagelabel": "28"
+      },
+      {
+        "bgimage": "9781107480551book-updated30.jpg",
+        "pagelabel": "29"
+      },
+      {
+        "bgimage": "9781107480551book-updated31.jpg",
+        "pagelabel": "30"
+      },
+      {
+        "bgimage": "9781107480551book-updated32.jpg",
+        "pagelabel": "31"
+      },
+      {
+        "bgimage": "9781107480551book-updated33.jpg",
+        "pagelabel": "32"
+      },
+      {
+        "bgimage": "9781107480551book-updated34.jpg",
+        "pagelabel": "33"
+      },
+      {
+        "bgimage": "9781107480551book-updated35.jpg",
+        "pagelabel": "34"
+      },
+      {
+        "bgimage": "9781107480551book-updated36.jpg",
+        "pagelabel": "35"
+      },
+      {
+        "bgimage": "9781107480551book-updated37.jpg",
+        "pagelabel": "36"
+      },
+      {
+        "bgimage": "9781107480551book-updated38.jpg",
+        "pagelabel": "37"
+      },
+      {
+        "bgimage": "9781107480551book-updated39.jpg",
+        "pagelabel": "38"
+      },
+      {
+        "bgimage": "9781107480551book-updated40.jpg",
+        "pagelabel": "39"
+      },
+      {
+        "bgimage": "9781107480551book-updated41.jpg",
+        "pagelabel": "40"
+      },
+      {
+        "bgimage": "9781107480551book-updated42.jpg",
+        "pagelabel": "41"
+      },
+      {
+        "bgimage": "9781107480551book-updated43.jpg",
+        "pagelabel": "42"
+      },
+      {
+        "bgimage": "9781107480551book-updated44.jpg",
+        "pagelabel": "43"
+      },
+      {
+        "bgimage": "9781107480551book-updated45.jpg",
+        "pagelabel": "44"
+      },
+      {
+        "bgimage": "9781107480551book-updated46.jpg",
+        "pagelabel": "45"
+      },
+      {
+        "bgimage": "9781107480551book-updated47.jpg",
+        "pagelabel": "46"
+      },
+      {
+        "bgimage": "9781107480551book-updated48.jpg",
+        "pagelabel": "47"
+      },
+      {
+        "bgimage": "9781107480551book-updated49.jpg",
+        "pagelabel": "48"
+      },
+      {
+        "bgimage": "9781107480551book-updated50.jpg",
+        "pagelabel": "49"
+      },
+      {
+        "bgimage": "9781107480551book-updated51.jpg",
+        "pagelabel": "50"
+      },
+      {
+        "bgimage": "9781107480551book-updated52.jpg",
+        "pagelabel": "51"
+      },
+      {
+        "bgimage": "9781107480551book-updated53.jpg",
+        "pagelabel": "52"
+      },
+      {
+        "bgimage": "9781107480551book-updated54.jpg",
+        "pagelabel": "53"
+      },
+      {
+        "bgimage": "9781107480551book-updated55.jpg",
+        "pagelabel": "54"
+      },
+      {
+        "bgimage": "9781107480551book-updated56.jpg",
+        "pagelabel": "55"
+      },
+      {
+        "bgimage": "9781107480551book-updated57.jpg",
+        "pagelabel": "56"
+      },
+      {
+        "bgimage": "9781107480551book-updated58.jpg",
+        "pagelabel": "57"
+      },
+      {
+        "bgimage": "9781107480551book-updated59.jpg",
+        "pagelabel": "58"
+      },
+      {
+        "bgimage": "9781107480551book-updated60.jpg",
+        "pagelabel": "59"
+      },
+      {
+        "bgimage": "9781107480551book-updated61.jpg",
+        "pagelabel": "60"
+      },
+      {
+        "bgimage": "9781107480551book-updated62.jpg",
+        "pagelabel": "61"
+      },
+      {
+        "bgimage": "9781107480551book-updated63.jpg",
+        "pagelabel": "62"
+      },
+      {
+        "bgimage": "9781107480551book-updated64.jpg",
+        "pagelabel": "63"
+      },
+      {
+        "bgimage": "9781107480551book-updated65.jpg",
+        "pagelabel": "64"
+      },
+      {
+        "bgimage": "9781107480551book-updated66.jpg",
+        "pagelabel": "65"
+      },
+      {
+        "bgimage": "9781107480551book-updated67.jpg",
+        "pagelabel": "66"
+      },
+      {
+        "bgimage": "9781107480551book-updated68.jpg",
+        "pagelabel": "67"
+      },
+      {
+        "bgimage": "9781107480551book-updated69.jpg",
+        "pagelabel": "68"
+      },
+      {
+        "bgimage": "9781107480551book-updated70.jpg",
+        "pagelabel": "69"
+      },
+      {
+        "bgimage": "9781107480551book-updated71.jpg",
+        "pagelabel": "70"
+      },
+      {
+        "bgimage": "9781107480551book-updated72.jpg",
+        "pagelabel": "71"
+      },
+      {
+        "bgimage": "9781107480551book-updated73.jpg",
+        "pagelabel": "72"
+      },
+      {
+        "bgimage": "9781107480551book-updated74.jpg",
+        "pagelabel": "73"
+      },
+      {
+        "bgimage": "9781107480551book-updated75.jpg",
+        "pagelabel": "74"
+      },
+      {
+        "bgimage": "9781107480551book-updated76.jpg",
+        "pagelabel": "75"
+      },
+      {
+        "bgimage": "9781107480551book-updated77.jpg",
+        "pagelabel": "76"
+      },
+      {
+        "bgimage": "9781107480551book-updated78.jpg",
+        "pagelabel": "77"
+      },
+      {
+        "bgimage": "9781107480551book-updated79.jpg",
+        "pagelabel": "78"
+      },
+      {
+        "bgimage": "9781107480551book-updated80.jpg",
+        "pagelabel": "79"
+      },
+      {
+        "bgimage": "9781107480551book-updated81.jpg",
+        "pagelabel": "80"
+      },
+      {
+        "bgimage": "9781107480551book-updated82.jpg",
+        "pagelabel": "81"
+      },
+      {
+        "bgimage": "9781107480551book-updated83.jpg",
+        "pagelabel": "82"
+      },
+      {
+        "bgimage": "9781107480551book-updated84.jpg",
+        "pagelabel": "83"
+      },
+      {
+        "bgimage": "9781107480551book-updated85.jpg",
+        "pagelabel": "84"
+      },
+      {
+        "bgimage": "9781107480551book-updated86.jpg",
+        "pagelabel": "85"
+      },
+      {
+        "bgimage": "9781107480551book-updated87.jpg",
+        "pagelabel": "86"
+      },
+      {
+        "bgimage": "9781107480551book-updated88.jpg",
+        "pagelabel": "87"
+      },
+      {
+        "bgimage": "9781107480551book-updated89.jpg",
+        "pagelabel": "88"
+      },
+      {
+        "bgimage": "9781107480551book-updated90.jpg",
+        "pagelabel": "89"
+      },
+      {
+        "bgimage": "9781107480551book-updated91.jpg",
+        "pagelabel": "90"
+      },
+      {
+        "bgimage": "9781107480551book-updated92.jpg",
+        "pagelabel": "91"
+      },
+      {
+        "bgimage": "9781107480551book-updated93.jpg",
+        "pagelabel": "92"
+      },
+      {
+        "bgimage": "9781107480551book-updated94.jpg",
+        "pagelabel": "93"
+      },
+      {
+        "bgimage": "9781107480551book-updated95.jpg",
+        "pagelabel": "94"
+      },
+      {
+        "bgimage": "9781107480551book-updated96.jpg",
+        "pagelabel": "95"
+      },
+      {
+        "bgimage": "9781107480551book-updated97.jpg",
+        "pagelabel": "96"
+      },
+      {
+        "bgimage": "9781107480551book-updated98.jpg",
+        "pagelabel": "97"
+      },
+      {
+        "bgimage": "9781107480551book-updated99.jpg",
+        "pagelabel": "98"
+      },
+      {
+        "bgimage": "9781107480551book-updated100.jpg",
+        "pagelabel": "99"
+      },
+      {
+        "bgimage": "9781107480551book-updated101.jpg",
+        "pagelabel": "100"
+      },
+      {
+        "bgimage": "9781107480551book-updated102.jpg",
+        "pagelabel": "101"
+      },
+      {
+        "bgimage": "9781107480551book-updated103.jpg",
+        "pagelabel": "102"
+      },
+      {
+        "bgimage": "9781107480551book-updated104.jpg",
+        "pagelabel": "103"
+      },
+      {
+        "bgimage": "9781107480551book-updated105.jpg",
+        "pagelabel": "104"
+      },
+      {
+        "bgimage": "9781107480551book-updated106.jpg",
+        "pagelabel": "105"
+      },
+      {
+        "bgimage": "9781107480551book-updated107.jpg",
+        "pagelabel": "106"
+      },
+      {
+        "bgimage": "9781107480551book-updated108.jpg",
+        "pagelabel": "107"
+      },
+      {
+        "bgimage": "9781107480551book-updated109.jpg",
+        "pagelabel": "108"
+      },
+      {
+        "bgimage": "9781107480551book-updated110.jpg",
+        "pagelabel": "109"
+      },
+      {
+        "bgimage": "9781107480551book-updated111.jpg",
+        "pagelabel": "110"
+      },
+      {
+        "bgimage": "9781107480551book-updated112.jpg",
+        "pagelabel": "111"
+      },
+      {
+        "bgimage": "9781107480551book-updated113.jpg",
+        "pagelabel": "112"
+      },
+      {
+        "bgimage": "9781107480551book-updated114.jpg",
+        "pagelabel": "113"
+      },
+      {
+        "bgimage": "9781107480551book-updated115.jpg",
+        "pagelabel": "114"
+      },
+      {
+        "bgimage": "9781107480551book-updated116.jpg",
+        "pagelabel": "115"
+      },
+      {
+        "bgimage": "9781107480551book-updated117.jpg",
+        "pagelabel": "116"
+      },
+      {
+        "bgimage": "9781107480551book-updated118.jpg",
+        "pagelabel": "117"
+      },
+      {
+        "bgimage": "9781107480551book-updated119.jpg",
+        "pagelabel": "118"
+      },
+      {
+        "bgimage": "9781107480551book-updated120.jpg",
+        "pagelabel": "119"
+      },
+      {
+        "bgimage": "9781107480551book-updated121.jpg",
+        "pagelabel": "120"
+      },
+      {
+        "bgimage": "9781107480551book-updated122.jpg",
+        "pagelabel": "121"
+      },
+      {
+        "bgimage": "9781107480551book-updated123.jpg",
+        "pagelabel": "122"
+      },
+      {
+        "bgimage": "9781107480551book-updated124.jpg",
+        "pagelabel": "123"
+      },
+      {
+        "bgimage": "9781107480551book-updated125.jpg",
+        "pagelabel": "124"
+      },
+      {
+        "bgimage": "9781107480551book-updated126.jpg",
+        "pagelabel": "125"
+      },
+      {
+        "bgimage": "9781107480551book-updated127.jpg",
+        "pagelabel": "126"
+      },
+      {
+        "bgimage": "9781107480551book-updated128.jpg",
+        "pagelabel": "127"
+      },
+      {
+        "bgimage": "9781107480551book-updated129.jpg",
+        "pagelabel": "128"
+      },
+      {
+        "bgimage": "9781107480551book-updated130.jpg",
+        "pagelabel": "129"
+      },
+      {
+        "bgimage": "9781107480551book-updated131.jpg",
+        "pagelabel": "130"
+      },
+      {
+        "bgimage": "9781107480551book-updated132.jpg",
+        "pagelabel": "131"
+      },
+      {
+        "bgimage": "9781107480551book-updated133.jpg",
+        "pagelabel": "132"
+      },
+      {
+        "bgimage": "9781107480551book-updated134.jpg",
+        "pagelabel": "133"
+      },
+      {
+        "bgimage": "9781107480551book-updated135.jpg",
+        "pagelabel": "134"
+      },
+      {
+        "bgimage": "9781107480551book-updated136.jpg",
+        "pagelabel": "135"
+      },
+      {
+        "bgimage": "9781107480551book-updated137.jpg",
+        "pagelabel": "136"
+      },
+      {
+        "bgimage": "9781107480551book-updated138.jpg",
+        "pagelabel": "137"
+      },
+      {
+        "bgimage": "9781107480551book-updated139.jpg",
+        "pagelabel": "138"
+      },
+      {
+        "bgimage": "9781107480551book-updated140.jpg",
+        "pagelabel": "139"
+      },
+      {
+        "bgimage": "9781107480551book-updated141.jpg",
+        "pagelabel": "140"
+      },
+      {
+        "bgimage": "9781107480551book-updated142.jpg",
+        "pagelabel": "141"
+      },
+      {
+        "bgimage": "9781107480551book-updated143.jpg",
+        "pagelabel": "142"
+      },
+      {
+        "bgimage": "9781107480551book-updated144.jpg",
+        "pagelabel": "143"
+      },
+      {
+        "bgimage": "9781107480551book-updated145.jpg",
+        "pagelabel": "144"
+      },
+      {
+        "bgimage": "9781107480551book-updated146.jpg",
+        "pagelabel": "145"
+      },
+      {
+        "bgimage": "9781107480551book-updated147.jpg",
+        "pagelabel": "146"
+      },
+      {
+        "bgimage": "9781107480551book-updated148.jpg",
+        "pagelabel": "147"
+      },
+      {
+        "bgimage": "9781107480551book-updated149.jpg",
+        "pagelabel": "148"
+      },
+      {
+        "bgimage": "9781107480551book-updated150.jpg",
+        "pagelabel": "149"
+      },
+      {
+        "bgimage": "9781107480551book-updated151.jpg",
+        "pagelabel": "150"
+      },
+      {
+        "bgimage": "9781107480551book-updated152.jpg",
+        "pagelabel": "151"
+      },
+      {
+        "bgimage": "9781107480551book-updated153.jpg",
+        "pagelabel": "152"
+      },
+      {
+        "bgimage": "9781107480551book-updated154.jpg",
+        "pagelabel": "153"
+      },
+      {
+        "bgimage": "9781107480551book-updated155.jpg",
+        "pagelabel": "154"
+      },
+      {
+        "bgimage": "9781107480551book-updated156.jpg",
+        "pagelabel": "155"
+      },
+      {
+        "bgimage": "9781107480551book-updated157.jpg",
+        "pagelabel": "156"
+      },
+      {
+        "bgimage": "9781107480551book-updated158.jpg",
+        "pagelabel": "157"
+      },
+      {
+        "bgimage": "9781107480551book-updated159.jpg",
+        "pagelabel": "158"
+      },
+      {
+        "bgimage": "9781107480551book-updated160.jpg",
+        "pagelabel": "159"
+      },
+      {
+        "bgimage": "9781107480551book-updated161.jpg",
+        "pagelabel": "160"
+      },
+      {
+        "bgimage": "9781107480551book-updated162.jpg",
+        "pagelabel": "161"
+      },
+      {
+        "bgimage": "9781107480551book-updated163.jpg",
+        "pagelabel": "162"
+      },
+      {
+        "bgimage": "9781107480551book-updated164.jpg",
+        "pagelabel": "163"
+      },
+      {
+        "bgimage": "9781107480551book-updated165.jpg",
+        "pagelabel": "164"
+      },
+      {
+        "bgimage": "9781107480551book-updated166.jpg",
+        "pagelabel": "165"
+      },
+      {
+        "bgimage": "9781107480551book-updated167.jpg",
+        "pagelabel": "166"
+      },
+      {
+        "bgimage": "9781107480551book-updated168.jpg",
+        "pagelabel": "167"
+      },
+      {
+        "bgimage": "9781107480551book-updated169.jpg",
+        "pagelabel": "168"
+      },
+      {
+        "bgimage": "9781107480551book-updated170.jpg",
+        "pagelabel": "169"
+      },
+      {
+        "bgimage": "9781107480551book-updated171.jpg",
+        "pagelabel": "170"
+      },
+      {
+        "bgimage": "9781107480551book-updated172.jpg",
+        "pagelabel": "171"
+      },
+      {
+        "bgimage": "9781107480551book-updated173.jpg",
+        "pagelabel": "172"
+      },
+      {
+        "bgimage": "9781107480551book-updated174.jpg",
+        "pagelabel": "173"
+      },
+      {
+        "bgimage": "9781107480551book-updated175.jpg",
+        "pagelabel": "174"
+      },
+      {
+        "bgimage": "9781107480551book-updated176.jpg",
+        "pagelabel": "175"
+      },
+      {
+        "bgimage": "9781107480551book-updated177.jpg",
+        "pagelabel": "176"
+      },
+      {
+        "bgimage": "9781107480551book-updated178.jpg",
+        "pagelabel": "177"
+      },
+      {
+        "bgimage": "9781107480551book-updated179.jpg",
+        "pagelabel": "178"
+      },
+      {
+        "bgimage": "9781107480551book-updated180.jpg",
+        "pagelabel": "179"
+      },
+      {
+        "bgimage": "9781107480551book-updated181.jpg",
+        "pagelabel": "180"
+      },
+      {
+        "bgimage": "9781107480551book-updated182.jpg",
+        "pagelabel": "181"
+      },
+      {
+        "bgimage": "9781107480551book-updated183.jpg",
+        "pagelabel": "182"
+      },
+      {
+        "bgimage": "9781107480551book-updated184.jpg",
+        "pagelabel": "183"
+      },
+      {
+        "bgimage": "9781107480551book-updated185.jpg",
+        "pagelabel": "184"
+      },
+      {
+        "bgimage": "9781107480551book-updated186.jpg",
+        "pagelabel": "185"
+      },
+      {
+        "bgimage": "9781107480551book-updated187.jpg",
+        "pagelabel": "186"
+      },
+      {
+        "bgimage": "9781107480551book-updated188.jpg",
+        "pagelabel": "187"
+      },
+      {
+        "bgimage": "9781107480551book-updated189.jpg",
+        "pagelabel": "188"
+      },
+      {
+        "bgimage": "9781107480551book-updated190.jpg",
+        "pagelabel": "189"
+      },
+      {
+        "bgimage": "9781107480551book-updated191.jpg",
+        "pagelabel": "190"
+      },
+      {
+        "bgimage": "9781107480551book-updated192.jpg",
+        "pagelabel": "191"
+      },
+      {
+        "bgimage": "9781107480551book-updated193.jpg",
+        "pagelabel": "192"
+      },
+      {
+        "bgimage": "9781107480551book-updated194.jpg",
+        "pagelabel": "193"
+      },
+      {
+        "bgimage": "9781107480551book-updated195.jpg",
+        "pagelabel": "194"
+      },
+      {
+        "bgimage": "9781107480551book-updated196.jpg",
+        "pagelabel": "195"
+      },
+      {
+        "bgimage": "9781107480551book-updated197.jpg",
+        "pagelabel": "196"
+      },
+      {
+        "bgimage": "9781107480551book-updated198.jpg",
+        "pagelabel": "197"
+      },
+      {
+        "bgimage": "9781107480551book-updated199.jpg",
+        "pagelabel": "198"
+      },
+      {
+        "bgimage": "9781107480551book-updated200.jpg",
+        "pagelabel": "199"
+      },
+      {
+        "bgimage": "9781107480551book-updated201.jpg",
+        "pagelabel": "200"
+      },
+      {
+        "bgimage": "9781107480551book-updated202.jpg",
+        "pagelabel": "201"
+      },
+      {
+        "bgimage": "9781107480551book-updated203.jpg",
+        "pagelabel": "202"
+      },
+      {
+        "bgimage": "9781107480551book-updated204.jpg",
+        "pagelabel": "203"
+      },
+      {
+        "bgimage": "9781107480551book-updated205.jpg",
+        "pagelabel": "204"
+      },
+      {
+        "bgimage": "9781107480551book-updated206.jpg",
+        "pagelabel": "205"
+      },
+      {
+        "bgimage": "9781107480551book-updated207.jpg",
+        "pagelabel": "206"
+      },
+      {
+        "bgimage": "9781107480551book-updated208.jpg",
+        "pagelabel": "207"
+      },
+      {
+        "bgimage": "9781107480551book-updated209.jpg",
+        "pagelabel": "208"
+      },
+      {
+        "bgimage": "9781107480551book-updated210.jpg",
+        "pagelabel": "209"
+      },
+      {
+        "bgimage": "9781107480551book-updated211.jpg",
+        "pagelabel": "210"
+      },
+      {
+        "bgimage": "9781107480551book-updated212.jpg",
+        "pagelabel": "211"
+      },
+      {
+        "bgimage": "9781107480551book-updated213.jpg",
+        "pagelabel": "212"
+      },
+      {
+        "bgimage": "9781107480551book-updated214.jpg",
+        "pagelabel": "213"
+      },
+      {
+        "bgimage": "9781107480551book-updated215.jpg",
+        "pagelabel": "214"
+      },
+      {
+        "bgimage": "9781107480551book-updated216.jpg",
+        "pagelabel": "215"
+      },
+      {
+        "bgimage": "9781107480551book-updated217.jpg",
+        "pagelabel": "216"
+      },
+      {
+        "bgimage": "9781107480551book-updated218.jpg",
+        "pagelabel": "217"
+      },
+      {
+        "bgimage": "9781107480551book-updated219.jpg",
+        "pagelabel": "218"
+      },
+      {
+        "bgimage": "9781107480551book-updated220.jpg",
+        "pagelabel": "219"
+      },
+      {
+        "bgimage": "9781107480551book-updated221.jpg",
+        "pagelabel": "220"
+      },
+      {
+        "bgimage": "9781107480551book-updated222.jpg",
+        "pagelabel": "221"
+      },
+      {
+        "bgimage": "9781107480551book-updated223.jpg",
+        "pagelabel": "222"
+      },
+      {
+        "bgimage": "9781107480551book-updated224.jpg",
+        "pagelabel": "223"
+      },
+      {
+        "bgimage": "9781107480551book-updated225.jpg",
+        "pagelabel": "224"
+      },
+      {
+        "bgimage": "9781107480551book-updated226.jpg",
+        "pagelabel": "225"
+      },
+      {
+        "bgimage": "9781107480551book-updated227.jpg",
+        "pagelabel": "226"
+      },
+      {
+        "bgimage": "9781107480551book-updated228.jpg",
+        "pagelabel": "227"
+      },
+      {
+        "bgimage": "9781107480551book-updated229.jpg",
+        "pagelabel": "228"
+      },
+      {
+        "bgimage": "9781107480551book-updated230.jpg",
+        "pagelabel": "229"
+      },
+      {
+        "bgimage": "9781107480551book-updated231.jpg",
+        "pagelabel": "230"
+      },
+      {
+        "bgimage": "9781107480551book-updated232.jpg",
+        "pagelabel": "231"
+      },
+      {
+        "bgimage": "9781107480551book-updated233.jpg",
+        "pagelabel": "232"
+      },
+      {
+        "bgimage": "9781107480551book-updated234.jpg",
+        "pagelabel": "233"
+      },
+      {
+        "bgimage": "9781107480551book-updated235.jpg",
+        "pagelabel": "234"
+      },
+      {
+        "bgimage": "9781107480551book-updated236.jpg",
+        "pagelabel": "235"
+      },
+      {
+        "bgimage": "9781107480551book-updated237.jpg",
+        "pagelabel": "236"
+      },
+      {
+        "bgimage": "9781107480551book-updated238.jpg",
+        "pagelabel": "237"
+      },
+      {
+        "bgimage": "9781107480551book-updated239.jpg",
+        "pagelabel": "238"
+      },
+      {
+        "bgimage": "9781107480551book-updated240.jpg",
+        "pagelabel": "239"
+      },
+      {
+        "bgimage": "9781107480551book-updated241.jpg",
+        "pagelabel": "240"
+      },
+      {
+        "bgimage": "9781107480551book-updated242.jpg",
+        "pagelabel": "241"
+      },
+      {
+        "bgimage": "9781107480551book-updated243.jpg",
+        "pagelabel": "242"
+      },
+      {
+        "bgimage": "9781107480551book-updated244.jpg",
+        "pagelabel": "243"
+      },
+      {
+        "bgimage": "9781107480551book-updated245.jpg",
+        "pagelabel": "244"
+      },
+      {
+        "bgimage": "9781107480551book-updated246.jpg",
+        "pagelabel": "245"
+      },
+      {
+        "bgimage": "9781107480551book-updated247.jpg",
+        "pagelabel": "246"
+      },
+      {
+        "bgimage": "9781107480551book-updated248.jpg",
+        "pagelabel": "247"
+      },
+      {
+        "bgimage": "9781107480551book-updated249.jpg",
+        "pagelabel": "248"
+      },
+      {
+        "bgimage": "9781107480551book-updated250.jpg",
+        "pagelabel": "249"
+      },
+      {
+        "bgimage": "9781107480551book-updated251.jpg",
+        "pagelabel": "250"
+      },
+      {
+        "bgimage": "9781107480551book-updated252.jpg",
+        "pagelabel": "251"
+      },
+      {
+        "bgimage": "9781107480551book-updated253.jpg",
+        "pagelabel": "252"
+      },
+      {
+        "bgimage": "9781107480551book-updated254.jpg",
+        "pagelabel": "253"
+      },
+      {
+        "bgimage": "9781107480551book-updated255.jpg",
+        "pagelabel": "254"
+      },
+      {
+        "bgimage": "9781107480551book-updated256.jpg",
+        "pagelabel": "255"
+      },
+      {
+        "bgimage": "9781107480551book-updated257.jpg",
+        "pagelabel": "256"
+      },
+      {
+        "bgimage": "9781107480551book-updated258.jpg",
+        "pagelabel": "257"
+      },
+      {
+        "bgimage": "9781107480551book-updated259.jpg",
+        "pagelabel": "258"
+      },
+      {
+        "bgimage": "9781107480551book-updated260.jpg",
+        "pagelabel": "259"
+      },
+      {
+        "bgimage": "9781107480551book-updated261.jpg",
+        "pagelabel": "260"
+      },
+      {
+        "bgimage": "9781107480551book-updated262.jpg",
+        "pagelabel": "261"
+      },
+      {
+        "bgimage": "9781107480551book-updated263.jpg",
+        "pagelabel": "262"
+      },
+      {
+        "bgimage": "9781107480551book-updated264.jpg",
+        "pagelabel": "263"
+      },
+      {
+        "bgimage": "9781107480551book-updated265.jpg",
+        "pagelabel": "264"
+      },
+      {
+        "bgimage": "9781107480551book-updated266.jpg",
+        "pagelabel": "265"
+      },
+      {
+        "bgimage": "9781107480551book-updated267.jpg",
+        "pagelabel": "266"
+      },
+      {
+        "bgimage": "9781107480551book-updated268.jpg",
+        "pagelabel": "267"
+      },
+      {
+        "bgimage": "9781107480551book-updated269.jpg",
+        "pagelabel": "268"
+      },
+      {
+        "bgimage": "9781107480551book-updated270.jpg",
+        "pagelabel": "269"
+      },
+      {
+        "bgimage": "9781107480551book-updated271.jpg",
+        "pagelabel": "270"
+      },
+      {
+        "bgimage": "9781107480551book-updated272.jpg",
+        "pagelabel": "271"
+      },
+      {
+        "bgimage": "9781107480551book-updated273.jpg",
+        "pagelabel": "272"
+      },
+      {
+        "bgimage": "9781107480551book-updated274.jpg",
+        "pagelabel": "273"
+      },
+      {
+        "bgimage": "9781107480551book-updated275.jpg",
+        "pagelabel": "274"
+      },
+      {
+        "bgimage": "9781107480551book-updated276.jpg",
+        "pagelabel": "275"
+      },
+      {
+        "bgimage": "9781107480551book-updated277.jpg",
+        "pagelabel": "276"
+      },
+      {
+        "bgimage": "9781107480551book-updated278.jpg",
+        "pagelabel": "277"
+      },
+      {
+        "bgimage": "9781107480551book-updated279.jpg",
+        "pagelabel": "278"
+      },
+      {
+        "bgimage": "9781107480551book-updated280.jpg",
+        "pagelabel": "279"
+      },
+      {
+        "bgimage": "9781107480551book-updated281.jpg",
+        "pagelabel": "280"
+      },
+      {
+        "bgimage": "9781107480551book-updated282.jpg",
+        "pagelabel": "281"
+      },
+      {
+        "bgimage": "9781107480551book-updated283.jpg",
+        "pagelabel": "282"
+      },
+      {
+        "bgimage": "9781107480551book-updated284.jpg",
+        "pagelabel": "283"
+      },
+      {
+        "bgimage": "9781107480551book-updated285.jpg",
+        "pagelabel": "284"
+      },
+      {
+        "bgimage": "9781107480551book-updated286.jpg",
+        "pagelabel": "285"
+      },
+      {
+        "bgimage": "9781107480551book-updated287.jpg",
+        "pagelabel": "286"
+      },
+      {
+        "bgimage": "9781107480551book-updated288.jpg",
+        "pagelabel": "287"
+      },
+      {
+        "bgimage": "9781107480551book-updated289.jpg",
+        "pagelabel": "288"
+      },
+      {
+        "bgimage": "9781107480551book-updated290.jpg",
+        "pagelabel": "289"
+      },
+      {
+        "bgimage": "9781107480551book-updated291.jpg",
+        "pagelabel": "290"
+      },
+      {
+        "bgimage": "9781107480551book-updated292.jpg",
+        "pagelabel": "291"
+      },
+      {
+        "bgimage": "9781107480551book-updated293.jpg",
+        "pagelabel": "292"
+      },
+      {
+        "bgimage": "9781107480551book-updated294.jpg",
+        "pagelabel": "293"
+      },
+      {
+        "bgimage": "9781107480551book-updated295.jpg",
+        "pagelabel": "294"
+      },
+      {
+        "bgimage": "9781107480551book-updated296.jpg",
+        "pagelabel": "295"
+      },
+      {
+        "bgimage": "9781107480551book-updated297.jpg",
+        "pagelabel": "296"
+      },
+      {
+        "bgimage": "9781107480551book-updated298.jpg",
+        "pagelabel": "297"
+      },
+      {
+        "bgimage": "9781107480551book-updated299.jpg",
+        "pagelabel": "298"
+      },
+      {
+        "bgimage": "9781107480551book-updated300.jpg",
+        "pagelabel": "299"
+      },
+      {
+        "bgimage": "9781107480551book-updated301.jpg",
+        "pagelabel": "300"
+      },
+      {
+        "bgimage": "9781107480551book-updated302.jpg",
+        "pagelabel": "301"
+      },
+      {
+        "bgimage": "9781107480551book-updated303.jpg",
+        "pagelabel": "302"
+      },
+      {
+        "bgimage": "9781107480551book-updated304.jpg",
+        "pagelabel": "303"
+      },
+      {
+        "bgimage": "9781107480551book-updated305.jpg",
+        "pagelabel": "304"
+      },
+      {
+        "bgimage": "9781107480551book-updated306.jpg",
+        "pagelabel": "305"
+      },
+      {
+        "bgimage": "9781107480551book-updated307.jpg",
+        "pagelabel": "306"
+      },
+      {
+        "bgimage": "9781107480551book-updated308.jpg",
+        "pagelabel": "307"
+      },
+      {
+        "bgimage": "9781107480551book-updated309.jpg",
+        "pagelabel": "308"
+      },
+      {
+        "bgimage": "9781107480551book-updated310.jpg",
+        "pagelabel": "309"
+      },
+      {
+        "bgimage": "9781107480551book-updated311.jpg",
+        "pagelabel": "310"
+      },
+      {
+        "bgimage": "9781107480551book-updated312.jpg",
+        "pagelabel": "311"
+      },
+      {
+        "bgimage": "9781107480551book-updated313.jpg",
+        "pagelabel": "312"
+      },
+      {
+        "bgimage": "9781107480551book-updated314.jpg",
+        "pagelabel": "313"
+      },
+      {
+        "bgimage": "9781107480551book-updated315.jpg",
+        "pagelabel": "314"
+      },
+      {
+        "bgimage": "9781107480551book-updated316.jpg",
+        "pagelabel": "315"
+      },
+      {
+        "bgimage": "9781107480551book-updated317.jpg",
+        "pagelabel": "316"
+      },
+      {
+        "bgimage": "9781107480551book-updated318.jpg",
+        "pagelabel": "317"
+      },
+      {
+        "bgimage": "9781107480551book-updated319.jpg",
+        "pagelabel": "318"
+      },
+      {
+        "bgimage": "9781107480551book-updated320.jpg",
+        "pagelabel": "319"
+      },
+      {
+        "bgimage": "9781107480551book-updated321.jpg",
+        "pagelabel": "320"
+      },
+      {
+        "bgimage": "9781107480551book-updated322.jpg",
+        "pagelabel": "321"
+      },
+      {
+        "bgimage": "9781107480551book-updated323.jpg",
+        "pagelabel": "322"
+      }
+    ]
+  }
+}

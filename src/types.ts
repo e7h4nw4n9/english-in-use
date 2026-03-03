@@ -69,6 +69,17 @@ export interface AppInitProgress {
   progress: number
 }
 
+export interface ExerciseDownloadProgressEvent {
+  productCode: string
+  resourceId?: string | null
+  stage: 'deps' | 'resource'
+  totalFiles: number
+  completedFiles: number
+  failedFiles: number
+  percent: number
+  done: boolean
+}
+
 export enum BookGroup {
   Vocabulary = 1,
   Grammar = 2,
@@ -108,14 +119,21 @@ export interface OverlayTargetPage {
   pagelabel: string
 }
 
+export interface LearningObject {
+  course_id: string
+  module_id: string
+}
+
 export interface OverlayItem {
   x: number
   y: number
   w: number
   h: number
-  type: 'audio' | 'page'
+  type: 'audio' | 'page' | 'exercise' | 'learning-object'
   audio?: OverlayAudio
   page?: OverlayTargetPage
+  'learning-object'?: LearningObject
+  exercise?: ExerciseInfo
 }
 
 export interface PageIndex {
@@ -128,6 +146,7 @@ export interface PageIndex {
 
 export interface BookMetadata {
   toc: TocNode[]
+  exerciseToc?: TocNode[]
   pages: Record<string, PageIndex>
   pageLabels: string[]
   pageWidth: number

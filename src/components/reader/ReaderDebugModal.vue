@@ -1,16 +1,39 @@
 <script setup lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useReaderStore } from '../../stores/reader'
 import type { BookMetadata } from '../../types'
 
-defineProps<{
+const props = defineProps<{
   metadata: BookMetadata | null
   sortedPageLabels: string[]
 }>()
 
 const readerStore = useReaderStore()
 const { debugVisible, currentPageLabel, viewMode } = storeToRefs(readerStore)
+
+const currentPageExercises = computed(() => {
+  if (!props.metadata) return []
+  const labels: string[] = [currentPageLabel.value]
+
+  if (viewMode.value === 'spread') {
+    const idx = props.sortedPageLabels.indexOf(currentPageLabel.value)
+    if (idx !== -1 && idx + 1 < props.sortedPageLabels.length) {
+      labels.push(props.sortedPageLabels[idx + 1])
+    }
+  }
+
+  const exercises: any[] = []
+  labels.forEach((label) => {
+    const page = props.metadata?.pages[label]
+    if (page?.exercises) {
+      page.exercises.forEach((ex) => {
+        exercises.push({ ...ex, pageLabel: label })
+      })
+    }
+  })
+  return exercises
+})
 
 const DebugTocNode = defineComponent({
   name: 'DebugTocNode',
@@ -45,7 +68,13 @@ const DebugTocNode = defineComponent({
 </script>
 
 <template>
-  <a-modal v-model:open="debugVisible" title="Reader Debug Info" :footer="null" width="600px">
+  <a-modal
+    v-model:open="debugVisible"
+    title="Reader Debug Info"
+    :footer="null"
+    width="600px"
+    destroy-on-close
+  >
     <div class="max-h-[70vh] space-y-4 overflow-y-auto p-4 font-mono text-[10px]">
       <div class="grid grid-cols-2 gap-2 rounded bg-gray-50 p-2 dark:bg-gray-800">
         <div class="flex justify-between border-b pb-1">
@@ -60,6 +89,23 @@ const DebugTocNode = defineComponent({
         <div class="flex justify-between border-b pb-1">
           <span>Labels Count:</span> <span>{{ sortedPageLabels.length }}</span>
         </div>
+      </div>
+
+      <!-- Current Exercises Section -->
+      <div>
+        <div class="mb-2 border-b font-bold text-orange-500">Current Exercises:</div>
+        <div v-if="currentPageExercises.length > 0" class="space-y-1">
+          <div
+            v-for="(ex, i) in currentPageExercises"
+            :key="i"
+            class="flex items-center gap-2 rounded bg-orange-50/50 p-1 dark:bg-orange-950/20"
+          >
+            <span class="font-bold text-orange-600 dark:text-orange-400">[{{ ex.pageLabel }}]</span>
+            <span class="text-slate-700 dark:text-slate-300">{{ ex.name }}</span>
+            <span class="ml-auto text-[8px] opacity-40">ID: {{ ex.resource_id }}</span>
+          </div>
+        </div>
+        <div v-else class="py-2 italic text-slate-400">No exercises found for current page.</div>
       </div>
 
       <div>

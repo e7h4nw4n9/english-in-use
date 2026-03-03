@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import ReaderView from '../ReaderView.vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAppStore } from '../../stores/app'
 import { useReaderStore } from '../../stores/reader'
+import * as booksApi from '../../lib/api/books'
+
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: vi.fn(() => Promise.resolve(() => {})),
+}))
 
 // Partial mock for vue-i18n
 vi.mock('vue-i18n', async (importOriginal) => {
@@ -61,6 +66,12 @@ vi.mock('../../lib/api/books', () => ({
   ),
   resolveBookAsset: vi.fn((_code, path) => Promise.resolve(`asset://localhost/${path}`)),
   resolveExerciseResource: vi.fn(() => Promise.resolve('exercise.html')),
+  getExerciseHtml: vi.fn(() =>
+    Promise.resolve({
+      html: '<html><body>Exercise</body></html>',
+      url: 'eiuasset://localhost/exercise.html',
+    }),
+  ),
   getReadingProgress: vi.fn(() => Promise.resolve(null)),
   updateReadingProgress: vi.fn(() => Promise.resolve()),
 }))
@@ -91,6 +102,11 @@ vi.mock('ant-design-vue', async () => {
 describe('ReaderView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.mocked(booksApi.getExerciseHtml).mockResolvedValue({
+      html: '<html><body>Exercise</body></html>',
+      url: 'eiuasset://localhost/exercise.html',
+    })
     const appStore = useAppStore()
     appStore.currentBook = {
       id: 1,
@@ -105,7 +121,7 @@ describe('ReaderView', () => {
   })
 
   it('renders correctly and loads metadata', async () => {
-    const wrapper = mount(ReaderView, {
+    mount(ReaderView, {
       global: {
         stubs: {
           LeftOutlined: true,
@@ -285,6 +301,305 @@ describe('ReaderView', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))
     await wrapper.vm.$nextTick()
     expect(readerStore.currentPageLabel).toBe('13')
+  })
+
+  it('stops audio playback and closes player when page changes', async () => {
+    const wrapper = mount(ReaderView, {
+      global: {
+        stubs: {
+          LeftOutlined: true,
+          RightOutlined: true,
+          FullscreenOutlined: true,
+          MenuFoldOutlined: true,
+          MenuUnfoldOutlined: true,
+          ZoomInOutlined: true,
+          ZoomOutOutlined: true,
+          BlockOutlined: true,
+          FileTextOutlined: true,
+          ArrowLeftOutlined: true,
+          'a-button': true,
+          'a-tooltip': true,
+          'a-divider': true,
+          'a-radio-group': true,
+          'a-radio-button': true,
+          'a-button-group': true,
+          'a-input-search': true,
+          'a-tree': true,
+          'a-spin': true,
+          'a-slider': true,
+        },
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const readerStore = useReaderStore()
+    readerStore.currentAudioPath = 'unit1.mp3'
+    readerStore.isPlaying = true
+    readerStore.audioCurrentTime = 12
+    readerStore.audioDuration = 99
+
+    readerStore.currentPageLabel = '13'
+    await wrapper.vm.$nextTick()
+
+    expect(readerStore.currentAudioPath).toBeNull()
+    expect(readerStore.isPlaying).toBe(false)
+    expect(readerStore.audioCurrentTime).toBe(0)
+    expect(readerStore.audioDuration).toBe(0)
+  })
+
+  it('keeps audio playback state when switching spread to single mode', async () => {
+    const wrapper = mount(ReaderView, {
+      global: {
+        stubs: {
+          LeftOutlined: true,
+          RightOutlined: true,
+          FullscreenOutlined: true,
+          MenuFoldOutlined: true,
+          MenuUnfoldOutlined: true,
+          ZoomInOutlined: true,
+          ZoomOutOutlined: true,
+          BlockOutlined: true,
+          FileTextOutlined: true,
+          ArrowLeftOutlined: true,
+          'a-button': true,
+          'a-tooltip': true,
+          'a-divider': true,
+          'a-radio-group': true,
+          'a-radio-button': true,
+          'a-button-group': true,
+          'a-input-search': true,
+          'a-tree': true,
+          'a-spin': true,
+          'a-slider': true,
+        },
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const readerStore = useReaderStore()
+    readerStore.viewMode = 'spread'
+    await wrapper.vm.$nextTick()
+
+    readerStore.currentAudioPath = 'unit1.mp3'
+    readerStore.isPlaying = true
+    readerStore.audioCurrentTime = 18
+    readerStore.audioDuration = 120
+
+    readerStore.viewMode = 'single'
+    await wrapper.vm.$nextTick()
+
+    expect(readerStore.currentAudioPath).toBe('unit1.mp3')
+    expect(readerStore.isPlaying).toBe(true)
+    expect(readerStore.audioCurrentTime).toBe(18)
+    expect(readerStore.audioDuration).toBe(120)
+  })
+
+  it('continues pending audio load when switching spread to single mode', async () => {
+    let resolveAudioAsset: (value: string) => void = () => {}
+    const pendingAudioAsset = new Promise<string>((resolve) => {
+      resolveAudioAsset = resolve
+    })
+    vi.mocked(booksApi.resolveBookAsset).mockReturnValueOnce(pendingAudioAsset)
+
+    const wrapper = mount(ReaderView, {
+      global: {
+        stubs: {
+          LeftOutlined: true,
+          RightOutlined: true,
+          FullscreenOutlined: true,
+          MenuFoldOutlined: true,
+          MenuUnfoldOutlined: true,
+          ZoomInOutlined: true,
+          ZoomOutOutlined: true,
+          BlockOutlined: true,
+          FileTextOutlined: true,
+          ArrowLeftOutlined: true,
+          'a-button': true,
+          'a-tooltip': true,
+          'a-divider': true,
+          'a-radio-group': true,
+          'a-radio-button': true,
+          'a-button-group': true,
+          'a-input-search': true,
+          'a-tree': true,
+          'a-spin': true,
+          'a-slider': true,
+        },
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const readerStore = useReaderStore()
+    readerStore.viewMode = 'spread'
+    await wrapper.vm.$nextTick()
+
+    const canvas = wrapper.findComponent({ name: 'ReaderCanvas' })
+    ;(canvas.vm as any).$emit('overlayClick', {
+      type: 'audio',
+      audio: { path: 'unit1.mp3' },
+    })
+    await wrapper.vm.$nextTick()
+
+    readerStore.viewMode = 'single'
+    await wrapper.vm.$nextTick()
+
+    resolveAudioAsset('asset://localhost/unit1.mp3')
+    await flushPromises()
+
+    expect(readerStore.currentAudioPath).toBe('unit1.mp3')
+    expect(booksApi.resolveBookAsset).toHaveBeenCalledWith('essgiuebk', 'unit1.mp3')
+  })
+
+  it('opens exercise modal when an exercise overlay is clicked', async () => {
+    const wrapper = mount(ReaderView, {
+      global: {
+        stubs: {
+          'a-modal': {
+            template: '<div class="a-modal-stub"><slot /></div>',
+            props: ['open'],
+          },
+          'a-button': true,
+          'a-tooltip': true,
+          'a-divider': true,
+          'a-spin': true,
+          'a-slider': true,
+        },
+      },
+    })
+
+    // Wait for metadata to load
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const readerStore = useReaderStore()
+    readerStore.currentPageLabel = '12'
+
+    // Mock metadata with exercise overlay
+    const vm = wrapper.vm as any
+    vm.metadata.pages['12'].overlays = [
+      {
+        x: 10,
+        y: 10,
+        w: 50,
+        h: 50,
+        type: 'exercise',
+        exercise: { name: 'Practice 1', resource_id: 'p1' },
+      },
+    ]
+    await wrapper.vm.$nextTick()
+
+    const canvas = wrapper.findComponent({ name: 'ReaderCanvas' })
+    ;(canvas.vm as any).$emit('overlayClick', vm.metadata.pages['12'].overlays[0])
+    await flushPromises()
+
+    expect(readerStore.exerciseVisible).toBe(true)
+    expect(readerStore.currentExerciseTitle).toBe('Practice 1')
+  })
+
+  it('opens exercise modal when a learning-object overlay is clicked', async () => {
+    const wrapper = mount(ReaderView, {
+      global: {
+        stubs: {
+          'a-modal': {
+            template: '<div class="a-modal-stub"><slot /></div>',
+            props: ['open'],
+          },
+          'a-button': true,
+          'a-tooltip': true,
+          'a-divider': true,
+          'a-spin': true,
+          'a-slider': true,
+        },
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const readerStore = useReaderStore()
+    readerStore.currentPageLabel = '12'
+
+    // Mock metadata with learning-object overlay
+    const vm = wrapper.vm as any
+    vm.metadata.pages['12'].overlays = [
+      {
+        x: 10,
+        y: 10,
+        w: 50,
+        h: 50,
+        type: 'learning-object',
+        exercise: { name: 'Learning Obj 1', resource_id: 'lo1' },
+      },
+    ]
+    await wrapper.vm.$nextTick()
+
+    const canvas = wrapper.findComponent({ name: 'ReaderCanvas' })
+    ;(canvas.vm as any).$emit('overlayClick', vm.metadata.pages['12'].overlays[0])
+    await flushPromises()
+
+    expect(readerStore.exerciseVisible).toBe(true)
+    expect(readerStore.currentExerciseTitle).toBe('Learning Obj 1')
+  })
+
+  it('shows global loading and waits for exercise download before opening modal', async () => {
+    let resolveExerciseHtml: (value: booksApi.ExerciseHtmlResponse) => void = () => {}
+    const pendingHtml = new Promise<booksApi.ExerciseHtmlResponse>((resolve) => {
+      resolveExerciseHtml = resolve
+    })
+    vi.mocked(booksApi.getExerciseHtml).mockReturnValueOnce(pendingHtml)
+
+    const wrapper = mount(ReaderView, {
+      global: {
+        stubs: {
+          'a-modal': {
+            template: '<div class="a-modal-stub"><slot /></div>',
+            props: ['open'],
+          },
+          'a-button': true,
+          'a-tooltip': true,
+          'a-divider': true,
+          'a-spin': true,
+          'a-slider': true,
+        },
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const appStore = useAppStore()
+    const readerStore = useReaderStore()
+    readerStore.currentPageLabel = '12'
+
+    const vm = wrapper.vm as any
+    vm.metadata.pages['12'].overlays = [
+      {
+        x: 10,
+        y: 10,
+        w: 50,
+        h: 50,
+        type: 'exercise',
+        exercise: { name: 'Practice Pending', resource_id: 'pending' },
+      },
+    ]
+    await wrapper.vm.$nextTick()
+
+    const canvas = wrapper.findComponent({ name: 'ReaderCanvas' })
+    ;(canvas.vm as any).$emit('overlayClick', vm.metadata.pages['12'].overlays[0])
+    await wrapper.vm.$nextTick()
+
+    expect(appStore.globalLoading).toBe(true)
+    expect(readerStore.exerciseVisible).toBe(false)
+
+    resolveExerciseHtml({
+      html: '<html><body>Ready</body></html>',
+      url: 'eiuasset://localhost/pending.html',
+    })
+    await flushPromises()
+
+    expect(appStore.globalLoading).toBe(false)
+    expect(readerStore.exerciseVisible).toBe(true)
+    expect(readerStore.currentExerciseTitle).toBe('Practice Pending')
   })
 
   it('switches to single view mode when container width is small', async () => {

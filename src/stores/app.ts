@@ -15,7 +15,11 @@ export const useAppStore = defineStore('app', () => {
   })
   const isLoading = ref(true)
   const loadingMessage = ref('')
+  const globalLoading = ref(false)
+  const globalLoadingMessage = ref('')
+  const globalLoadingProgress = ref<number | null>(null)
   const currentBook = ref<Book | null>(null)
+  let globalLoadingCount = 0
 
   let unlistenStatus: UnlistenFn | null = null
 
@@ -127,15 +131,50 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  function startGlobalLoading(message?: string) {
+    globalLoadingCount += 1
+    globalLoading.value = true
+    globalLoadingMessage.value = message || i18n.global.t('app.loading')
+    globalLoadingProgress.value = null
+  }
+
+  function setGlobalLoadingMessage(message: string) {
+    globalLoadingMessage.value = message
+  }
+
+  function setGlobalLoadingProgress(progress: number | null) {
+    if (progress === null || Number.isNaN(progress)) {
+      globalLoadingProgress.value = null
+      return
+    }
+    globalLoadingProgress.value = Math.max(0, Math.min(100, progress))
+  }
+
+  function stopGlobalLoading() {
+    globalLoadingCount = Math.max(0, globalLoadingCount - 1)
+    if (globalLoadingCount === 0) {
+      globalLoading.value = false
+      globalLoadingMessage.value = ''
+      globalLoadingProgress.value = null
+    }
+  }
+
   return {
     config,
     connectionStatus,
     isLoading,
     loadingMessage,
+    globalLoading,
+    globalLoadingMessage,
+    globalLoadingProgress,
     isConfigValid,
     currentBook,
     initApp,
     updateConnectionStatus,
     refreshConfig,
+    startGlobalLoading,
+    setGlobalLoadingMessage,
+    setGlobalLoadingProgress,
+    stopGlobalLoading,
   }
 })

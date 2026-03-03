@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAppStore } from '../../stores/app'
 import { useReaderStore } from '../../stores/reader'
@@ -27,7 +27,6 @@ const props = defineProps<{
   displayIndex: number
   sortedPageLabels: string[]
   currentPageAudioFiles: OverlayAudio[]
-  currentPageExercises: ExerciseInfo[]
   isNarrow?: boolean
 }>()
 
@@ -40,10 +39,7 @@ const emit = defineEmits<{
 
 const appStore = useAppStore()
 const readerStore = useReaderStore()
-const { viewMode, showHotspots, resourceDrawerVisible, isSidebarCollapsed } =
-  storeToRefs(readerStore)
-
-const drawerTab = ref('audio')
+const { viewMode, showHotspots, isSidebarCollapsed } = storeToRefs(readerStore)
 
 const currentRangeText = computed(() => {
   const left = props.sortedPageLabels[props.displayIndex] || ''
@@ -61,6 +57,15 @@ function closeReader() {
 
 function toggleSidebar() {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
+}
+
+function toggleViewMode() {
+  if (viewMode.value === 'spread') {
+    viewMode.value = 'single'
+    return
+  }
+
+  viewMode.value = 'spread'
 }
 </script>
 
@@ -99,7 +104,7 @@ function toggleSidebar() {
         class="flex h-auto items-center p-0 text-inherit opacity-60 transition-opacity hover:opacity-100"
         :disabled="isNarrow"
         :title="viewMode === 'single' ? t('reader.viewSpread') : t('reader.viewSingle')"
-        @click="viewMode = viewMode === 'single' ? 'spread' : 'single'"
+        @click="toggleViewMode"
       >
         <template #icon>
           <BlockOutlined v-if="viewMode === 'single'" />

@@ -4,8 +4,10 @@ pub mod models;
 pub mod services;
 pub mod utils;
 
+#[cfg(desktop)]
 use tauri::Emitter;
 use tauri::Manager;
+#[cfg(desktop)]
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -19,6 +21,57 @@ async fn check_connection_status(
     app: tauri::AppHandle,
 ) -> Result<models::ConnectionStatus, String> {
     Ok(services::status::run_check(&app).await)
+}
+
+#[cfg(desktop)]
+fn setup_desktop_menu(app: &mut tauri::App) -> tauri::Result<()> {
+    let handle = app.handle();
+
+    let settings_item =
+        MenuItem::with_id(handle, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?;
+    let quit_item = PredefinedMenuItem::quit(handle, None)?;
+
+    let app_submenu = Submenu::with_items(
+        handle,
+        "App",
+        true,
+        &[
+            &settings_item,
+            &PredefinedMenuItem::separator(handle)?,
+            &quit_item,
+        ],
+    )?;
+
+    let edit_submenu = Submenu::with_items(
+        handle,
+        "Edit",
+        true,
+        &[
+            &PredefinedMenuItem::undo(handle, None)?,
+            &PredefinedMenuItem::redo(handle, None)?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::cut(handle, None)?,
+            &PredefinedMenuItem::copy(handle, None)?,
+            &PredefinedMenuItem::paste(handle, None)?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::select_all(handle, None)?,
+        ],
+    )?;
+
+    let menu = Menu::with_items(handle, &[&app_submenu, &edit_submenu])?;
+    app.set_menu(menu)?;
+    app.on_menu_event(move |app, event| {
+        if event.id == "settings" {
+            let _ = app.emit("open-settings", ());
+        }
+    });
+
+    Ok(())
+}
+
+#[cfg(not(desktop))]
+fn setup_desktop_menu(_app: &mut tauri::App) -> tauri::Result<()> {
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -38,7 +91,12 @@ pub fn run() {
             .build(),
     };
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
+        .register_asynchronous_uri_scheme_protocol(
+            "eiuasset",
+            crate::utils::exercise_asset::handle_request,
+        )
+        .plugin(tauri_plugin_fs::init())
         .manage(config_state)
         .manage(database::DbState::default())
         .manage(book_cache)
@@ -56,9 +114,25 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init());
+
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_window_state::Builder::default().build());
+
+    #[cfg(not(desktop))]
+    let builder = builder;
+
+    builder
         .setup(|app| {
+            if let Ok(cache_dir) = app.path().app_cache_dir() {
+                if let Err(err) = app.asset_protocol_scope().allow_directory(&cache_dir, true) {
+                    log::warn!(
+                        "failed to extend asset protocol scope for cache dir: {}",
+                        err
+                    );
+                }
+            }
+
             // 初始化全局应用数据目录常量
             let app_data_dir = app
                 .path()
@@ -83,47 +157,7 @@ pub fn run() {
                 services::status::monitor_connections(handle).await;
             });
 
-            let handle = app.handle();
-
-            let settings_item =
-                MenuItem::with_id(handle, "settings", "Settings...", true, Some("CmdOrCtrl+,"))?;
-            let quit_item = PredefinedMenuItem::quit(handle, None)?;
-
-            let app_submenu = Submenu::with_items(
-                handle,
-                "App",
-                true,
-                &[
-                    &settings_item,
-                    &PredefinedMenuItem::separator(handle)?,
-                    &quit_item,
-                ],
-            )?;
-
-            let edit_submenu = Submenu::with_items(
-                handle,
-                "Edit",
-                true,
-                &[
-                    &PredefinedMenuItem::undo(handle, None)?,
-                    &PredefinedMenuItem::redo(handle, None)?,
-                    &PredefinedMenuItem::separator(handle)?,
-                    &PredefinedMenuItem::cut(handle, None)?,
-                    &PredefinedMenuItem::copy(handle, None)?,
-                    &PredefinedMenuItem::paste(handle, None)?,
-                    &PredefinedMenuItem::separator(handle)?,
-                    &PredefinedMenuItem::select_all(handle, None)?,
-                ],
-            )?;
-
-            let menu = Menu::with_items(handle, &[&app_submenu, &edit_submenu])?;
-            app.set_menu(menu)?;
-
-            app.on_menu_event(move |app, event| {
-                if event.id == "settings" {
-                    let _ = app.emit("open-settings", ());
-                }
-            });
+            setup_desktop_menu(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -132,7 +166,9 @@ pub fn run() {
             commands::config::save_config,
             commands::config::export_config,
             commands::config::import_config,
+            commands::config::validate_local_book_source,
             commands::db::get_default_sqlite_path,
+            commands::db::resolve_sqlite_path,
             commands::r2::test_r2_connection,
             commands::r2::list_r2_objects,
             commands::r2::read_r2_object,
@@ -148,6 +184,7 @@ pub fn run() {
             commands::books::resolve_page_resource,
             commands::books::resolve_book_asset,
             commands::books::resolve_exercise_resource,
+            commands::books::get_exercise_html,
             commands::books::get_reading_progress,
             commands::books::update_reading_progress,
             commands::system::restart,

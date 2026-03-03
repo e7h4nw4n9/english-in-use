@@ -4,7 +4,6 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { theme } from 'ant-design-vue'
 import {
   BugOutlined,
-  HomeOutlined,
   CloudOutlined,
   SyncOutlined,
   CheckCircleOutlined,
@@ -28,6 +27,7 @@ const { currentUnitName, debugVisible } = storeToRefs(readerStore)
 
 defineProps<{
   title: string
+  buildStamp?: string
 }>()
 
 const isFullscreen = ref(false)
@@ -101,8 +101,8 @@ onMounted(async () => {
       data-tauri-drag-region
       class="relative flex h-full w-full items-center justify-between px-3"
     >
-      <!-- Left: Placeholder (for symmetry if needed) -->
-      <div class="no-drag z-10 flex min-w-[80px] items-center gap-1"></div>
+      <!-- Left: Spacer -->
+      <div class="no-drag z-10 flex min-w-[80px] items-center"></div>
 
       <!-- Center: Title -->
       <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -113,6 +113,8 @@ onMounted(async () => {
 
       <!-- Right: Actions (Status, Debug) -->
       <div class="no-drag z-10 flex min-w-[80px] items-center justify-end gap-1">
+        <span v-if="buildStamp" class="build-stamp"> Build {{ buildStamp }} </span>
+
         <!-- Connection Status Trigger -->
         <a-tooltip placement="bottomRight" :mouse-enter-delay="0.5">
           <template #title>
@@ -270,7 +272,11 @@ onMounted(async () => {
 
 <style scoped>
 .titlebar {
-  height: 32px;
+  --titlebar-safe-top: constant(safe-area-inset-top);
+  --titlebar-safe-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+  height: calc(32px + var(--titlebar-safe-top));
+  padding-top: var(--titlebar-safe-top);
   user-select: none;
   display: flex;
   align-items: center;
@@ -345,6 +351,17 @@ onMounted(async () => {
   50% {
     opacity: 0.4;
   }
+}
+
+.build-stamp {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 10px;
+  line-height: 1;
+  color: v-bind('token.colorTextSecondary');
+  opacity: 1;
+  user-select: text;
 }
 
 .status-card {

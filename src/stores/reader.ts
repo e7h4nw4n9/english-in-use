@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
 export const useReaderStore = defineStore('reader', () => {
   const isSidebarCollapsed = ref(true)
@@ -14,13 +14,17 @@ export const useReaderStore = defineStore('reader', () => {
   const playbackRate = ref(1.0)
   const audioCurrentTime = ref(0)
   const audioDuration = ref(0)
+  const isAudioLoading = ref(false)
+  const audioError = ref<string | null>(null)
   const isAudioBarCollapsed = ref(false)
   const showHotspots = ref(true)
 
   // Exercise State
   const exerciseVisible = ref(false)
   const currentExerciseUrl = ref('')
+  const currentExerciseHtml = ref('')
   const currentExerciseTitle = ref('')
+  const currentExerciseResourceId = ref('')
   const currentUnitName = ref('')
   const debugVisible = ref(false)
   const resourceDrawerVisible = ref(false)
@@ -67,6 +71,8 @@ export const useReaderStore = defineStore('reader', () => {
     isPlaying.value = false
     audioCurrentTime.value = 0
     audioDuration.value = 0
+    isAudioLoading.value = false
+    audioError.value = null
   }
 
   const toggleHotspots = () => {
@@ -90,11 +96,15 @@ export const useReaderStore = defineStore('reader', () => {
     playbackRate,
     audioCurrentTime,
     audioDuration,
+    isAudioLoading,
+    audioError,
     isAudioBarCollapsed,
     showHotspots,
     exerciseVisible,
     currentExerciseUrl,
+    currentExerciseHtml,
     currentExerciseTitle,
+    currentExerciseResourceId,
     currentUnitName,
     debugVisible,
     resourceDrawerVisible,

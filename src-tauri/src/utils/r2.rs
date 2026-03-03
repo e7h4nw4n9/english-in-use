@@ -20,6 +20,31 @@ impl Default for R2ClientState {
     }
 }
 
+#[cfg(target_os = "ios")]
+fn create_ios_http_client_for_r2() -> Result<aws_types::sdk_config::SharedHttpClient, String> {
+    use aws_smithy_http_client::tls;
+
+    // iOS 上 `native roots` 在当前 AWS/rustls 组合下可能解析失败，导致 TLS 初始化 panic。
+    // 这里使用内置 CA bundle，绕过系统根证书解析路径。
+    let trust_store = tls::TrustStore::empty()
+        .with_native_roots(false)
+        .with_pem_certificate(include_bytes!("../../certs/cacert.pem").to_vec());
+
+    let tls_context = tls::TlsContext::builder()
+        .with_trust_store(trust_store)
+        .build()
+        .map_err(|e| format!("构建 iOS TLS 上下文失败: {e}"))?;
+
+    let http_client = aws_smithy_http_client::Builder::new()
+        .tls_provider(tls::Provider::rustls(
+            tls::rustls_provider::CryptoMode::AwsLc,
+        ))
+        .tls_context(tls_context)
+        .build_https();
+
+    Ok(http_client)
+}
+
 pub async fn get_client(
     config_state: &tauri::State<'_, crate::services::config::ConfigState>,
     r2_state: &tauri::State<'_, R2ClientState>,
@@ -69,6 +94,14 @@ pub(crate) async fn create_r2_client_internal(
         ..
     } = source
     {
+        #[cfg(all(target_os = "ios", target_abi = "sim"))]
+        {
+            let msg =
+                "iOS 模拟器当前无法可靠加载系统根证书，R2 TLS 初始化失败。请在真机上测试 R2。";
+            log::warn!("{}", msg);
+            return Err(msg.to_string());
+        }
+
         debug!("正在为账户 {} 创建 R2 客户端", account_id);
         let endpoint = endpoint_override
             .clone()
@@ -88,16 +121,44 @@ pub(crate) async fn create_r2_client_internal(
             Region::new("auto")
         };
 
-        let config = aws_config::defaults(aws_config::BehaviorVersion::latest())
-            .region(region)
-            .endpoint_url(endpoint)
-            .credentials_provider(SharedCredentialsProvider::new(credentials))
-            .load()
-            .await;
+        let builder_task = tokio::spawn(async move {
+            let loader = aws_config::defaults(aws_config::BehaviorVersion::latest())
+                .region(region)
+                .endpoint_url(endpoint)
+                .credentials_provider(SharedCredentialsProvider::new(credentials));
 
-        let s3_config = aws_sdk_s3::config::Builder::from(&config)
-            .force_path_style(true)
-            .build();
+            #[cfg(target_os = "ios")]
+            let loader = {
+                let http_client = create_ios_http_client_for_r2()?;
+                loader.http_client(http_client)
+            };
+
+            let config = loader.load().await;
+
+            let s3_config = aws_sdk_s3::config::Builder::from(&config)
+                .force_path_style(true)
+                .build();
+
+            Ok::<aws_sdk_s3::config::Config, String>(s3_config)
+        });
+
+        let s3_config = match builder_task.await {
+            Ok(Ok(s3_config)) => s3_config,
+            Ok(Err(err)) => {
+                error!("R2 客户端初始化失败: {}", err);
+                return Err(err);
+            }
+            Err(join_err) if join_err.is_panic() => {
+                error!("R2 TLS 初始化发生 panic: {}", join_err);
+                return Err(
+                    "R2 TLS 初始化失败（系统证书不可用或未被识别）。请在真机上测试。".to_string(),
+                );
+            }
+            Err(join_err) => {
+                error!("R2 客户端初始化任务失败: {}", join_err);
+                return Err(format!("R2 客户端初始化任务失败: {}", join_err));
+            }
+        };
 
         info!("R2 客户端创建成功");
         Ok(Client::from_conf(s3_config))
@@ -107,17 +168,25 @@ pub(crate) async fn create_r2_client_internal(
     }
 }
 
-pub async fn list_objects(client: &Client, bucket: &str) -> Result<Vec<String>, String> {
-    info!("正在列出存储桶 {} 中的对象", bucket);
-    let resp = client
-        .list_objects_v2()
-        .bucket(bucket)
-        .send()
-        .await
-        .map_err(|e| {
-            error!("列出 R2 对象失败: {}", e);
-            format!("Failed to list objects: {}", e)
-        })?;
+pub async fn list_objects(
+    client: &Client,
+    bucket: &str,
+    prefix: Option<&str>,
+) -> Result<Vec<String>, String> {
+    info!(
+        "正在列出存储桶 {} 中的对象 (prefix: {:?})",
+        bucket,
+        prefix.unwrap_or("")
+    );
+    let mut request = client.list_objects_v2().bucket(bucket);
+    if let Some(p) = prefix {
+        request = request.prefix(p);
+    }
+
+    let resp = request.send().await.map_err(|e| {
+        error!("列出 R2 对象失败: {}", e);
+        format!("Failed to list objects: {}", e)
+    })?;
 
     let objects: Vec<String> = resp
         .contents()
@@ -264,7 +333,7 @@ mod tests {
         };
 
         let client = create_r2_client_internal(&source, Some(url)).await.unwrap();
-        let objects = list_objects(&client, "test-bucket").await.unwrap();
+        let objects = list_objects(&client, "test-bucket", None).await.unwrap();
 
         assert_eq!(objects.len(), 2);
         assert!(objects.contains(&"test-file.txt".to_string()));
@@ -364,7 +433,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_status_not_r2() {
         // let source = BookSource::Local {
-        //     path: "/tmp".to_string(),
+        //     path: "tmp".to_string(),
         // };
         // let status = check_status(&source).await;
         // assert_eq!(status, ServiceStatus::NotConfigured);
@@ -373,7 +442,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_client_invalid_source() {
         let source = BookSource::Local {
-            path: "/tmp".to_string(),
+            path: "tmp".to_string(),
         };
         let result = create_r2_client(&source).await;
         assert!(result.is_err());

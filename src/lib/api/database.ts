@@ -17,6 +17,16 @@ export async function getDefaultSqlitePath(): Promise<string> {
 }
 
 /**
+ * 解析 SQLite 路径：
+ * - 传入目录且目录存在数据库文件时，优先返回已有数据库文件路径
+ * - 传入目录但没有数据库文件时，返回该目录下默认数据库文件路径
+ * - 传入文件路径时直接返回
+ */
+export async function resolveSqlitePath(path: string): Promise<string> {
+  return await invoke<string>('resolve_sqlite_path', { path })
+}
+
+/**
  * 测试数据库连接
  * @param connection 数据库连接配置
  */

@@ -1,6 +1,12 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { AppConfig } from '../../types'
 
+export interface LocalBookSourceValidationResult {
+  ok: boolean
+  warnings: string[]
+  errors: string[]
+}
+
 /**
  * 加载当前应用配置
  */
@@ -31,4 +37,13 @@ export async function exportConfig(path: string, config: AppConfig): Promise<voi
  */
 export async function importConfig(path: string): Promise<AppConfig> {
   return await invoke<AppConfig>('import_config', { path })
+}
+
+/**
+ * 验证本地图书源目录结构
+ */
+export async function validateLocalBookSource(
+  path: string,
+): Promise<LocalBookSourceValidationResult> {
+  return await invoke<LocalBookSourceValidationResult>('validate_local_book_source', { path })
 }

@@ -5,6 +5,7 @@ use log::{debug, error, info};
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::Value;
+use std::time::Duration;
 
 const CLOUDFLARE_API_BASE: &str = "https://api.cloudflare.com/client/v4";
 
@@ -33,10 +34,18 @@ pub struct D1Database {
 }
 
 impl D1Database {
+    fn build_http_client() -> Client {
+        Client::builder()
+            .connect_timeout(Duration::from_secs(8))
+            .timeout(Duration::from_secs(15))
+            .build()
+            .unwrap_or_else(|_| Client::new())
+    }
+
     pub fn new(account_id: String, database_id: String, api_token: String) -> Self {
         info!("初始化 Cloudflare D1 数据库客户端: {}", database_id);
         Self {
-            client: Client::new(),
+            client: Self::build_http_client(),
             account_id,
             database_id,
             api_token,
@@ -54,7 +63,7 @@ impl D1Database {
             CLOUDFLARE_API_BASE, account_id, database_id
         );
 
-        let client = reqwest::Client::new();
+        let client = Self::build_http_client();
         match client.get(&url).bearer_auth(api_token).send().await {
             Ok(response) => {
                 if response.status().is_success() {
