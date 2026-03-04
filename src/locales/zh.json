@@ -11,6 +11,7 @@
     "themeDark": "深色",
     "logLevel": "日志等级",
     "enableDebugTools": "启用 Debug 工具",
+    "autoStartStudyTimer": "进入阅读器后自动开始学习计时",
     "debugToolsDisabledByBuild": "当前构建已禁用",
     "enableAutoCheck": "自动测试网络连接",
     "checkInterval": "测试频率 (分钟)",
@@ -96,7 +97,18 @@
     },
     "homeTabs": {
       "books": "书籍",
-      "studyPlan": "学习计划"
+      "studyPlan": "学习计划",
+      "studyStats": "学习统计"
+    }
+  },
+  "db": {
+    "init": {
+      "checkLatestVersion": "正在检查数据库版本...",
+      "readLocalVersion": "正在读取本地数据库版本...",
+      "readDbVersion": "正在读取数据库当前版本...",
+      "migrating": "正在执行数据库升级...",
+      "writeLocalVersion": "正在同步本地版本信息...",
+      "done": "数据库初始化完成"
     }
   },
   "footer": {
@@ -166,5 +178,51 @@
     "weekTaskList": "本周每日任务",
     "unknownSeries": "未分类系列",
     "unknownBook": "未匹配书籍"
+  },
+  "studyTimer": {
+    "title": "学习计时",
+    "noUnit": "暂无单元",
+    "start": "开始",
+    "pause": "暂停",
+    "resume": "继续",
+    "collapse": "收起",
+    "expand": "展开",
+    "restart": "重新开始",
+    "stopAndSave": "结束并保存",
+    "pausedInBackground": "应用进入后台，计时已自动暂停",
+    "saved": "学习计时已保存",
+    "saveFailed": "保存计时失败: {error}",
+    "exitConfirmTitle": "存在未保存计时",
+    "exitConfirmDescription": "检测到未保存的学习计时，离开阅读器前是否保存？",
+    "cancelExit": "取消退出",
+    "discardAndExit": "丢弃并退出",
+    "saveAndExit": "保存并退出",
+    "assignTitle": "保存计时到单元",
+    "assignDescription": "请选择本次计时要归属的单元。",
+    "assignLabel": "请选择归属单元",
+    "confirmSave": "确认保存"
+  },
+  "studyStats": {
+    "period": {
+      "week": "周",
+      "month": "月",
+      "year": "年"
+    },
+    "allBooks": "全部书籍",
+    "allSeries": "全部系列",
+    "seriesVocabulary": "词汇系列",
+    "seriesGrammar": "语法系列",
+    "seriesOther": "其他",
+    "trend": "每日趋势",
+    "bookBreakdown": "书籍占比",
+    "seriesBreakdown": "系列占比",
+    "recentSessions": "最近记录",
+    "duration": "时长",
+    "unit": "单元",
+    "book": "书籍",
+    "timeRange": "时间范围",
+    "empty": "暂无学习记录",
+    "loadFailed": "统计加载失败: {error}",
+    "page": "页码"
   }
 }

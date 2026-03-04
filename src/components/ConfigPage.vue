@@ -69,6 +69,7 @@ const language = ref(props.initialConfig?.system?.language || 'en')
 const themeMode = ref(props.initialConfig?.system?.theme || 'system')
 const logLevel = ref(props.initialConfig?.system?.log_level || 'info')
 const enableDebugTools = ref(props.initialConfig?.system?.enable_debug_tools ?? false)
+const autoStartStudyTimer = ref(props.initialConfig?.system?.auto_start_study_timer ?? false)
 const isCloudConfigured = computed(
   () => sourceType.value === 'CloudflareR2' || dbType.value === 'CloudflareD1',
 )
@@ -499,6 +500,7 @@ function updateFormFromConfig(config: AppConfig) {
     themeMode.value = config.system.theme as 'system' | 'light' | 'dark'
     logLevel.value = config.system.log_level
     enableDebugTools.value = config.system.enable_debug_tools ?? false
+    autoStartStudyTimer.value = config.system.auto_start_study_timer ?? false
     enableAutoCheck.value = config.system.enable_auto_check
     checkIntervalMins.value = config.system.check_interval_mins
   }
@@ -863,6 +865,7 @@ async function handleSave() {
         theme: themeMode.value as 'system' | 'light' | 'dark',
         log_level: logLevel.value as any,
         enable_debug_tools: enableDebugTools.value,
+        auto_start_study_timer: autoStartStudyTimer.value,
         enable_auto_check: enableAutoCheck.value,
         check_interval_mins: checkIntervalMins.value,
       },
@@ -930,6 +933,7 @@ async function handleExport() {
         theme: themeMode.value as 'system' | 'light' | 'dark',
         log_level: logLevel.value as any,
         enable_debug_tools: enableDebugTools.value,
+        auto_start_study_timer: autoStartStudyTimer.value,
         enable_auto_check: enableAutoCheck.value,
         check_interval_mins: checkIntervalMins.value,
       },
@@ -993,6 +997,7 @@ async function handleImport() {
       appendOperationDiagnostic('开始读取导入配置')
       const config: AppConfig = await withTimeout(importConfig(selected), 15_000, '读取配置文件')
       config.system.enable_debug_tools = config.system.enable_debug_tools ?? false
+      config.system.auto_start_study_timer = config.system.auto_start_study_timer ?? false
       appStore.setGlobalLoadingProgress(25)
       appendOperationDiagnostic('导入配置读取完成')
 
@@ -1348,6 +1353,7 @@ function getCurrentDatabase(): DatabaseConnection | null {
           v-model:themeMode="themeMode"
           v-model:logLevel="logLevel"
           v-model:enableDebugTools="enableDebugTools"
+          v-model:autoStartStudyTimer="autoStartStudyTimer"
           v-model:enableAutoCheck="enableAutoCheck"
           v-model:checkIntervalMins="checkIntervalMins"
           :debug-features-available="debugFeaturesAvailable"

@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { message } from 'ant-design-vue'
 import { useAppStore } from '../stores/app'
 import { useReaderStore } from '../stores/reader'
 import { useReaderAudio } from '../composables/useReaderAudio'
 import { useReaderMetadata } from '../composables/useReaderMetadata'
 import { useReaderShortcuts } from '../composables/reader/useReaderShortcuts'
 import { useReaderTocContext } from '../composables/reader/useReaderTocContext'
+import { useStudyTimer, type StudyTimerStopContext } from '../composables/reader/useStudyTimer'
 import { useReaderExerciseLoader } from '../composables/reader/useReaderExerciseLoader'
 import { useReaderViewportMode } from '../composables/reader/useReaderViewportMode'
 import { useReaderOverlayActions } from '../composables/reader/useReaderOverlayActions'
 import { useI18n } from 'vue-i18n'
+import type { StudySessionUnitRef } from '../types'
 
 // Components
 import ReaderTOC from './reader/ReaderTOC.vue'
@@ -103,6 +106,37 @@ const { isNarrow, observe, disconnect } = useReaderViewportMode({
   zoomLevel,
 })
 
+const autoStartStudyTimer = computed(() => Boolean(config.value?.system.auto_start_study_timer))
+const {
+  status: studyTimerStatus,
+  isRunning: studyTimerIsRunning,
+  formattedDuration: studyTimerFormattedDuration,
+  autoPausedByBackground,
+  start: startStudyTimer,
+  pause: pauseStudyTimer,
+  resume: resumeStudyTimer,
+  restart: restartStudyTimer,
+  reset: resetStudyTimer,
+  buildStopContext,
+  saveWithAssignedUnit,
+  markDiscarded,
+} = useStudyTimer({
+  productCode: computed(() => currentBook.value?.product_code),
+  currentResourceId: currentStudyPlanResourceId,
+  currentUnitName: currentStudyPlanUnitName,
+  autoStart: autoStartStudyTimer,
+})
+
+const saveTimerPromptVisible = ref(false)
+const saveInProgress = ref(false)
+const pendingStopContext = ref<StudyTimerStopContext | null>(null)
+const pendingFlow = ref<'manual' | 'exit' | null>(null)
+const pendingAssignedResourceId = ref('')
+const shouldResumeRunningOnCancel = ref(false)
+
+const visitedUnitOptions = computed(() => pendingStopContext.value?.visitedUnits || [])
+const shouldShowAssignUnitPicker = computed(() => visitedUnitOptions.value.length > 1)
+
 watch(
   currentUnitName,
   (unitName) => {
@@ -127,14 +161,136 @@ watch(
   { immediate: true },
 )
 
+watch(autoPausedByBackground, (paused, wasPaused) => {
+  if (paused && !wasPaused) {
+    message.info(t('studyTimer.pausedInBackground'))
+  }
+})
+
 function handleToggleAudio(path: string) {
   if (currentBook.value) {
     toggleAudio(currentBook.value.product_code, path)
   }
 }
 
-function closeReader() {
+function captureStopContext(): StudyTimerStopContext | null {
+  const wasRunning = studyTimerIsRunning.value
+  if (wasRunning) {
+    pauseStudyTimer()
+  }
+  shouldResumeRunningOnCancel.value = wasRunning
+
+  const context = buildStopContext()
+  if (!context) {
+    resetStudyTimer(true)
+    shouldResumeRunningOnCancel.value = false
+    return null
+  }
+
+  return context
+}
+
+function resetPendingFlowState() {
+  pendingStopContext.value = null
+  pendingFlow.value = null
+  pendingAssignedResourceId.value = ''
+  shouldResumeRunningOnCancel.value = false
+}
+
+function restoreRunningStateOnCancel() {
+  if (shouldResumeRunningOnCancel.value) {
+    resumeStudyTimer()
+  }
+  shouldResumeRunningOnCancel.value = false
+}
+
+function resolveAssignedUnitFromPicker(context: StudyTimerStopContext): StudySessionUnitRef {
+  const matched = context.visitedUnits.find(
+    (item) => item.resourceId === pendingAssignedResourceId.value,
+  )
+  return matched || context.entryUnit
+}
+
+async function persistTimerContext(
+  context: StudyTimerStopContext,
+  assignedUnit: StudySessionUnitRef,
+  closeReaderAfterSave: boolean,
+) {
+  saveInProgress.value = true
+  try {
+    await saveWithAssignedUnit(context, assignedUnit)
+    message.success(t('studyTimer.saved'))
+
+    saveTimerPromptVisible.value = false
+    resetPendingFlowState()
+
+    if (closeReaderAfterSave) {
+      appStore.currentBook = null
+    }
+  } catch (error) {
+    const errorText = error instanceof Error ? error.message : String(error)
+    message.error(t('studyTimer.saveFailed', { error: errorText }))
+  } finally {
+    saveInProgress.value = false
+  }
+}
+
+async function requestStopAndSaveTimer() {
+  const context = captureStopContext()
+  if (!context) return
+
+  pendingStopContext.value = context
+  pendingFlow.value = 'manual'
+  pendingAssignedResourceId.value = context.entryUnit.resourceId
+
+  if (shouldShowAssignUnitPicker.value) {
+    saveTimerPromptVisible.value = true
+    return
+  }
+
+  await persistTimerContext(context, context.entryUnit, false)
+}
+
+async function handleRequestCloseReader() {
+  const context = captureStopContext()
+  if (!context) {
+    appStore.currentBook = null
+    return
+  }
+
+  pendingStopContext.value = context
+  pendingFlow.value = 'exit'
+  pendingAssignedResourceId.value = context.entryUnit.resourceId
+  saveTimerPromptVisible.value = true
+}
+
+function handleCancelSaveTimerPrompt() {
+  saveTimerPromptVisible.value = false
+  resetPendingFlowState()
+  restoreRunningStateOnCancel()
+}
+
+function handleDiscardAndExitReader() {
+  markDiscarded()
+  saveTimerPromptVisible.value = false
+  resetPendingFlowState()
   appStore.currentBook = null
+}
+
+async function handleConfirmSaveTimerPrompt() {
+  const context = pendingStopContext.value
+  if (!context) {
+    saveTimerPromptVisible.value = false
+    if (pendingFlow.value === 'exit') {
+      appStore.currentBook = null
+    }
+    return
+  }
+
+  const assignedUnit = shouldShowAssignUnitPicker.value
+    ? resolveAssignedUnitFromPicker(context)
+    : context.entryUnit
+  await persistTimerContext(context, assignedUnit, pendingFlow.value === 'exit')
 }
 
 useReaderShortcuts({
@@ -143,7 +299,9 @@ useReaderShortcuts({
   togglePlayback: () => {
     isPlaying.value = !isPlaying.value
   },
-  closeReader,
+  closeReader: () => {
+    void handleRequestCloseReader()
+  },
   zoomIn: () => readerStore.zoomIn(),
   zoomOut: () => readerStore.zoomOut(),
   resetZoom: () => readerStore.resetZoom(),
@@ -194,12 +352,64 @@ onUnmounted(() => {
         :currentStudyPlanResourceId="currentStudyPlanResourceId"
         :currentStudyPlanUnitName="currentStudyPlanUnitName"
         :isNarrow="isNarrow"
+        :timerStatus="studyTimerStatus"
+        :timerDisplay="studyTimerFormattedDuration"
         @toggleAudio="handleToggleAudio"
         @openExercise="openExercise"
         @goBack="goBack"
         @goForward="goForward"
+        @requestCloseReader="handleRequestCloseReader"
+        @timerStart="startStudyTimer"
+        @timerPause="pauseStudyTimer"
+        @timerResume="resumeStudyTimer"
+        @timerRestart="restartStudyTimer"
+        @timerStopSave="requestStopAndSaveTimer"
       />
     </Transition>
+
+    <a-modal
+      :open="saveTimerPromptVisible"
+      :title="
+        pendingFlow === 'exit' ? t('studyTimer.exitConfirmTitle') : t('studyTimer.assignTitle')
+      "
+      :footer="null"
+      :maskClosable="false"
+      :closable="false"
+      centered
+    >
+      <p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+        {{
+          pendingFlow === 'exit'
+            ? t('studyTimer.exitConfirmDescription')
+            : t('studyTimer.assignDescription')
+        }}
+      </p>
+      <div v-if="shouldShowAssignUnitPicker" class="mb-4">
+        <div class="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
+          {{ t('studyTimer.assignLabel') }}
+        </div>
+        <a-select v-model:value="pendingAssignedResourceId" class="w-full">
+          <a-select-option
+            v-for="unit in visitedUnitOptions"
+            :key="unit.resourceId"
+            :value="unit.resourceId"
+          >
+            <span class="font-semibold">{{ unit.unitName }}</span>
+          </a-select-option>
+        </a-select>
+      </div>
+      <div class="flex justify-end gap-2">
+        <a-button @click="handleCancelSaveTimerPrompt">
+          {{ pendingFlow === 'exit' ? t('studyTimer.cancelExit') : t('common.cancel') }}
+        </a-button>
+        <a-button v-if="pendingFlow === 'exit'" danger @click="handleDiscardAndExitReader">{{
+          t('studyTimer.discardAndExit')
+        }}</a-button>
+        <a-button type="primary" :loading="saveInProgress" @click="handleConfirmSaveTimerPrompt">{{
+          pendingFlow === 'exit' ? t('studyTimer.saveAndExit') : t('studyTimer.confirmSave')
+        }}</a-button>
+      </div>
+    </a-modal>
 
     <ReaderAudioPlayer />
 

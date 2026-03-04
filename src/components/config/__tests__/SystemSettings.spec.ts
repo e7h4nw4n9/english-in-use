@@ -59,6 +59,7 @@ describe('SystemSettings.vue', () => {
         themeMode: 'system',
         logLevel: 'info',
         enableDebugTools: true,
+        autoStartStudyTimer: false,
         debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,
@@ -82,6 +83,7 @@ describe('SystemSettings.vue', () => {
         themeMode: 'system',
         logLevel: 'info',
         enableDebugTools: true,
+        autoStartStudyTimer: false,
         debugFeaturesAvailable: false,
         enableAutoCheck: true,
         checkIntervalMins: 5,
@@ -92,7 +94,7 @@ describe('SystemSettings.vue', () => {
 
     expect(wrapper.text()).not.toContain('config.enableDebugTools')
     const switchInputs = wrapper.findAll('.switch-stub')
-    expect(switchInputs).toHaveLength(1)
+    expect(switchInputs).toHaveLength(2)
   })
 
   it('disables auto check switch when cloud is not configured', () => {
@@ -102,6 +104,7 @@ describe('SystemSettings.vue', () => {
         themeMode: 'system',
         logLevel: 'info',
         enableDebugTools: false,
+        autoStartStudyTimer: false,
         debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,
@@ -111,7 +114,7 @@ describe('SystemSettings.vue', () => {
     })
 
     const switchInputs = wrapper.findAll('.switch-stub')
-    expect((switchInputs[1].element as HTMLInputElement).disabled).toBe(true)
+    expect((switchInputs[2].element as HTMLInputElement).disabled).toBe(true)
   })
 
   it('emits updates when values change', async () => {
@@ -121,6 +124,7 @@ describe('SystemSettings.vue', () => {
         themeMode: 'system',
         logLevel: 'info',
         enableDebugTools: false,
+        autoStartStudyTimer: false,
         debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,

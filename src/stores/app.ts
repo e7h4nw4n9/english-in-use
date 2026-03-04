@@ -91,13 +91,14 @@ export const useAppStore = defineStore('app', () => {
 
       if (isConfigValid.value) {
         info('配置有效，正在初始化数据库...')
-        const newlyInitialized = await initializeDatabase()
-        info(`数据库初始化完成，是否为新初始化: ${newlyInitialized}`)
+        loadingMessage.value = i18n.global.t('db.init.checkLatestVersion')
+        const didMigrate = await initializeDatabase()
+        info(`数据库初始化完成，是否执行迁移: ${didMigrate}`)
 
-        // If using Cloudflare D1 and it was newly initialized, wait a couple of seconds
+        // If using Cloudflare D1 and migration ran, wait a couple of seconds
         // for the database to be fully ready on the network
-        if (newlyInitialized && config.value?.database?.type === 'CloudflareD1') {
-          debug('检测到 Cloudflare D1 首次初始化，等待 2 秒以确保连接就绪...')
+        if (didMigrate && config.value?.database?.type === 'CloudflareD1') {
+          debug('检测到 Cloudflare D1 迁移执行，等待 2 秒以确保连接就绪...')
           loadingMessage.value = i18n.global.t('config.waitingForDatabase')
           await new Promise((resolve) => setTimeout(resolve, 2000))
         }

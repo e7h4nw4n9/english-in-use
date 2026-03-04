@@ -6,12 +6,13 @@ import ConfigPage from './components/ConfigPage.vue'
 import BookList from './components/BookList.vue'
 import ReaderView from './components/ReaderView.vue'
 import StudyPlanPage from './components/study-plan/StudyPlanPage.vue'
+import StudyStatsPage from './components/study-stats/StudyStatsPage.vue'
 import LoadingOverlay from './components/common/loading/LoadingOverlay.vue'
 import type { AppInitProgress } from './types'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from './composables/useTheme'
 import { theme } from 'ant-design-vue'
-import { BookOutlined, CalendarOutlined } from '@ant-design/icons-vue'
+import { BookOutlined, CalendarOutlined, BarChartOutlined } from '@ant-design/icons-vue'
 import { useAppStore } from './stores/app'
 import { useReaderStore } from './stores/reader'
 import { storeToRefs } from 'pinia'
@@ -35,7 +36,7 @@ const {
 const { isUiVisible } = storeToRefs(readerStore)
 
 const showConfig = ref(false)
-const homeTab = ref<'books' | 'studyPlan'>('books')
+const homeTab = ref<'books' | 'studyPlan' | 'studyStats'>('books')
 const homeReloadKey = ref(0)
 const shouldReloadHomeAfterConfigChange = ref(false)
 
@@ -125,7 +126,7 @@ async function onConfigBack(options?: { reloadHome?: boolean }) {
 
 onMounted(async () => {
   unlistenProgress = await listen<AppInitProgress>('init-progress', (event) => {
-    loadingMessage.value = event.payload.message
+    loadingMessage.value = t(event.payload.message)
   })
 
   await appStore.initApp()
@@ -199,11 +200,23 @@ onUnmounted(() => {
                 <CalendarOutlined class="home-tab-icon" />
                 {{ t('app.homeTabs.studyPlan') }}
               </button>
+              <button
+                type="button"
+                class="home-tab-btn"
+                :class="{ active: homeTab === 'studyStats' }"
+                :aria-selected="homeTab === 'studyStats'"
+                :tabindex="homeTab === 'studyStats' ? 0 : -1"
+                @click="homeTab = 'studyStats'"
+              >
+                <BarChartOutlined class="home-tab-icon" />
+                {{ t('app.homeTabs.studyStats') }}
+              </button>
             </div>
 
             <div class="home-content-surface">
               <BookList v-if="homeTab === 'books'" />
-              <StudyPlanPage v-else />
+              <StudyPlanPage v-else-if="homeTab === 'studyPlan'" />
+              <StudyStatsPage v-else />
             </div>
           </div>
         </Transition>
@@ -287,7 +300,7 @@ onUnmounted(() => {
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 18px;
   padding: 6px;
@@ -306,7 +319,7 @@ onUnmounted(() => {
   top: 6px;
   bottom: 6px;
   left: 6px;
-  width: calc((100% - 20px) / 2);
+  width: calc((100% - 28px) / 3);
   border-radius: 16px;
   background: linear-gradient(135deg, v-bind('token.colorPrimary'), v-bind('token.colorInfo'));
   box-shadow: 0 4px 12px color-mix(in srgb, v-bind('token.colorPrimary') 40%, transparent);
@@ -315,6 +328,10 @@ onUnmounted(() => {
 
 .home-tabs[data-active-tab='studyPlan']::before {
   transform: translateX(calc(100% + 8px));
+}
+
+.home-tabs[data-active-tab='studyStats']::before {
+  transform: translateX(calc((100% + 8px) * 2));
 }
 
 .home-tab-btn {

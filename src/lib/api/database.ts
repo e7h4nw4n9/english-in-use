@@ -3,7 +3,7 @@ import type { DatabaseConnection, ConnectionStatus, BookSource } from '../../typ
 
 /**
  * 初始化数据库
- * @returns 是否执行了新的迁移（即是否为首次初始化）
+ * @returns 是否执行了升级迁移
  */
 export async function initializeDatabase(): Promise<boolean> {
   return await invoke<boolean>('initialize_database')

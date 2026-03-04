@@ -11,6 +11,7 @@
     "themeDark": "Dark",
     "logLevel": "Log Level",
     "enableDebugTools": "Enable Debug Tools",
+    "autoStartStudyTimer": "Auto start study timer in reader",
     "debugToolsDisabledByBuild": "Disabled in this build",
     "enableAutoCheck": "Auto Connection Test",
     "checkInterval": "Test Interval (mins)",
@@ -96,7 +97,18 @@
     },
     "homeTabs": {
       "books": "Books",
-      "studyPlan": "Study Plan"
+      "studyPlan": "Study Plan",
+      "studyStats": "Study Stats"
+    }
+  },
+  "db": {
+    "init": {
+      "checkLatestVersion": "Checking database version...",
+      "readLocalVersion": "Reading local database version...",
+      "readDbVersion": "Reading current database version...",
+      "migrating": "Applying database migrations...",
+      "writeLocalVersion": "Syncing local version file...",
+      "done": "Database initialization completed"
     }
   },
   "footer": {
@@ -166,5 +178,51 @@
     "weekTaskList": "Weekly Task Lists",
     "unknownSeries": "Uncategorized Series",
     "unknownBook": "Unmatched Book"
+  },
+  "studyTimer": {
+    "title": "Study Timer",
+    "noUnit": "No unit selected",
+    "start": "Start",
+    "pause": "Pause",
+    "resume": "Resume",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "restart": "Restart",
+    "stopAndSave": "Stop & Save",
+    "pausedInBackground": "Timer paused after app moved to background",
+    "saved": "Study session saved",
+    "saveFailed": "Failed to save session: {error}",
+    "exitConfirmTitle": "Unsaved Study Timer",
+    "exitConfirmDescription": "You have an unsaved timer session. Save before leaving reader?",
+    "cancelExit": "Cancel Exit",
+    "discardAndExit": "Discard & Exit",
+    "saveAndExit": "Save & Exit",
+    "assignTitle": "Save Session To Unit",
+    "assignDescription": "Choose the unit to save this session to.",
+    "assignLabel": "Assign To Unit",
+    "confirmSave": "Confirm Save"
+  },
+  "studyStats": {
+    "period": {
+      "week": "Week",
+      "month": "Month",
+      "year": "Year"
+    },
+    "allBooks": "All Books",
+    "allSeries": "All Series",
+    "seriesVocabulary": "Vocabulary",
+    "seriesGrammar": "Grammar",
+    "seriesOther": "Other",
+    "trend": "Daily Trend",
+    "bookBreakdown": "Book Breakdown",
+    "seriesBreakdown": "Series Breakdown",
+    "recentSessions": "Recent Sessions",
+    "duration": "Duration",
+    "unit": "Unit",
+    "book": "Book",
+    "timeRange": "Time Range",
+    "empty": "No study sessions yet",
+    "loadFailed": "Failed to load stats: {error}",
+    "page": "Page"
   }
 }

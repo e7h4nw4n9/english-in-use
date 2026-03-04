@@ -193,6 +193,8 @@ pub fn run() {
             commands::study_plan::get_study_tasks_summary,
             commands::study_plan::get_tasks_by_date,
             commands::study_plan::complete_study_task,
+            commands::study_session::save_study_session,
+            commands::study_session::get_study_stats,
             commands::system::restart,
             commands::system::get_platform,
             check_connection_status

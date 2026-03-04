@@ -76,6 +76,7 @@ const commonStubs = {
   AppFooter: { template: '<div class="footer-stub" />' },
   ConfigPage: { template: '<div class="config-page-stub" />' },
   BookList: { template: '<div class="book-list-stub" />' },
+  StudyStatsPage: { template: '<div class="study-stats-page-stub" />' },
   ReaderView: { template: '<div class="reader-view-stub" />' },
 }
 

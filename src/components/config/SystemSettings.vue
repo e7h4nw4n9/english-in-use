@@ -16,6 +16,7 @@ interface Props {
   themeMode: string
   logLevel: string
   enableDebugTools: boolean
+  autoStartStudyTimer: boolean
   debugFeaturesAvailable: boolean
   enableAutoCheck: boolean
   checkIntervalMins: number
@@ -29,6 +30,7 @@ const emit = defineEmits<{
   (e: 'update:themeMode', value: string): void
   (e: 'update:logLevel', value: string): void
   (e: 'update:enableDebugTools', value: boolean): void
+  (e: 'update:autoStartStudyTimer', value: boolean): void
   (e: 'update:enableAutoCheck', value: boolean): void
   (e: 'update:checkIntervalMins', value: number): void
 }>()
@@ -119,6 +121,13 @@ onMounted(() => {
         <a-switch
           :checked="enableDebugTools"
           @update:checked="emit('update:enableDebugTools', $event)"
+        />
+      </a-form-item>
+
+      <a-form-item :label="t('config.autoStartStudyTimer')">
+        <a-switch
+          :checked="autoStartStudyTimer"
+          @update:checked="emit('update:autoStartStudyTimer', $event)"
         />
       </a-form-item>
 

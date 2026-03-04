@@ -64,7 +64,7 @@ function deferred<T>() {
   return { promise, resolve, reject }
 }
 
-function mountFooter(props: Partial<InstanceType<typeof ReaderFooter>['$props']> = {}) {
+function mountFooter(props: Record<string, any> = {}) {
   return mount(ReaderFooter, {
     props: {
       displayIndex: 0,
@@ -72,6 +72,8 @@ function mountFooter(props: Partial<InstanceType<typeof ReaderFooter>['$props']>
       currentPageAudioFiles: [],
       currentStudyPlanResourceId: 'RE_SHARED',
       currentStudyPlanUnitName: 'Unit 1',
+      timerStatus: 'idle',
+      timerDisplay: '00:00:00',
       isNarrow: false,
       ...props,
     },
@@ -80,6 +82,8 @@ function mountFooter(props: Partial<InstanceType<typeof ReaderFooter>['$props']>
         'a-button': true,
         'a-float-button': true,
         'a-float-button-group': true,
+        'a-popover': true,
+        ReaderStudyTimerFloat: true,
         LeftOutlined: true,
         RightOutlined: true,
         UnorderedListOutlined: true,
@@ -92,6 +96,11 @@ function mountFooter(props: Partial<InstanceType<typeof ReaderFooter>['$props']>
         AppstoreOutlined: true,
         CalendarOutlined: true,
         CheckCircleOutlined: true,
+        ClockCircleOutlined: true,
+        PauseCircleOutlined: true,
+        PlayCircleOutlined: true,
+        RedoOutlined: true,
+        SaveOutlined: true,
       },
     },
   })
@@ -257,5 +266,40 @@ describe('ReaderFooter study plan sync', () => {
     expect(vm.isStudyPlanActive).toBe(true)
     expect(vm.studyPlanLoading).toBe(false)
     expect(mockedGetStudyPlanStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it('emits timerStart only from island when timer is idle', async () => {
+    const wrapper = mountFooter({ timerStatus: 'idle' })
+    const vm = wrapper.vm as unknown as {
+      canStartTimerFromIsland: boolean
+      startTimerFromIsland: () => void
+    }
+
+    expect(vm.canStartTimerFromIsland).toBe(true)
+    vm.startTimerFromIsland()
+    expect(wrapper.emitted('timerStart')).toHaveLength(1)
+
+    await wrapper.setProps({ timerStatus: 'running' })
+    expect(vm.canStartTimerFromIsland).toBe(false)
+    vm.startTimerFromIsland()
+    expect(wrapper.emitted('timerStart')).toHaveLength(1)
+  })
+
+  it('shows timer panel only when timer session is active', async () => {
+    const wrapper = mountFooter({ timerStatus: 'idle' })
+    const vm = wrapper.vm as unknown as {
+      timerPanelVisible: boolean
+    }
+
+    expect(vm.timerPanelVisible).toBe(false)
+
+    await wrapper.setProps({ timerStatus: 'running' })
+    expect(vm.timerPanelVisible).toBe(true)
+
+    await wrapper.setProps({ timerStatus: 'paused' })
+    expect(vm.timerPanelVisible).toBe(true)
+
+    await wrapper.setProps({ timerStatus: 'idle' })
+    expect(vm.timerPanelVisible).toBe(false)
   })
 })

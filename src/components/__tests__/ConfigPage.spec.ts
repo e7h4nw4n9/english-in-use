@@ -142,6 +142,7 @@ describe('ConfigPage.vue Core Logic', () => {
             log_level: 'info',
             enable_auto_check: true,
             check_interval_mins: 5,
+            auto_start_study_timer: false,
           },
           book_source: {
             type: 'Local',
@@ -201,6 +202,7 @@ describe('ConfigPage.vue Core Logic', () => {
         log_level: 'debug',
         enable_auto_check: true,
         check_interval_mins: 10,
+        auto_start_study_timer: false,
       },
       book_source: { type: 'Local', details: { path: '/path' } },
       database: { type: 'SQLite', details: { path: '/db' } },
@@ -237,6 +239,7 @@ describe('ConfigPage.vue Core Logic', () => {
         log_level: 'debug',
         enable_auto_check: true,
         check_interval_mins: 10,
+        auto_start_study_timer: false,
       },
       book_source: { type: 'Local', details: { path: '/path' } },
       database: { type: 'SQLite', details: { path: '' } },
@@ -268,6 +271,7 @@ describe('ConfigPage.vue Core Logic', () => {
         log_level: 'debug',
         enable_auto_check: true,
         check_interval_mins: 10,
+        auto_start_study_timer: false,
       },
       book_source: { type: 'Local', details: { path: '/path' } },
       database: { type: 'SQLite', details: { path: '/db' } },
@@ -302,6 +306,7 @@ describe('ConfigPage.vue Core Logic', () => {
             log_level: 'info',
             enable_auto_check: true,
             check_interval_mins: 5,
+            auto_start_study_timer: false,
           },
           book_source: {
             type: 'CloudflareR2',
@@ -347,6 +352,7 @@ describe('ConfigPage.vue Core Logic', () => {
         log_level: 'info',
         enable_auto_check: true,
         check_interval_mins: 5,
+        auto_start_study_timer: false,
       },
       book_source: {
         type: 'CloudflareR2',
@@ -401,6 +407,7 @@ describe('ConfigPage.vue Core Logic', () => {
             log_level: 'info',
             enable_auto_check: true,
             check_interval_mins: 5,
+            auto_start_study_timer: false,
           },
           book_source: {
             type: 'Local',
@@ -446,6 +453,7 @@ describe('ConfigPage.vue Core Logic', () => {
             log_level: 'info',
             enable_auto_check: true,
             check_interval_mins: 5,
+            auto_start_study_timer: false,
           },
           book_source: {
             type: 'Local',
@@ -487,6 +495,7 @@ describe('ConfigPage.vue Core Logic', () => {
             log_level: 'info',
             enable_auto_check: true,
             check_interval_mins: 5,
+            auto_start_study_timer: false,
           },
           book_source: {
             type: 'Local',
@@ -526,6 +535,7 @@ describe('ConfigPage.vue Core Logic', () => {
             log_level: 'info',
             enable_auto_check: true,
             check_interval_mins: 5,
+            auto_start_study_timer: false,
           },
           book_source: {
             type: 'Local',

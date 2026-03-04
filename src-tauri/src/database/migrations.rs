@@ -22,4 +22,9 @@ pub const MIGRATIONS: &[Migration] = &[
         up: concat!(include_str!("../../migrations/0.2.0/up/study_plan.sql")),
         down: concat!(include_str!("../../migrations/0.2.0/down/down.sql")),
     },
+    Migration {
+        version: "0.3.0",
+        up: concat!(include_str!("../../migrations/0.3.0/up/study_sessions.sql")),
+        down: concat!(include_str!("../../migrations/0.3.0/down/down.sql")),
+    },
 ];

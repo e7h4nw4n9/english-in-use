@@ -16,6 +16,7 @@ import {
   AppstoreOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons-vue'
 import { message, theme } from 'ant-design-vue'
 import { useI18n } from 'vue-i18n'
@@ -26,6 +27,7 @@ import type {
   StudyPlanUpsertResponse,
 } from '../../types'
 import { abandonStudyPlan, getStudyPlanStatus, upsertStudyPlan } from '../../lib/api/studyPlan'
+import ReaderStudyTimerFloat from './ReaderStudyTimerFloat.vue'
 
 const { useToken } = theme
 const { token } = useToken()
@@ -37,6 +39,8 @@ const props = defineProps<{
   currentPageAudioFiles: OverlayAudio[]
   currentStudyPlanResourceId: string | null
   currentStudyPlanUnitName: string
+  timerStatus: 'idle' | 'running' | 'paused'
+  timerDisplay: string
   isNarrow?: boolean
 }>()
 
@@ -45,6 +49,12 @@ const emit = defineEmits<{
   (e: 'openExercise', ex: ExerciseInfo): void
   (e: 'goBack'): void
   (e: 'goForward'): void
+  (e: 'requestCloseReader'): void
+  (e: 'timerStart'): void
+  (e: 'timerPause'): void
+  (e: 'timerResume'): void
+  (e: 'timerRestart'): void
+  (e: 'timerStopSave'): void
 }>()
 
 const appStore = useAppStore()
@@ -73,8 +83,15 @@ const currentRangeText = computed(() => {
   return `${left}-${right}`
 })
 
-function closeReader() {
-  appStore.currentBook = null
+const timerPanelVisible = ref(false)
+const canStartTimerFromIsland = computed(() => props.timerStatus === 'idle')
+const timerIslandTooltip = computed(() =>
+  canStartTimerFromIsland.value ? t('studyTimer.start') : t('studyTimer.title'),
+)
+
+function startTimerFromIsland() {
+  if (!canStartTimerFromIsland.value) return
+  emit('timerStart')
 }
 
 function toggleSidebar() {
@@ -240,6 +257,14 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => props.timerStatus,
+  (status) => {
+    timerPanelVisible.value = status !== 'idle'
+  },
+  { immediate: true },
+)
+
 onBeforeUnmount(() => {
   invalidateStudyPlanStatusSync()
 })
@@ -305,7 +330,7 @@ onBeforeUnmount(() => {
       type="primary"
       :style="{ left: '24px', bottom: '24px' }"
       class="soft-primary-btn"
-      @click="closeReader"
+      @click="emit('requestCloseReader')"
     >
       <template #icon><HomeOutlined /></template>
       <template #tooltip>{{ t('reader.home') }}</template>
@@ -321,6 +346,17 @@ onBeforeUnmount(() => {
       <template #tooltip>{{ t('reader.toc') }}</template>
     </a-float-button>
 
+    <ReaderStudyTimerFloat
+      :visible="timerPanelVisible"
+      :timerStatus="timerStatus"
+      :timerDisplay="timerDisplay"
+      @timerStart="emit('timerStart')"
+      @timerPause="emit('timerPause')"
+      @timerResume="emit('timerResume')"
+      @timerRestart="emit('timerRestart')"
+      @timerStopSave="emit('timerStopSave')"
+    />
+
     <!-- 3. Function Island (Bottom Right) -->
     <a-float-button-group
       trigger="click"
@@ -329,6 +365,16 @@ onBeforeUnmount(() => {
       class="soft-primary-btn"
     >
       <template #icon><AppstoreOutlined /></template>
+
+      <a-float-button
+        :disabled="!canStartTimerFromIsland"
+        :type="canStartTimerFromIsland ? 'primary' : 'default'"
+        class="soft-primary-btn island-start-timer-btn"
+        @click="startTimerFromIsland"
+      >
+        <template #icon><ClockCircleOutlined /></template>
+        <template #tooltip>{{ timerIslandTooltip }}</template>
+      </a-float-button>
 
       <a-float-button
         @click="toggleStudyPlan"
@@ -371,7 +417,8 @@ onBeforeUnmount(() => {
 }
 .reader-footer-floating :deep(.ant-float-btn),
 .reader-footer-floating :deep(.ant-btn),
-.reader-footer-floating :deep(.ant-drawer) {
+.reader-footer-floating :deep(.ant-drawer),
+.reader-footer-floating :deep(.study-timer-float) {
   pointer-events: auto;
 }
 

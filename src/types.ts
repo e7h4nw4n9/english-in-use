@@ -46,6 +46,7 @@ export interface SystemConfig {
   enable_debug_tools: boolean
   enable_auto_check: boolean
   check_interval_mins: number
+  auto_start_study_timer?: boolean
 }
 
 export interface AppConfig {
@@ -220,4 +221,80 @@ export interface CompleteStudyTaskResponse {
   taskStatus: 0 | 1
   planStatus: 0 | 1 | 2
   completedStages: number[]
+}
+
+export type StudyStatsPeriodType = 'week' | 'month' | 'year'
+
+export interface StudySessionUnitRef {
+  resourceId: string
+  unitName: string
+}
+
+export interface SaveStudySessionPayload {
+  productCode: string
+  entryResourceId: string
+  entryUnitName: string
+  assignedResourceId: string
+  assignedUnitName: string
+  visitedUnits: StudySessionUnitRef[]
+  startAt: string
+  endAt: string
+  duration: number
+}
+
+export interface SaveStudySessionResponse {
+  id: number
+  success: boolean
+}
+
+export interface StudyStatsFilters {
+  bookId?: number
+  bookGroup?: number
+}
+
+export interface StudyStatsTrendItem {
+  date: string
+  duration: number
+}
+
+export interface StudyStatsBookBreakdownItem {
+  bookId: number
+  productCode: string
+  bookTitle: string
+  duration: number
+}
+
+export interface StudyStatsSeriesBreakdownItem {
+  bookGroup: number
+  seriesKey: string
+  duration: number
+}
+
+export interface StudySessionListItem {
+  id: number
+  bookId: number
+  bookGroup: number
+  productCode: string
+  bookTitle: string
+  resourceId: string
+  unitName: string
+  entryResourceId: string
+  entryUnitName: string
+  visitedUnits: StudySessionUnitRef[]
+  startAt: string
+  endAt: string
+  duration: number
+}
+
+export interface StudyStatsResponse {
+  periodType: StudyStatsPeriodType
+  rangeStart: string
+  rangeEnd: string
+  trend: StudyStatsTrendItem[]
+  bookBreakdown: StudyStatsBookBreakdownItem[]
+  seriesBreakdown: StudyStatsSeriesBreakdownItem[]
+  recentSessions: StudySessionListItem[]
+  page: number
+  pageSize: number
+  totalRecent: number
 }
