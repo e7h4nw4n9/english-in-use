@@ -187,6 +187,12 @@ pub fn run() {
             commands::books::get_exercise_html,
             commands::books::get_reading_progress,
             commands::books::update_reading_progress,
+            commands::study_plan::upsert_study_plan,
+            commands::study_plan::abandon_study_plan,
+            commands::study_plan::get_study_plan_status,
+            commands::study_plan::get_study_tasks_summary,
+            commands::study_plan::get_tasks_by_date,
+            commands::study_plan::complete_study_task,
             commands::system::restart,
             commands::system::get_platform,
             check_connection_status

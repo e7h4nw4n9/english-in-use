@@ -93,6 +93,10 @@
     "bookGroups": {
       "vocabulary": "词汇系列 (Vocabulary in Use)",
       "grammar": "语法系列 (Grammar in Use)"
+    },
+    "homeTabs": {
+      "books": "书籍",
+      "studyPlan": "学习计划"
     }
   },
   "footer": {
@@ -126,5 +130,41 @@
     "loadingExercisePackage": "正在下载练习包",
     "audioLoading": "音频加载中...",
     "audioLoadFailed": "音频播放失败"
+  },
+  "studyPlan": {
+    "unavailable": "当前页面暂无可加入计划的单元",
+    "loading": "学习计划加载中...",
+    "nextReview": "下次复习：{date}",
+    "inPlan": "已加入学习计划",
+    "add": "加入学习计划",
+    "added": "已加入学习计划",
+    "abandoned": "已放弃学习计划",
+    "actionFailed": "操作失败: {error}",
+    "loadFailed": "加载失败: {error}",
+    "view": {
+      "day": "日",
+      "week": "周",
+      "month": "月"
+    },
+    "nav": {
+      "today": "今天"
+    },
+    "total": "总任务",
+    "due": "待完成",
+    "overdue": "逾期",
+    "taskListFor": "{date} 当日任务",
+    "empty": "当前没有任务",
+    "goStudy": "去学习",
+    "complete": "完成",
+    "completed": "任务已完成",
+    "stage": "第",
+    "done": "已完成",
+    "bookNotFound": "未找到对应书籍，无法跳转",
+    "todayTasks": "今日任务",
+    "taskDetail": "任务详情",
+    "noTasksForDate": "当日暂无任务",
+    "weekTaskList": "本周每日任务",
+    "unknownSeries": "未分类系列",
+    "unknownBook": "未匹配书籍"
   }
 }

@@ -93,6 +93,10 @@
     "bookGroups": {
       "vocabulary": "Vocabulary in Use",
       "grammar": "Grammar in Use"
+    },
+    "homeTabs": {
+      "books": "Books",
+      "studyPlan": "Study Plan"
     }
   },
   "footer": {
@@ -126,5 +130,41 @@
     "loadingExercisePackage": "Downloading exercise package",
     "audioLoading": "Loading audio...",
     "audioLoadFailed": "Unable to play audio"
+  },
+  "studyPlan": {
+    "unavailable": "No schedulable unit on this page",
+    "loading": "Loading study plan...",
+    "nextReview": "Next review: {date}",
+    "inPlan": "In study plan",
+    "add": "Add to study plan",
+    "added": "Added to study plan",
+    "abandoned": "Study plan abandoned",
+    "actionFailed": "Action failed: {error}",
+    "loadFailed": "Load failed: {error}",
+    "view": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "nav": {
+      "today": "Today"
+    },
+    "total": "Total",
+    "due": "Due",
+    "overdue": "Overdue",
+    "taskListFor": "Tasks for {date}",
+    "empty": "No tasks for now",
+    "goStudy": "Go Study",
+    "complete": "Complete",
+    "completed": "Task completed",
+    "stage": "Stage",
+    "done": "Done",
+    "bookNotFound": "Book not found for this task",
+    "todayTasks": "Today's Tasks",
+    "taskDetail": "Task Details",
+    "noTasksForDate": "No tasks for this date",
+    "weekTaskList": "Weekly Task Lists",
+    "unknownSeries": "Uncategorized Series",
+    "unknownBook": "Unmatched Book"
   }
 }

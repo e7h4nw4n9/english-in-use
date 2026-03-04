@@ -278,7 +278,7 @@ onMounted(async () => {
   --titlebar-safe-top: constant(safe-area-inset-top);
   --titlebar-safe-top: env(safe-area-inset-top, 0px);
   box-sizing: border-box;
-  height: calc(32px + var(--titlebar-safe-top));
+  height: calc(40px + var(--titlebar-safe-top));
   padding-top: var(--titlebar-safe-top);
   user-select: none;
   display: flex;
@@ -287,41 +287,26 @@ onMounted(async () => {
   flex-shrink: 0;
   z-index: 1000;
   cursor: default;
-  background-color: v-bind('token.colorBgContainer');
-  border-bottom: 1px solid v-bind('token.colorBorderSecondary');
+  background-color: color-mix(in srgb, v-bind('token.colorBgContainer') 40%, transparent);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid color-mix(in srgb, #ffffff 15%, transparent);
   position: relative;
   overflow: hidden;
   transition: padding-left 0.3s ease;
+  box-shadow: 0 4px 12px -2px color-mix(in srgb, v-bind('token.colorText') 5%, transparent);
 }
 
 .is-macos {
   padding-left: 72px;
 }
 
-.titlebar::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, v-bind('token.colorPrimary'), transparent);
-  opacity: 0.1;
-}
-
-.title-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-}
-
 .title-text {
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.05em;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: v-bind('token.colorTextSecondary');
+  opacity: 0.9;
 }
 
 .no-drag {

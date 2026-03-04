@@ -40,6 +40,67 @@ function findDeepestTitleForPage(
   return null
 }
 
+function resolvePageRange(
+  node: TocNode,
+  sortedPageLabels: string[],
+): { startIndex: number; endIndex: number } | null {
+  if (!node.startPage || !node.endPage) return null
+  const startIndex = sortedPageLabels.indexOf(node.startPage)
+  const endIndex = sortedPageLabels.indexOf(node.endPage)
+  if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+    return null
+  }
+  return { startIndex, endIndex }
+}
+
+function getPageSpan(node: TocNode, sortedPageLabels: string[]): number {
+  const range = resolvePageRange(node, sortedPageLabels)
+  if (!range) return 0
+  return range.endIndex - range.startIndex + 1
+}
+
+function findDeepestPathForPage(
+  nodes: TocNode[],
+  pageIndex: number,
+  sortedPageLabels: string[],
+): TocNode[] | null {
+  for (const node of nodes) {
+    const range = resolvePageRange(node, sortedPageLabels)
+    const inRange = range !== null && pageIndex >= range.startIndex && pageIndex <= range.endIndex
+
+    if (inRange) {
+      if (node.children?.length) {
+        const childPath = findDeepestPathForPage(node.children, pageIndex, sortedPageLabels)
+        if (childPath) return [node, ...childPath]
+      }
+      return [node]
+    }
+
+    if (!range && node.children?.length) {
+      const childPath = findDeepestPathForPage(node.children, pageIndex, sortedPageLabels)
+      if (childPath) return [node, ...childPath]
+    }
+  }
+  return null
+}
+
+function selectStudyPlanAnchor(path: TocNode[], sortedPageLabels: string[]): TocNode | null {
+  if (!path.length) return null
+
+  const deepest = path[path.length - 1]
+  if (getPageSpan(deepest, sortedPageLabels) >= 2) {
+    return deepest
+  }
+
+  for (let i = path.length - 2; i >= 0; i -= 1) {
+    if (getPageSpan(path[i], sortedPageLabels) >= 2) {
+      return path[i]
+    }
+  }
+
+  return deepest
+}
+
 function findBestAudioNodeForPage(
   nodes: TocNode[],
   pageIndex: number,
@@ -86,12 +147,52 @@ export function useReaderTocContext({
   sortedPageLabels,
   fallbackUnitTitle,
 }: UseReaderTocContextOptions) {
+  const currentPageIndex = computed(() => sortedPageLabels.value.indexOf(leftPageLabel.value))
+
+  const currentTocPath = computed<TocNode[] | null>(() => {
+    if (!metadata.value || !currentPageLabel.value) return null
+    if (currentPageIndex.value === -1) return null
+
+    return findDeepestPathForPage(
+      metadata.value.toc,
+      currentPageIndex.value,
+      sortedPageLabels.value,
+    )
+  })
+
+  const currentStudyPlanAnchor = computed<TocNode | null>(() => {
+    const path = currentTocPath.value
+    if (!path?.length) return null
+    return selectStudyPlanAnchor(path, sortedPageLabels.value)
+  })
+
   const currentUnitName = computed(() => {
     if (!metadata.value || !currentPageLabel.value) return ''
 
-    const pageIndex = sortedPageLabels.value.indexOf(leftPageLabel.value)
-    const title = findDeepestTitleForPage(metadata.value.toc, pageIndex, sortedPageLabels.value)
+    const title = findDeepestTitleForPage(
+      metadata.value.toc,
+      currentPageIndex.value,
+      sortedPageLabels.value,
+    )
     return title || fallbackUnitTitle.value || ''
+  })
+
+  const currentStudyPlanUnitName = computed(() => {
+    const anchor = currentStudyPlanAnchor.value
+    if (anchor?.title) return anchor.title
+    return currentUnitName.value || fallbackUnitTitle.value || ''
+  })
+
+  const currentStudyPlanResourceId = computed(() => {
+    if (!metadata.value || !currentPageLabel.value) return null
+
+    const anchorStartPage = currentStudyPlanAnchor.value?.startPage
+    if (anchorStartPage) {
+      const anchorResourceId = metadata.value.pages[anchorStartPage]?.resource_id || null
+      if (anchorResourceId) return anchorResourceId
+    }
+
+    return metadata.value.pages[currentPageLabel.value]?.resource_id || null
   })
 
   const currentPageAudioFiles = computed<OverlayAudio[]>(() => {
@@ -115,6 +216,8 @@ export function useReaderTocContext({
 
   return {
     currentUnitName,
+    currentStudyPlanUnitName,
+    currentStudyPlanResourceId,
     currentPageAudioFiles,
   }
 }

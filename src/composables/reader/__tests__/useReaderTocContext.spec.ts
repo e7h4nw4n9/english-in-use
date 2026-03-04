@@ -36,19 +36,27 @@ const metadata: BookMetadata = {
     },
   ],
   exerciseToc: [],
-  pages: {},
+  pages: {
+    '12': { label: '12', image_path: 'page12.jpg', resource_id: 'RE_U1_CONTENT' },
+    '13': { label: '13', image_path: 'page13.jpg', resource_id: 'RE_U1_EXERCISE' },
+    '14': { label: '14', image_path: 'page14.jpg', resource_id: 'RE_U1_TAIL' },
+    '15': { label: '15', image_path: 'page15.jpg', resource_id: 'RE_U2' },
+    '16': { label: '16', image_path: 'page16.jpg', resource_id: 'RE_U2' },
+  },
   pageLabels: ['12', '13', '14', '15', '16'],
   pageWidth: 1000,
   pageHeight: 1400,
 }
 
 function createContext({
+  customMetadata = metadata,
   currentPageLabel = '12',
   leftPageLabel = '12',
   rightPageLabel = '',
   viewMode = 'single',
   fallbackUnitTitle = 'Fallback Book',
 }: {
+  customMetadata?: BookMetadata
   currentPageLabel?: string
   leftPageLabel?: string
   rightPageLabel?: string
@@ -56,7 +64,7 @@ function createContext({
   fallbackUnitTitle?: string
 } = {}) {
   return useReaderTocContext({
-    metadata: ref(metadata),
+    metadata: ref(customMetadata),
     currentPageLabel: ref(currentPageLabel),
     leftPageLabel: ref(leftPageLabel),
     rightPageLabel: ref(rightPageLabel),
@@ -79,6 +87,8 @@ describe('useReaderTocContext', () => {
       fallbackUnitTitle: 'English In Use',
     })
     expect(context.currentUnitName.value).toBe('English In Use')
+    expect(context.currentStudyPlanUnitName.value).toBe('English In Use')
+    expect(context.currentStudyPlanResourceId.value).toBeNull()
   })
 
   it('uses child audio first and falls back to parent audio', () => {
@@ -97,5 +107,32 @@ describe('useReaderTocContext', () => {
       viewMode: 'spread',
     })
     expect(context.currentPageAudioFiles.value.map((audio) => audio.path)).toEqual(['unit2.mp3'])
+  })
+
+  it('keeps one study plan context for content/exercise pages in same unit', () => {
+    const contentPage = createContext({ currentPageLabel: '12', leftPageLabel: '12' })
+    const exercisePage = createContext({ currentPageLabel: '13', leftPageLabel: '13' })
+
+    expect(contentPage.currentStudyPlanUnitName.value).toBe('Unit 1')
+    expect(exercisePage.currentStudyPlanUnitName.value).toBe('Unit 1')
+    expect(contentPage.currentStudyPlanResourceId.value).toBe('RE_U1_CONTENT')
+    expect(exercisePage.currentStudyPlanResourceId.value).toBe('RE_U1_CONTENT')
+  })
+
+  it('falls back to current page resource when study plan anchor resource is missing', () => {
+    const context = createContext({
+      customMetadata: {
+        ...metadata,
+        pages: {
+          ...metadata.pages,
+          '12': { label: '12', image_path: 'page12.jpg' },
+        },
+      },
+      currentPageLabel: '13',
+      leftPageLabel: '13',
+    })
+
+    expect(context.currentStudyPlanUnitName.value).toBe('Unit 1')
+    expect(context.currentStudyPlanResourceId.value).toBe('RE_U1_EXERCISE')
   })
 })

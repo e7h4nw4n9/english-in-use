@@ -26,6 +26,7 @@ export const useReaderStore = defineStore('reader', () => {
   const currentExerciseTitle = ref('')
   const currentExerciseResourceId = ref('')
   const currentUnitName = ref('')
+  const pendingStudyResourceId = ref<string | null>(null)
   const debugVisible = ref(false)
   const resourceDrawerVisible = ref(false)
   const isUiVisible = ref(true)
@@ -106,6 +107,7 @@ export const useReaderStore = defineStore('reader', () => {
     currentExerciseTitle,
     currentExerciseResourceId,
     currentUnitName,
+    pendingStudyResourceId,
     debugVisible,
     resourceDrawerVisible,
     isUiVisible,

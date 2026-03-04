@@ -163,3 +163,61 @@ export interface ReadingProgress {
   offset_y: number
   updated_at: string
 }
+
+export type StudyViewMode = 'day' | 'week' | 'month'
+
+export interface StudyPlanUpsertResponse {
+  planUnitId: number
+  planStatus: 0 | 1 | 2
+  nextReviewDate: string | null
+  totalStages: number
+  completedStages: number[]
+}
+
+export interface StudyPlanStatusResponse {
+  inPlan: boolean
+  planStatus: 0 | 1 | 2 | null
+  planUnitId: number | null
+  completedStages: number[]
+  nextReviewDate: string | null
+  overdueCount: number
+}
+
+export interface StudyPlanActionResponse {
+  success: boolean
+}
+
+export interface StudyTaskSummaryDay {
+  date: string
+  total: number
+  due: number
+  overdue: number
+  completed: number
+}
+
+export interface StudyTaskSummaryResponse {
+  rangeStart: string
+  rangeEnd: string
+  viewMode: StudyViewMode
+  days: StudyTaskSummaryDay[]
+}
+
+export interface StudyTaskItem {
+  taskId: number
+  planUnitId: number
+  productCode: string
+  resourceId: string
+  unitName: string
+  reviewStage: number
+  scheduledDate: string
+  isOverdue: boolean
+  taskStatus: 0 | 1
+  completedAt: string | null
+}
+
+export interface CompleteStudyTaskResponse {
+  taskId: number
+  taskStatus: 0 | 1
+  planStatus: 0 | 1 | 2
+  completedStages: number[]
+}

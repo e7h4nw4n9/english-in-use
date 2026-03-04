@@ -62,7 +62,12 @@ const effectiveDebugEnabled = computed(
   () => __DEBUG_FEATURES__ && Boolean(config.value?.system.enable_debug_tools),
 )
 const exerciseDebugPanelEnabled = computed(() => effectiveDebugEnabled.value)
-const { currentUnitName, currentPageAudioFiles } = useReaderTocContext({
+const {
+  currentUnitName,
+  currentStudyPlanUnitName,
+  currentStudyPlanResourceId,
+  currentPageAudioFiles,
+} = useReaderTocContext({
   metadata,
   currentPageLabel,
   leftPageLabel,
@@ -186,6 +191,8 @@ onUnmounted(() => {
         :displayIndex="displayIndex"
         :sortedPageLabels="sortedPageLabels"
         :currentPageAudioFiles="currentPageAudioFiles"
+        :currentStudyPlanResourceId="currentStudyPlanResourceId"
+        :currentStudyPlanUnitName="currentStudyPlanUnitName"
         :isNarrow="isNarrow"
         @toggleAudio="handleToggleAudio"
         @openExercise="openExercise"

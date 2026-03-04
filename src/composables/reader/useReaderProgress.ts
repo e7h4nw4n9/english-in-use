@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import type { Book, BookMetadata } from '@/types'
 import { getReadingProgress, updateReadingProgress } from '@/lib/api/books'
+import { useReaderStore } from '@/stores/reader'
 
 interface UseReaderProgressOptions {
   currentBook: Ref<Book | null>
@@ -17,15 +18,42 @@ export function useReaderProgress({
   zoomLevel,
   sortedPageLabels,
 }: UseReaderProgressOptions) {
+  const readerStore = useReaderStore()
+
+  function resolvePageLabelByResourceId(resourceId: string): string | null {
+    if (!metadata.value || !resourceId) return null
+
+    for (const label of sortedPageLabels.value) {
+      if (metadata.value.pages[label]?.resource_id === resourceId) {
+        return label
+      }
+    }
+    return null
+  }
+
   async function restoreProgress() {
     if (!currentBook.value) return
 
     try {
+      if (readerStore.pendingStudyResourceId) {
+        const pendingTarget = resolvePageLabelByResourceId(readerStore.pendingStudyResourceId)
+        readerStore.pendingStudyResourceId = null
+        if (pendingTarget) {
+          currentPageLabel.value = pendingTarget
+          return
+        }
+      }
+
       const progress = await getReadingProgress(currentBook.value.product_code)
       if (!progress) return
 
       if (progress.page_label && sortedPageLabels.value.includes(progress.page_label)) {
         currentPageLabel.value = progress.page_label
+      } else if (progress.resource_id) {
+        const targetLabel = resolvePageLabelByResourceId(progress.resource_id)
+        if (targetLabel) {
+          currentPageLabel.value = targetLabel
+        }
       }
 
       if (progress.scale) {
