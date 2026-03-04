@@ -264,8 +264,11 @@ onUnmounted(() => {
   isolation: isolate;
   padding: 12px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .main-content::before,
@@ -371,6 +374,8 @@ onUnmounted(() => {
 
 .home-content-surface {
   min-height: calc(100% - 64px);
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid color-mix(in srgb, #ffffff 15%, transparent);
   border-radius: 28px;
   background: color-mix(in srgb, v-bind('token.colorBgContainer') 30%, transparent);
@@ -420,6 +425,12 @@ onUnmounted(() => {
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;

@@ -171,11 +171,19 @@ onUnmounted(() => {
 <style scoped>
 .book-list-container {
   position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 .book-list-shell {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 .book-empty-state {
@@ -252,6 +260,7 @@ onUnmounted(() => {
 .book-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  min-width: 0;
   gap: 24px;
   padding: 16px 0 12px;
 }
@@ -277,7 +286,7 @@ onUnmounted(() => {
 }
 
 .book-item:hover {
-  transform: translateY(-6px) scale(1.02);
+  transform: translateY(-6px) scale(1.01);
   border-color: color-mix(in srgb, #ffffff 40%, transparent);
   background: color-mix(in srgb, v-bind('token.colorBgContainer') 80%, transparent);
   box-shadow:

@@ -213,14 +213,9 @@ pub async fn init_database_internal<H: DatabaseInitHandler + ?Sized>(
     if let Some(local_version) = local_version.as_deref() {
         if is_same_version(local_version, latest_version) {
             debug!(
-                "本地版本文件已是最新版本 {}，跳过数据库版本检查和迁移",
+                "本地版本文件已是最新版本 {}，继续核对数据库实际版本",
                 latest_version
             );
-            if !init_flag_path.exists() {
-                handler.mark_initialized()?;
-            }
-            report_progress("db.init.done", 1.0);
-            return Ok((false, db));
         }
     }
 
@@ -406,7 +401,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_init_database_internal_skips_when_local_version_is_latest() {
+    async fn test_init_database_internal_runs_migration_when_local_is_latest_if_db_is_behind() {
         let temp = tempfile::tempdir().unwrap();
         let flag_path = temp.path().join(".db_initialized");
         let local_version_path = temp.path().join(".db_version");
@@ -436,10 +431,14 @@ mod tests {
         .await
         .unwrap();
 
-        assert!(!migrated);
+        assert!(migrated);
         assert!(flag_path.exists());
-        assert_eq!(migrate_calls.load(Ordering::SeqCst), 0);
-        assert_eq!(get_version_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(migrate_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(get_version_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            fs::read_to_string(local_version_path).unwrap().trim(),
+            "0.3.0"
+        );
     }
 
     #[tokio::test]

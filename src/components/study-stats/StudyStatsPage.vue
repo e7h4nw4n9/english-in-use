@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import type { Book, StudyStatsFilters, StudyStatsPeriodType, StudyStatsResponse } from '../../types'
 import { getBooks } from '../../lib/api'
 import { getStudyStats } from '../../lib/api/studyTimer'
+import { formatIsoToLocalMinute } from '../../lib/datetime'
 
 const { t } = useI18n()
 const { useToken } = theme
@@ -151,13 +152,13 @@ onMounted(async () => {
         </div>
 
         <div class="filters">
-          <a-select v-model:value="selectedSeries" class="w-[160px]">
+          <a-select v-model:value="selectedSeries" class="w-full sm:w-[160px]">
             <a-select-option value="all">{{ t('studyStats.allSeries') }}</a-select-option>
             <a-select-option value="1">{{ t('studyStats.seriesVocabulary') }}</a-select-option>
             <a-select-option value="2">{{ t('studyStats.seriesGrammar') }}</a-select-option>
           </a-select>
 
-          <a-select v-model:value="selectedBookId" class="w-[220px]">
+          <a-select v-model:value="selectedBookId" class="w-full sm:w-[220px]">
             <a-select-option value="all">{{ t('studyStats.allBooks') }}</a-select-option>
             <a-select-option
               v-for="book in filteredBookOptions"
@@ -245,7 +246,7 @@ onMounted(async () => {
                   <td>{{ session.bookTitle }}</td>
                   <td>{{ session.unitName }}</td>
                   <td>{{ formatSeconds(session.duration) }}</td>
-                  <td>{{ session.startAt.slice(0, 16).replace('T', ' ') }}</td>
+                  <td>{{ formatIsoToLocalMinute(session.startAt) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -270,13 +271,21 @@ onMounted(async () => {
 
 <style scoped>
 .study-stats-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 16px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .stats-shell {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   gap: 14px;
 }
 
@@ -284,6 +293,9 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   gap: 12px;
   padding: 10px;
   border: 1px solid color-mix(in srgb, #ffffff 20%, transparent);
@@ -317,16 +329,24 @@ onMounted(async () => {
 .filters {
   display: flex;
   flex-wrap: wrap;
+  flex: 1 1 280px;
+  min-width: 0;
   gap: 8px;
+  justify-content: flex-end;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: 1.6fr 1fr 1fr;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   gap: 12px;
 }
 
 .stats-card {
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid color-mix(in srgb, #ffffff 15%, transparent);
   border-radius: 16px;
   padding: 12px;
@@ -423,6 +443,7 @@ onMounted(async () => {
 }
 
 .recent-table-wrap {
+  max-width: 100%;
   overflow-x: auto;
 }
 
@@ -461,6 +482,17 @@ onMounted(async () => {
 @media (max-width: 1100px) {
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-toolbar {
+    gap: 10px;
+  }
+
+  .filters {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 </style>

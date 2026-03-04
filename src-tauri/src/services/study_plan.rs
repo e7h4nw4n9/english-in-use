@@ -382,7 +382,8 @@ pub async fn get_tasks_by_date(
     db: &dyn Database,
     date: &str,
 ) -> Result<Vec<StudyTaskItem>, String> {
-    let date = escape_sql_literal(date);
+    let date_raw = date.to_string();
+    let date = escape_sql_literal(&date_raw);
 
     let sql = format!(
         "SELECT \
@@ -399,26 +400,41 @@ pub async fn get_tasks_by_date(
         JOIN study_plan_units u ON t.plan_unit_id = u.id \
         JOIN books b ON u.book_id = b.id \
         WHERE u.plan_status = 0 \
-          AND t.scheduled_date = '{}' \
-        ORDER BY t.review_stage ASC, t.id ASC",
-        date
+          AND ( \
+                t.scheduled_date = '{}' \
+             OR (t.scheduled_date < '{}' AND t.task_status = 0) \
+          ) \
+        ORDER BY \
+            CASE WHEN t.scheduled_date < '{}' THEN 0 ELSE 1 END ASC, \
+            t.scheduled_date ASC, \
+            t.review_stage ASC, \
+            t.id ASC",
+        date, date, date
     );
 
     let rows = db.query(sql).await.map_err(|e| e.to_string())?;
 
     Ok(rows
         .iter()
-        .map(|row| StudyTaskItem {
-            task_id: json_i64(row, "task_id").unwrap_or_default(),
-            plan_unit_id: json_i64(row, "plan_unit_id").unwrap_or_default(),
-            product_code: json_string(row, "product_code").unwrap_or_default(),
-            resource_id: json_string(row, "resource_id").unwrap_or_default(),
-            unit_name: json_string(row, "unit_name").unwrap_or_default(),
-            review_stage: json_i32(row, "review_stage").unwrap_or_default(),
-            scheduled_date: json_string(row, "scheduled_date").unwrap_or_default(),
-            task_status: json_i32(row, "task_status").unwrap_or_default(),
-            is_overdue: false,
-            completed_at: json_string(row, "completed_at"),
+        .map(|row| {
+            let scheduled_date = json_string(row, "scheduled_date").unwrap_or_default();
+            let task_status = json_i32(row, "task_status").unwrap_or_default();
+            let is_overdue = task_status == 0
+                && !scheduled_date.is_empty()
+                && scheduled_date.as_str() < date_raw.as_str();
+
+            StudyTaskItem {
+                task_id: json_i64(row, "task_id").unwrap_or_default(),
+                plan_unit_id: json_i64(row, "plan_unit_id").unwrap_or_default(),
+                product_code: json_string(row, "product_code").unwrap_or_default(),
+                resource_id: json_string(row, "resource_id").unwrap_or_default(),
+                unit_name: json_string(row, "unit_name").unwrap_or_default(),
+                review_stage: json_i32(row, "review_stage").unwrap_or_default(),
+                scheduled_date,
+                task_status,
+                is_overdue,
+                completed_at: json_string(row, "completed_at"),
+            }
         })
         .collect())
 }
@@ -441,6 +457,16 @@ pub async fn complete_study_task(
     let plan_unit_id = json_i64(task_row, "plan_unit_id").ok_or("TASK_NOT_FOUND")?;
     let mut task_status = json_i32(task_row, "task_status").ok_or("TASK_NOT_FOUND")?;
     let plan_status_before = json_i32(task_row, "plan_status").ok_or("TASK_NOT_FOUND")?;
+
+    if task_status == 1 {
+        let completed_stages = get_completed_stages(db, plan_unit_id).await?;
+        return Ok(CompleteStudyTaskResponse {
+            task_id,
+            task_status,
+            plan_status: plan_status_before,
+            completed_stages,
+        });
+    }
 
     if plan_status_before != 0 {
         return Err(if plan_status_before == 1 {
@@ -588,10 +614,55 @@ mod tests {
             .unwrap();
         assert_eq!(status.plan_status, Some(1));
         assert_eq!(status.completed_stages.len(), 7);
+
+        let retry_result = complete_study_task(&db, stage7_id).await.unwrap();
+        assert_eq!(retry_result.task_status, 1);
+        assert_eq!(retry_result.plan_status, 1);
+        assert_eq!(retry_result.completed_stages.len(), 7);
     }
 
     #[tokio::test]
-    async fn get_tasks_by_date_returns_only_selected_day_and_no_overdue_flag() {
+    async fn complete_study_task_rejects_pending_task_when_plan_is_mastered() {
+        let db = create_db().await;
+
+        let plan = upsert_study_plan(&db, "studytestbook", "RE_2501", "Unit 2.5")
+            .await
+            .unwrap();
+
+        let rows = db
+            .query(format!(
+                "SELECT id, review_stage FROM study_tasks WHERE plan_unit_id = {} ORDER BY review_stage ASC",
+                plan.plan_unit_id
+            ))
+            .await
+            .unwrap();
+
+        let stage1_id = rows
+            .iter()
+            .find(|row| json_i32(row, "review_stage") == Some(1))
+            .and_then(|row| json_i64(row, "id"))
+            .unwrap();
+        let stage2_id = rows
+            .iter()
+            .find(|row| json_i32(row, "review_stage") == Some(2))
+            .and_then(|row| json_i64(row, "id"))
+            .unwrap();
+
+        let _ = complete_study_task(&db, stage1_id).await.unwrap();
+
+        db.execute(format!(
+            "UPDATE study_plan_units SET plan_status = 1, updated_at = CURRENT_TIMESTAMP WHERE id = {}",
+            plan.plan_unit_id
+        ))
+        .await
+        .unwrap();
+
+        let err = complete_study_task(&db, stage2_id).await.unwrap_err();
+        assert_eq!(err, "PLAN_ALREADY_MASTERED");
+    }
+
+    #[tokio::test]
+    async fn get_tasks_by_date_returns_today_and_overdue_pending_tasks() {
         let db = create_db().await;
 
         let plan = upsert_study_plan(&db, "studytestbook", "RE_3001", "Unit 3")
@@ -616,6 +687,11 @@ mod tests {
             .find(|row| json_i32(row, "review_stage") == Some(2))
             .and_then(|row| json_i64(row, "id"))
             .unwrap();
+        let stage3_id = stage_rows
+            .iter()
+            .find(|row| json_i32(row, "review_stage") == Some(3))
+            .and_then(|row| json_i64(row, "id"))
+            .unwrap();
 
         db.execute(format!(
             "UPDATE study_tasks SET scheduled_date = date('now', 'localtime', '-1 day') WHERE id = {}",
@@ -629,6 +705,12 @@ mod tests {
         ))
         .await
         .unwrap();
+        db.execute(format!(
+            "UPDATE study_tasks SET scheduled_date = date('now', 'localtime', '-2 day'), task_status = 1, completed_at = CURRENT_TIMESTAMP WHERE id = {}",
+            stage3_id
+        ))
+        .await
+        .unwrap();
 
         let today_rows = db
             .query("SELECT date('now', 'localtime') AS today".to_string())
@@ -637,8 +719,12 @@ mod tests {
         let today = json_string(&today_rows[0], "today").unwrap();
 
         let tasks = get_tasks_by_date(&db, &today).await.unwrap();
-        assert_eq!(tasks.len(), 1);
-        assert_eq!(tasks[0].review_stage, 2);
-        assert!(!tasks[0].is_overdue);
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(tasks[0].task_id, stage1_id);
+        assert_eq!(tasks[0].review_stage, 1);
+        assert!(tasks[0].is_overdue);
+        assert_eq!(tasks[1].task_id, stage2_id);
+        assert_eq!(tasks[1].review_stage, 2);
+        assert!(!tasks[1].is_overdue);
     }
 }

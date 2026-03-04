@@ -587,9 +587,14 @@ onMounted(async () => {
 
 <style scoped>
 .study-plan-page {
+  box-sizing: border-box;
   position: relative;
   isolation: isolate;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 100%;
   padding: 14px;
 }
@@ -598,10 +603,16 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 100%;
 }
 
 .study-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid color-mix(in srgb, v-bind('token.colorBorderSecondary') 75%, transparent);
   border-radius: 16px;
   background:
@@ -665,12 +676,15 @@ onMounted(async () => {
 
 .period-nav {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   align-items: center;
   gap: 8px;
 }
 
 .period-label {
-  min-width: 220px;
+  min-width: 0;
+  flex: 1 1 140px;
   text-align: center;
   font-size: 14px;
   font-weight: 700;
@@ -834,7 +848,7 @@ onMounted(async () => {
   }
 
   .period-label {
-    min-width: 150px;
+    flex-basis: 100%;
   }
 
   .date-grid-month,

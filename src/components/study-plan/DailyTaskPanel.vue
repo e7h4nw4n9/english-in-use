@@ -184,8 +184,11 @@ function onMarkTaskDone(task: StudyTaskItem) {
 .daily-task-container {
   display: flex;
   flex-direction: column;
+  max-width: 100%;
+  min-width: 0;
   gap: 4px;
   width: 100%;
+  overflow-x: hidden;
 }
 
 .glass-block {
@@ -269,6 +272,7 @@ function onMarkTaskDone(task: StudyTaskItem) {
 
 /* Book Collapse Styling */
 .series-content {
+  min-width: 0;
   padding: 0 6px 6px;
 }
 
@@ -289,6 +293,7 @@ function onMarkTaskDone(task: StudyTaskItem) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
   width: 100%;
   padding-right: 4px;
 }
@@ -319,10 +324,14 @@ function onMarkTaskDone(task: StudyTaskItem) {
   font-size: 8px;
   font-weight: 800;
   text-transform: uppercase;
+  max-width: 45%;
   color: v-bind('token.colorTextTertiary');
   background: color-mix(in srgb, v-bind('token.colorFillSecondary') 25%, transparent);
   padding: 0px 4px;
   border-radius: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Task Card Styling */
@@ -352,6 +361,8 @@ function onMarkTaskDone(task: StudyTaskItem) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -404,7 +415,10 @@ function onMarkTaskDone(task: StudyTaskItem) {
 .task-card-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
+  margin-left: auto;
   flex-shrink: 0;
 }
 
