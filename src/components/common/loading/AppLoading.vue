@@ -28,8 +28,8 @@ const normalizedProgress = computed(() => {
 })
 
 const cardToneClass = computed(() => {
-  if (props.tone === 'strong') return 'bg-white/70 dark:bg-black/35'
-  return 'bg-white/50 dark:bg-black/20'
+  if (props.tone === 'strong') return 'bg-white/80 dark:bg-slate-800/90'
+  return 'bg-white/60 dark:bg-slate-800/70'
 })
 </script>
 
@@ -37,13 +37,13 @@ const cardToneClass = computed(() => {
   <div
     :class="
       card
-        ? `app-loading-card flex flex-col items-center gap-6 rounded-3xl p-12 backdrop-blur-xl ${cardToneClass}`
+        ? `app-loading-card flex flex-col items-center gap-6 rounded-3xl p-12 backdrop-blur-2xl ${cardToneClass}`
         : 'app-loading-inline flex flex-col items-center gap-3'
     "
   >
     <a-spin :size="spinSize">
       <template #indicator>
-        <SyncOutlined spin style="font-size: 32px" />
+        <SyncOutlined spin style="font-size: 32px" :style="{ color: '#3b82f6' }" />
       </template>
     </a-spin>
 
@@ -51,7 +51,7 @@ const cardToneClass = computed(() => {
       <span v-if="title" class="text-sm font-bold uppercase tracking-widest text-blue-500">
         {{ title }}
       </span>
-      <span v-if="message" class="text-xs font-medium text-gray-400 dark:text-gray-500">
+      <span v-if="message" class="text-xs font-medium text-gray-500 dark:text-slate-400">
         {{ message }}
       </span>
     </div>
@@ -63,13 +63,21 @@ const cardToneClass = computed(() => {
       :percent="Math.round(normalizedProgress)"
       :show-info="true"
       status="active"
+      :stroke-color="{
+        '0%': '#3b82f6',
+        '100%': '#60a5fa',
+      }"
     />
   </div>
 </template>
 
 <style scoped>
 .app-loading-card {
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .app-loading-card {
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 </style>

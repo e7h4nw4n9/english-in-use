@@ -13,7 +13,6 @@ import {
   FileTextOutlined,
   BlockOutlined,
   HomeOutlined,
-  AppstoreOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -272,79 +271,101 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="reader-footer-floating">
-    <!-- 1. Integrated Page Indicator & Navigation (Bottom Center) -->
-    <div
-      class="pointer-events-auto fixed bottom-6 left-1/2 z-[1000] flex -translate-x-1/2 items-center gap-3 rounded-full border px-3 py-1.5 shadow-lg backdrop-blur-md transition-all duration-300"
-      :style="{
-        backgroundColor: token.colorBgElevated + 'aa',
-        borderColor: token.colorBorderSecondary,
-        color: token.colorTextSecondary,
-      }"
-    >
-      <!-- Prev Button -->
-      <a-button
-        type="text"
-        size="small"
-        class="flex h-auto items-center p-0 text-inherit opacity-60 transition-opacity hover:opacity-100"
-        :title="t('reader.prevPage')"
-        @click="emit('goBack')"
-      >
-        <template #icon><LeftOutlined /></template>
-      </a-button>
+    <nav class="reader-dock" role="toolbar" aria-label="Reader controls">
+      <a-tooltip placement="top" :title="t('reader.home')">
+        <a-button type="text" class="dock-btn" @click="emit('requestCloseReader')">
+          <template #icon><HomeOutlined /></template>
+        </a-button>
+      </a-tooltip>
 
-      <!-- Page Range Text -->
-      <div class="min-w-[60px] px-1 text-center text-xs font-bold tabular-nums tracking-wider">
-        {{ currentRangeText }} <span class="mx-0.5 opacity-40">/</span>
+      <a-tooltip placement="top" :title="t('reader.toc')">
+        <a-button type="text" class="dock-btn" @click="toggleSidebar">
+          <template #icon><UnorderedListOutlined /></template>
+        </a-button>
+      </a-tooltip>
+
+      <span class="dock-divider" aria-hidden="true"></span>
+
+      <a-tooltip placement="top" :title="t('reader.prevPage')">
+        <a-button type="text" class="dock-btn" @click="emit('goBack')">
+          <template #icon><LeftOutlined /></template>
+        </a-button>
+      </a-tooltip>
+
+      <div class="range-chip" :title="currentRangeText">
+        {{ currentRangeText }} <span class="range-divider">/</span>
         {{ sortedPageLabels.length }}
       </div>
 
-      <!-- View Mode Toggle -->
-      <a-button
-        type="text"
-        size="small"
-        class="flex h-auto items-center p-0 text-inherit opacity-60 transition-opacity hover:opacity-100"
-        :disabled="isNarrow"
+      <a-tooltip placement="top" :title="t('reader.nextPage')">
+        <a-button type="text" class="dock-btn" @click="emit('goForward')">
+          <template #icon><RightOutlined /></template>
+        </a-button>
+      </a-tooltip>
+
+      <a-tooltip
+        placement="top"
         :title="viewMode === 'single' ? t('reader.viewSpread') : t('reader.viewSingle')"
-        @click="toggleViewMode"
       >
-        <template #icon>
-          <BlockOutlined v-if="viewMode === 'single'" />
-          <FileTextOutlined v-else />
-        </template>
-      </a-button>
+        <a-button type="text" class="dock-btn" :disabled="isNarrow" @click="toggleViewMode">
+          <template #icon>
+            <BlockOutlined v-if="viewMode === 'single'" />
+            <FileTextOutlined v-else />
+          </template>
+        </a-button>
+      </a-tooltip>
 
-      <!-- Next Button -->
-      <a-button
-        type="text"
-        size="small"
-        class="flex h-auto items-center p-0 text-inherit opacity-60 transition-opacity hover:opacity-100"
-        :title="t('reader.nextPage')"
-        @click="emit('goForward')"
+      <span class="dock-divider" aria-hidden="true"></span>
+
+      <a-tooltip placement="top" :title="timerIslandTooltip">
+        <a-button
+          type="text"
+          class="dock-btn"
+          :disabled="!canStartTimerFromIsland"
+          @click="startTimerFromIsland"
+        >
+          <template #icon><ClockCircleOutlined /></template>
+        </a-button>
+      </a-tooltip>
+
+      <a-tooltip placement="top" :title="studyPlanTooltip">
+        <a-button
+          type="text"
+          class="dock-btn"
+          :class="{ active: isStudyPlanActive }"
+          :disabled="!canUseStudyPlan || studyPlanBusy"
+          @click="toggleStudyPlan"
+        >
+          <template #icon>
+            <CheckCircleOutlined v-if="isStudyPlanActive" />
+            <CalendarOutlined v-else />
+          </template>
+        </a-button>
+      </a-tooltip>
+
+      <a-tooltip
+        placement="top"
+        :title="showHotspots ? t('reader.hideHotspots') : t('reader.showHotspots')"
       >
-        <template #icon><RightOutlined /></template>
-      </a-button>
-    </div>
+        <a-button
+          type="text"
+          class="dock-btn"
+          :class="{ active: showHotspots }"
+          @click="showHotspots = !showHotspots"
+        >
+          <template #icon>
+            <EyeOutlined v-if="showHotspots" />
+            <EyeInvisibleOutlined v-else />
+          </template>
+        </a-button>
+      </a-tooltip>
 
-    <!-- 2. Left Side Action Buttons -->
-    <a-float-button
-      type="primary"
-      :style="{ left: '24px', bottom: '24px' }"
-      class="soft-primary-btn"
-      @click="emit('requestCloseReader')"
-    >
-      <template #icon><HomeOutlined /></template>
-      <template #tooltip>{{ t('reader.home') }}</template>
-    </a-float-button>
-
-    <a-float-button
-      type="primary"
-      :style="{ left: '24px', bottom: '80px' }"
-      class="soft-primary-btn"
-      @click="toggleSidebar"
-    >
-      <template #icon><UnorderedListOutlined /></template>
-      <template #tooltip>{{ t('reader.toc') }}</template>
-    </a-float-button>
+      <a-tooltip placement="top" :title="t('reader.resetZoom')">
+        <a-button type="text" class="dock-btn" @click="readerStore.resetZoom()">
+          <template #icon><FullscreenExitOutlined /></template>
+        </a-button>
+      </a-tooltip>
+    </nav>
 
     <ReaderStudyTimerFloat
       :visible="timerPanelVisible"
@@ -356,58 +377,6 @@ onBeforeUnmount(() => {
       @timerRestart="emit('timerRestart')"
       @timerStopSave="emit('timerStopSave')"
     />
-
-    <!-- 3. Function Island (Bottom Right) -->
-    <a-float-button-group
-      trigger="click"
-      type="primary"
-      :style="{ right: '24px', bottom: '24px' }"
-      class="soft-primary-btn"
-    >
-      <template #icon><AppstoreOutlined /></template>
-
-      <a-float-button
-        :disabled="!canStartTimerFromIsland"
-        :type="canStartTimerFromIsland ? 'primary' : 'default'"
-        class="soft-primary-btn island-start-timer-btn"
-        @click="startTimerFromIsland"
-      >
-        <template #icon><ClockCircleOutlined /></template>
-        <template #tooltip>{{ timerIslandTooltip }}</template>
-      </a-float-button>
-
-      <a-float-button
-        @click="toggleStudyPlan"
-        :disabled="!canUseStudyPlan"
-        :type="isStudyPlanActive ? 'primary' : 'default'"
-        class="soft-primary-btn"
-      >
-        <template #icon>
-          <CheckCircleOutlined v-if="isStudyPlanActive" />
-          <CalendarOutlined v-else />
-        </template>
-        <template #tooltip>{{ studyPlanTooltip }}</template>
-      </a-float-button>
-
-      <!-- Hotspots Toggle -->
-      <a-float-button @click="showHotspots = !showHotspots" type="primary" class="soft-primary-btn">
-        <template #icon>
-          <EyeOutlined v-if="showHotspots" />
-          <EyeInvisibleOutlined v-else />
-        </template>
-        <template #tooltip>{{
-          showHotspots ? t('reader.hideHotspots') : t('reader.showHotspots')
-        }}</template>
-      </a-float-button>
-
-      <!-- Zoom Reset -->
-      <a-float-button @click="readerStore.resetZoom()" type="primary" class="soft-primary-btn">
-        <template #icon><FullscreenExitOutlined /></template>
-        <template #tooltip>{{ t('reader.resetZoom') }}</template>
-      </a-float-button>
-    </a-float-button-group>
-
-    <!-- Resources Drawer removed as per functionality cleanup -->
   </div>
 </template>
 
@@ -415,29 +384,176 @@ onBeforeUnmount(() => {
 .reader-footer-floating {
   pointer-events: none;
 }
-.reader-footer-floating :deep(.ant-float-btn),
+
 .reader-footer-floating :deep(.ant-btn),
-.reader-footer-floating :deep(.ant-drawer),
 .reader-footer-floating :deep(.study-timer-float) {
   pointer-events: auto;
 }
 
-.nav-btn {
-  color: v-bind('token.colorTextSecondary');
-}
-.nav-btn:hover {
-  color: v-bind('token.colorPrimary');
+.reader-dock {
+  pointer-events: auto;
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--reader-footer-dock-bottom, 16px) + var(--reader-footer-safe-bottom, 0px));
+  z-index: 1000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  min-height: var(--reader-footer-height, 54px);
+  width: fit-content;
+  max-width: 96vw;
+  /* Liquid Glass Core */
+  background: color-mix(in srgb, v-bind('token.colorBgElevated') 70%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid color-mix(in srgb, v-bind('token.colorWhite') 10%, transparent);
+  border-top: 1px solid color-mix(in srgb, v-bind('token.colorWhite') 25%, transparent);
+  border-radius: 16px;
+  box-shadow:
+    0 10px 40px -10px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px color-mix(in srgb, v-bind('token.colorWhite') 5%, transparent);
+
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: manipulation;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Soft Primary Button Styles */
-:deep(.soft-primary-btn.ant-float-btn-primary .ant-float-btn-body) {
-  background-color: v-bind('token.colorPrimaryBg') !important;
+.reader-dock::-webkit-scrollbar {
+  display: none;
 }
-:deep(.soft-primary-btn.ant-float-btn-primary .ant-float-btn-icon) {
-  color: v-bind('token.colorPrimary') !important;
-  opacity: 0.65;
+
+:deep(.dock-btn.ant-btn) {
+  min-width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: v-bind('token.colorTextSecondary');
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-:deep(.soft-primary-btn.ant-float-btn-primary:hover .ant-float-btn-body) {
-  background-color: v-bind('token.colorPrimaryBgHover') !important;
+
+:deep(.dock-btn.ant-btn:not(:disabled):hover) {
+  color: v-bind('token.colorPrimary');
+  background: color-mix(in srgb, v-bind('token.colorPrimaryBg') 45%, transparent);
+  transform: translateY(-1px);
+}
+
+:deep(.dock-btn.ant-btn:not(:disabled):active) {
+  transform: scale(0.92);
+}
+
+.dock-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: color-mix(in srgb, v-bind('token.colorTextQuaternary') 25%, transparent);
+}
+
+.range-chip {
+  min-width: 90px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: v-bind('token.colorText');
+  background: color-mix(in srgb, v-bind('token.colorFillSecondary') 40%, transparent);
+  border: 1px solid color-mix(in srgb, v-bind('token.colorWhite') 8%, transparent);
+  white-space: nowrap;
+}
+
+.range-divider {
+  opacity: 0.45;
+}
+
+@media (max-width: 1024px) {
+  .reader-dock {
+    gap: 4px;
+    padding: 4px 6px;
+    min-height: var(--reader-footer-height, 48px);
+  }
+
+  :deep(.dock-btn.ant-btn) {
+    min-width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .range-chip {
+    min-width: 80px;
+    height: 32px;
+    font-size: 11px;
+    padding: 0 8px;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (hover: none) and (pointer: coarse) {
+    .reader-dock {
+      gap: 8px;
+      padding: 8px 10px;
+      min-height: var(--reader-footer-height, 60px);
+    }
+
+    :deep(.dock-btn.ant-btn) {
+      min-width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      font-size: 18px;
+    }
+
+    .dock-divider {
+      height: 22px;
+      margin: 0 3px;
+    }
+
+    .range-chip {
+      min-width: 96px;
+      height: 38px;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+  }
+
+  @media (hover: none) and (pointer: coarse) and (max-width: 1024px) {
+    .reader-dock {
+      gap: 6px;
+      padding: 7px 9px;
+      min-height: var(--reader-footer-height, 54px);
+    }
+
+    :deep(.dock-btn.ant-btn) {
+      min-width: 42px;
+      height: 42px;
+      font-size: 17px;
+    }
+
+    .range-chip {
+      min-width: 88px;
+      height: 36px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :deep(.dock-btn.ant-btn) {
+    transition: none;
+  }
 }
 </style>

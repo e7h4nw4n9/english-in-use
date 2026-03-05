@@ -95,10 +95,13 @@
       "vocabulary": "Vocabulary in Use",
       "grammar": "Grammar in Use"
     },
+    "bookListSummary": "{count} books in library",
+    "bookListSeries": "{count} series",
     "homeTabs": {
       "books": "Books",
       "studyPlan": "Study Plan",
-      "studyStats": "Study Stats"
+      "studyStats": "Study Stats",
+      "settings": "Settings"
     }
   },
   "db": {
@@ -157,6 +160,15 @@
       "day": "Day",
       "week": "Week",
       "month": "Month"
+    },
+    "weekdayShort": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
     },
     "nav": {
       "today": "Today"
@@ -223,6 +235,7 @@
     "timeRange": "Time Range",
     "empty": "No study sessions yet",
     "loadFailed": "Failed to load stats: {error}",
-    "page": "Page"
+    "page": "Page",
+    "resetFilters": "Reset Filters"
   }
 }

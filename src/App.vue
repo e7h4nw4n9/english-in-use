@@ -12,15 +12,20 @@ import type { AppInitProgress } from './types'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from './composables/useTheme'
 import { theme } from 'ant-design-vue'
-import { BookOutlined, CalendarOutlined, BarChartOutlined } from '@ant-design/icons-vue'
+import {
+  BookOutlined,
+  CalendarOutlined,
+  BarChartOutlined,
+  SettingOutlined,
+} from '@ant-design/icons-vue'
 import { useAppStore } from './stores/app'
 import { useReaderStore } from './stores/reader'
 import { storeToRefs } from 'pinia'
 
+type HomeTab = 'books' | 'studyPlan' | 'studyStats' | 'settings'
+
 const { t, locale } = useI18n()
 const { isDark, setTheme } = useTheme()
-const { useToken } = theme
-const { token } = useToken()
 const appStore = useAppStore()
 const readerStore = useReaderStore()
 const {
@@ -36,53 +41,80 @@ const {
 const { isUiVisible } = storeToRefs(readerStore)
 
 const showConfig = ref(false)
-const homeTab = ref<'books' | 'studyPlan' | 'studyStats'>('books')
+const homeTab = ref<HomeTab>('books')
 const homeReloadKey = ref(0)
 const shouldReloadHomeAfterConfigChange = ref(false)
+
+const themeTokens = {
+  light: {
+    colorPrimary: '#2563EB',
+    colorInfo: '#0EA5E9',
+    colorSuccess: '#16A34A',
+    colorWarning: '#D97706',
+    colorError: '#DC2626',
+    colorBgBase: '#F5F7FB',
+    colorBgContainer: '#FFFFFF',
+    colorBgElevated: '#FFFFFF',
+    colorTextBase: '#111827',
+    colorText: '#111827',
+    colorTextSecondary: '#4B5563',
+    colorBorder: '#D1D5DB',
+    colorBorderSecondary: '#E5E7EB',
+  },
+  dark: {
+    colorPrimary: '#60A5FA',
+    colorInfo: '#38BDF8',
+    colorSuccess: '#4ADE80',
+    colorWarning: '#FBBF24',
+    colorError: '#FB7185',
+    colorBgBase: '#0F172A',
+    colorBgContainer: '#1E293B',
+    colorBgElevated: '#334155',
+    colorTextBase: '#F8FAFC',
+    colorText: '#F8FAFC',
+    colorTextSecondary: '#94A3B8',
+    colorBorder: '#334155',
+    colorBorderSecondary: '#1E293B',
+  },
+}
 
 let unlistenOpenSettings: UnlistenFn | null = null
 let unlistenProgress: UnlistenFn | null = null
 
-// Ant Design theme configuration
-const algorithm = computed(() => {
-  return isDark.value ? theme.darkAlgorithm : theme.defaultAlgorithm
-})
+const appTheme = computed(() => ({
+  algorithm: isDark.value ? theme.darkAlgorithm : theme.defaultAlgorithm,
+  token: isDark.value ? themeTokens.dark : themeTokens.light,
+}))
 
-// Compute padding for main container based on footer visibility
-const containerStyle = computed(() => {
-  return {} // Flex layout handles this now
-})
-
-// Compute current title for the custom header
 const currentTitle = computed(() => {
-  const titleKey = showConfig.value ? 'config.title' : 'app.title'
-  return t(titleKey)
+  if (showConfig.value || homeTab.value === 'settings') {
+    return t('config.title')
+  }
+  return t('app.title')
 })
 
 const shouldShowHeader = computed(() => {
-  // Config page should always keep the app header visible
   return showConfig.value || isUiVisible.value || !currentBook.value
 })
 
 const buildStamp = __DEBUG_FEATURES__ ? __BUILD_STAMP__ : undefined
 
-// Apply settings from config whenever it changes
 watch(
   config,
   (newConfig) => {
-    if (newConfig) {
-      if (newConfig.system.language) {
-        locale.value = newConfig.system.language
-      }
-      if (newConfig.system.theme) {
-        setTheme(newConfig.system.theme as any)
-      }
+    if (!newConfig) return
+
+    if (newConfig.system.language) {
+      locale.value = newConfig.system.language
+    }
+
+    if (newConfig.system.theme) {
+      setTheme(newConfig.system.theme as any)
     }
   },
   { immediate: true, deep: true },
 )
 
-// Show config if invalid when loading finishes
 watch(
   [isConfigValid, isLoading],
   ([valid, loading]) => {
@@ -111,9 +143,9 @@ async function goHome() {
   if (currentBook.value) {
     currentBook.value = null
   }
-  if (showConfig.value) {
-    showConfig.value = false
-  }
+
+  homeTab.value = 'books'
+  showConfig.value = false
 }
 
 async function onConfigBack(options?: { reloadHome?: boolean }) {
@@ -121,7 +153,17 @@ async function onConfigBack(options?: { reloadHome?: boolean }) {
     await goHome()
     return
   }
-  showConfig.value = false
+
+  if (showConfig.value) {
+    showConfig.value = false
+    return
+  }
+
+  homeTab.value = 'books'
+}
+
+function activateHomeTab(tab: HomeTab) {
+  homeTab.value = tab
 }
 
 onMounted(async () => {
@@ -143,7 +185,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <a-config-provider :theme="{ algorithm }">
+  <a-config-provider :theme="appTheme">
     <div class="app-layout">
       <Transition name="slide-up">
         <AppHeader
@@ -155,7 +197,7 @@ onUnmounted(() => {
         />
       </Transition>
 
-      <main class="app-main-container" :style="containerStyle">
+      <main class="app-main-container">
         <Transition name="fade" mode="out-in">
           <LoadingOverlay
             v-if="isLoading"
@@ -177,14 +219,14 @@ onUnmounted(() => {
           <ReaderView v-else-if="currentBook" />
 
           <div v-else :key="homeReloadKey" class="main-content">
-            <div class="home-tabs" :data-active-tab="homeTab" role="tablist" aria-label="Home tabs">
+            <div class="home-tabs" role="tablist" aria-label="Home tabs">
               <button
                 type="button"
                 class="home-tab-btn"
                 :class="{ active: homeTab === 'books' }"
                 :aria-selected="homeTab === 'books'"
                 :tabindex="homeTab === 'books' ? 0 : -1"
-                @click="homeTab = 'books'"
+                @click="activateHomeTab('books')"
               >
                 <BookOutlined class="home-tab-icon" />
                 {{ t('app.homeTabs.books') }}
@@ -195,7 +237,7 @@ onUnmounted(() => {
                 :class="{ active: homeTab === 'studyPlan' }"
                 :aria-selected="homeTab === 'studyPlan'"
                 :tabindex="homeTab === 'studyPlan' ? 0 : -1"
-                @click="homeTab = 'studyPlan'"
+                @click="activateHomeTab('studyPlan')"
               >
                 <CalendarOutlined class="home-tab-icon" />
                 {{ t('app.homeTabs.studyPlan') }}
@@ -206,17 +248,36 @@ onUnmounted(() => {
                 :class="{ active: homeTab === 'studyStats' }"
                 :aria-selected="homeTab === 'studyStats'"
                 :tabindex="homeTab === 'studyStats' ? 0 : -1"
-                @click="homeTab = 'studyStats'"
+                @click="activateHomeTab('studyStats')"
               >
                 <BarChartOutlined class="home-tab-icon" />
                 {{ t('app.homeTabs.studyStats') }}
+              </button>
+              <button
+                type="button"
+                class="home-tab-btn"
+                :class="{ active: homeTab === 'settings' }"
+                :aria-selected="homeTab === 'settings'"
+                :tabindex="homeTab === 'settings' ? 0 : -1"
+                @click="activateHomeTab('settings')"
+              >
+                <SettingOutlined class="home-tab-icon" />
+                {{ t('app.homeTabs.settings') }}
               </button>
             </div>
 
             <div class="home-content-surface">
               <BookList v-if="homeTab === 'books'" />
               <StudyPlanPage v-else-if="homeTab === 'studyPlan'" />
-              <StudyStatsPage v-else />
+              <StudyStatsPage v-else-if="homeTab === 'studyStats'" />
+              <ConfigPage
+                v-else
+                :initial-config="config || undefined"
+                :allow-back="false"
+                @config-imported="onConfigImported"
+                @config-saved="onConfigSaved"
+                @back="onConfigBack"
+              />
             </div>
           </div>
         </Transition>
@@ -244,7 +305,6 @@ onUnmounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: transparent;
   overflow: hidden;
 }
 
@@ -260,9 +320,8 @@ onUnmounted(() => {
 }
 
 .main-content {
-  position: relative;
-  isolation: isolate;
   padding: 12px;
+  padding-bottom: 96px; /* Space for the floating dock */
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -271,101 +330,64 @@ onUnmounted(() => {
   overflow-x: hidden;
 }
 
-.main-content::before,
-.main-content::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  border-radius: 999px;
-  filter: blur(64px);
-  pointer-events: none;
-  opacity: 0.55;
-}
-
-.main-content::before {
-  width: 260px;
-  height: 260px;
-  top: -120px;
-  left: -70px;
-  background: v-bind('token.colorPrimaryBg');
-}
-
-.main-content::after {
-  width: 320px;
-  height: 320px;
-  top: 140px;
-  right: -140px;
-  background: v-bind('token.colorFillSecondary');
-}
-
 .home-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 18px;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  gap: 4px;
+  width: auto;
+  min-width: 280px;
+  max-width: min(92vw, 520px);
   padding: 6px;
-  border: 1px solid color-mix(in srgb, #ffffff 20%, transparent);
-  border-radius: 22px;
-  background: color-mix(in srgb, v-bind('token.colorBgContainer') 40%, transparent);
-  backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in srgb, #ffffff 25%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, v-bind('appTheme.token.colorBgElevated') 65%, transparent);
+  backdrop-filter: blur(20px);
   box-shadow:
-    0 12px 24px -22px color-mix(in srgb, v-bind('token.colorText') 20%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #ffffff 30%, transparent);
+    0 12px 40px -8px rgba(0, 0, 0, 0.25),
+    0 8px 16px -4px rgba(0, 0, 0, 0.15);
 }
 
-.home-tabs::before {
-  content: '';
-  position: absolute;
-  top: 6px;
-  bottom: 6px;
-  left: 6px;
-  width: calc((100% - 28px) / 3);
-  border-radius: 16px;
-  background: linear-gradient(135deg, v-bind('token.colorPrimary'), v-bind('token.colorInfo'));
-  box-shadow: 0 4px 12px color-mix(in srgb, v-bind('token.colorPrimary') 40%, transparent);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.home-tabs[data-active-tab='studyPlan']::before {
-  transform: translateX(calc(100% + 8px));
-}
-
-.home-tabs[data-active-tab='studyStats']::before {
-  transform: translateX(calc((100% + 8px) * 2));
+.dark .home-tabs {
+  border: 1px solid color-mix(in srgb, #ffffff 10%, transparent);
+  box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.5);
 }
 
 .home-tab-btn {
-  position: relative;
-  z-index: 1;
   border: 0;
   background: transparent;
-  color: v-bind('token.colorTextSecondary');
-  border-radius: 16px;
-  padding: 12px 14px;
-  font-size: 14px;
-  font-weight: 700;
+  color: v-bind('appTheme.token.colorTextSecondary');
+  border-radius: 999px;
+  padding: 8px 16px;
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.24s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
 }
 
 .home-tab-btn:hover {
-  color: v-bind('token.colorText');
+  background: color-mix(in srgb, v-bind('appTheme.token.colorPrimary') 10%, transparent);
+  color: v-bind('appTheme.token.colorPrimary');
 }
 
 .home-tab-btn.active {
   color: #ffffff;
+  background: v-bind('appTheme.token.colorPrimary');
+  box-shadow: 0 4px 12px color-mix(in srgb, v-bind('appTheme.token.colorPrimary') 30%, transparent);
 }
 
 .home-tab-btn:focus-visible {
-  outline: 2px solid v-bind('token.colorPrimary');
-  outline-offset: 4px;
+  outline: 2px solid v-bind('appTheme.token.colorPrimary');
+  outline-offset: 2px;
 }
 
 .home-tab-icon {
@@ -373,36 +395,32 @@ onUnmounted(() => {
 }
 
 .home-content-surface {
-  min-height: calc(100% - 64px);
+  min-height: 100%;
   max-width: 100%;
   min-width: 0;
-  border: 1px solid color-mix(in srgb, #ffffff 15%, transparent);
-  border-radius: 28px;
-  background: color-mix(in srgb, v-bind('token.colorBgContainer') 30%, transparent);
-  backdrop-filter: blur(12px);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #ffffff 20%, transparent),
-    0 30px 48px -42px color-mix(in srgb, v-bind('token.colorText') 25%, transparent);
+  border: 1px solid
+    color-mix(in srgb, v-bind('appTheme.token.colorBorderSecondary') 80%, transparent);
+  border-radius: 14px;
+  background: v-bind('appTheme.token.colorBgContainer');
   overflow: hidden;
 }
 
-/* Transitions */
 .fade-enter-active,
 .fade-leave-active {
   transition:
-    opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(4px);
 }
 
 .slide-up-enter-active,
 .slide-up-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .slide-up-enter-from,
@@ -411,20 +429,101 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all 0.3s ease;
+@media (max-width: 880px) {
+  .main-content {
+    padding: 10px;
+    padding-bottom: 88px;
+  }
+
+  .home-tabs {
+    min-width: auto;
+    padding: 5px;
+    bottom: 20px;
+  }
+
+  .home-tab-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .home-tab-icon {
+    font-size: 15px;
+  }
 }
 
-.slide-down-enter-from,
-.slide-down-leave-to {
-  transform: translateY(100%);
-  opacity: 0;
+@media (max-width: 640px) {
+  .home-tab-btn {
+    padding: 10px;
+    font-size: 0;
+    gap: 0;
+  }
+
+  .home-tab-icon {
+    font-size: 18px;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (hover: none) and (pointer: coarse) {
+    .main-content {
+      padding-bottom: 104px;
+    }
+
+    .home-tabs {
+      bottom: 28px;
+      gap: 6px;
+      padding: 8px;
+    }
+
+    .home-tab-btn {
+      padding: 10px 18px;
+      font-size: 14px;
+      gap: 8px;
+    }
+
+    .home-tab-icon {
+      font-size: 18px;
+    }
+  }
+
+  @media (hover: none) and (pointer: coarse) and (max-width: 880px) {
+    .main-content {
+      padding-bottom: 96px;
+    }
+
+    .home-tabs {
+      bottom: 24px;
+      padding: 7px;
+    }
+
+    .home-tab-btn {
+      padding: 10px 14px;
+      font-size: 13px;
+      gap: 7px;
+    }
+
+    .home-tab-icon {
+      font-size: 17px;
+    }
+  }
+
+  @media (hover: none) and (pointer: coarse) and (max-width: 640px) {
+    .home-tab-btn {
+      padding: 11px;
+      font-size: 0;
+      gap: 0;
+    }
+
+    .home-tab-icon {
+      font-size: 20px;
+    }
+  }
 }
 </style>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 *,
 *::before,
@@ -453,14 +552,11 @@ body,
 }
 
 html {
-  transition: background-color 0.3s ease;
+  background-color: #f5f7fb;
 }
 
 html.dark {
-  background-color: #082f49; /* Deep cyan dark background */
-}
-
-html:not(.dark) {
-  background-color: #ecfeff; /* Fresh cyan background */
+  background-color: #0f172a;
+  color: #f8fafc;
 }
 </style>

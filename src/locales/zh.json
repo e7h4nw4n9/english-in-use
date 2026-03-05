@@ -95,10 +95,13 @@
       "vocabulary": "词汇系列 (Vocabulary in Use)",
       "grammar": "语法系列 (Grammar in Use)"
     },
+    "bookListSummary": "共 {count} 本书",
+    "bookListSeries": "{count} 个系列",
     "homeTabs": {
       "books": "书籍",
       "studyPlan": "学习计划",
-      "studyStats": "学习统计"
+      "studyStats": "学习统计",
+      "settings": "设置"
     }
   },
   "db": {
@@ -157,6 +160,15 @@
       "day": "日",
       "week": "周",
       "month": "月"
+    },
+    "weekdayShort": {
+      "mon": "周一",
+      "tue": "周二",
+      "wed": "周三",
+      "thu": "周四",
+      "fri": "周五",
+      "sat": "周六",
+      "sun": "周日"
     },
     "nav": {
       "today": "今天"
@@ -223,6 +235,7 @@
     "timeRange": "时间范围",
     "empty": "暂无学习记录",
     "loadFailed": "统计加载失败: {error}",
-    "page": "页码"
+    "page": "页码",
+    "resetFilters": "重置筛选"
   }
 }

@@ -192,9 +192,9 @@ function onMarkTaskDone(task: StudyTaskItem) {
 }
 
 .glass-block {
-  background: color-mix(in srgb, v-bind('token.colorBgContainer') 40%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorBgContainer') 60%, transparent);
   backdrop-filter: blur(20px);
-  border: 1px solid color-mix(in srgb, #ffffff 20%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 10%, transparent);
   border-radius: 12px;
   padding: 16px;
 }
@@ -205,21 +205,23 @@ function onMarkTaskDone(task: StudyTaskItem) {
 }
 
 :deep(.series-collapse > .ant-collapse-item) {
-  margin-bottom: 4px;
-  background: color-mix(in srgb, v-bind('token.colorBgContainer') 25%, transparent);
+  margin-bottom: 6px;
+  background: color-mix(in srgb, v-bind('token.colorBgContainer') 40%, transparent);
   backdrop-filter: blur(10px);
-  border: 1px solid color-mix(in srgb, #ffffff 12%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 8%, transparent);
   border-radius: 12px !important;
   overflow: hidden;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 :deep(.series-collapse > .ant-collapse-item:hover) {
-  border-color: color-mix(in srgb, v-bind('token.colorPrimary') 25%, transparent);
+  border-color: color-mix(in srgb, v-bind('token.colorPrimary') 30%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorBgContainer') 60%, transparent);
 }
 
 :deep(.series-collapse > .ant-collapse-item > .ant-collapse-header) {
-  padding: 6px 10px !important;
+  padding: 8px 12px !important;
   align-items: center;
 }
 
@@ -234,23 +236,23 @@ function onMarkTaskDone(task: StudyTaskItem) {
 .series-header-main {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .series-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: color-mix(in srgb, v-bind('token.colorPrimary') 12%, transparent);
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: color-mix(in srgb, v-bind('token.colorPrimary') 15%, transparent);
   color: v-bind('token.colorPrimary');
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .series-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   color: v-bind('token.colorTextHeading');
   letter-spacing: -0.01em;
@@ -260,33 +262,33 @@ function onMarkTaskDone(task: StudyTaskItem) {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 16px;
-  padding: 0 5px;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
   border-radius: 999px;
   background: v-bind('token.colorPrimary');
   color: #ffffff;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
 }
 
 /* Book Collapse Styling */
 .series-content {
   min-width: 0;
-  padding: 0 6px 6px;
+  padding: 0 8px 8px;
 }
 
 :deep(.book-collapse > .ant-collapse-item) {
-  margin-bottom: 2px;
-  border: 1px solid color-mix(in srgb, #ffffff 8%, transparent);
-  background: color-mix(in srgb, v-bind('token.colorFillAlter') 12%, transparent);
+  margin-bottom: 4px;
+  border: 1px solid color-mix(in srgb, #ffffff 5%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorFillAlter') 15%, transparent);
   border-radius: 10px !important;
   overflow: hidden;
 }
 
 :deep(.book-collapse > .ant-collapse-item > .ant-collapse-header) {
-  padding: 4px 10px !important;
-  font-size: 11px;
+  padding: 6px 12px !important;
+  font-size: 12px;
 }
 
 .book-header {
@@ -301,14 +303,14 @@ function onMarkTaskDone(task: StudyTaskItem) {
 .book-header-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
 .book-header-icon {
   color: v-bind('token.colorTextSecondary');
-  opacity: 0.4;
-  font-size: 12px;
+  opacity: 0.5;
+  font-size: 13px;
 }
 
 .book-title {
@@ -321,14 +323,14 @@ function onMarkTaskDone(task: StudyTaskItem) {
 
 .book-code-tag {
   font-family: 'Plus Jakarta Sans', monospace;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   text-transform: uppercase;
   max-width: 45%;
   color: v-bind('token.colorTextTertiary');
-  background: color-mix(in srgb, v-bind('token.colorFillSecondary') 25%, transparent);
-  padding: 0px 4px;
-  border-radius: 3px;
+  background: color-mix(in srgb, v-bind('token.colorFillSecondary') 30%, transparent);
+  padding: 1px 6px;
+  border-radius: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -338,32 +340,33 @@ function onMarkTaskDone(task: StudyTaskItem) {
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 1px 0 4px;
+  gap: 4px;
+  padding: 2px 0 6px;
 }
 
 .task-glass-card {
   position: relative;
-  background: color-mix(in srgb, v-bind('token.colorBgElevated') 25%, transparent);
-  border: 1px solid color-mix(in srgb, #ffffff 8%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorBgElevated') 30%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 5%, transparent);
   border-radius: 8px;
   transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
   overflow: hidden;
 }
 
 .task-glass-card:hover {
-  transform: translateX(3px);
-  background: color-mix(in srgb, v-bind('token.colorBgElevated') 40%, transparent);
+  transform: translateX(4px);
+  background: color-mix(in srgb, v-bind('token.colorBgElevated') 50%, transparent);
+  border-color: color-mix(in srgb, v-bind('token.colorPrimary') 20%, transparent);
 }
 
 .task-card-body {
-  padding: 6px 10px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-width: 0;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 
 .task-info {
@@ -372,44 +375,44 @@ function onMarkTaskDone(task: StudyTaskItem) {
 }
 
 .task-unit-name {
-  margin: 0 0 2px;
-  font-size: 12px;
+  margin: 0 0 4px;
+  font-size: 13px;
   font-weight: 700;
   color: v-bind('token.colorText');
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .task-meta-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .meta-tag {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 0px 5px;
-  border-radius: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 
 .stage-tag {
-  background: color-mix(in srgb, v-bind('token.colorInfo') 10%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorInfo') 15%, transparent);
   color: v-bind('token.colorInfo');
 }
 
 .meta-date {
-  font-size: 9px;
+  font-size: 10px;
   color: v-bind('token.colorTextTertiary');
   font-weight: 600;
 }
 
 .status-tag {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
-  padding: 0 4px;
-  height: 14px;
-  line-height: 14px;
+  padding: 0 6px;
+  height: 16px;
+  line-height: 16px;
 }
 
 .task-card-actions {
@@ -417,40 +420,40 @@ function onMarkTaskDone(task: StudyTaskItem) {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 6px;
   margin-left: auto;
   flex-shrink: 0;
 }
 
 .action-btn {
   font-weight: 700;
-  font-size: 10px;
-  height: 24px;
-  padding: 0 8px;
+  font-size: 11px;
+  height: 28px;
+  padding: 0 10px;
 }
 
 .study-btn {
   color: v-bind('token.colorPrimary');
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .study-btn:hover {
   opacity: 1;
-  background: color-mix(in srgb, v-bind('token.colorPrimary') 10%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorPrimary') 15%, transparent);
 }
 
 .done-btn {
-  box-shadow: 0 1px 4px color-mix(in srgb, v-bind('token.colorPrimary') 15%, transparent);
+  box-shadow: 0 2px 6px color-mix(in srgb, v-bind('token.colorPrimary') 20%, transparent);
 }
 
 /* Status Variants */
 .task-glass-card.is-done {
-  opacity: 0.55;
-  background: color-mix(in srgb, v-bind('token.colorSuccessBg') 10%, transparent);
+  opacity: 0.6;
+  background: color-mix(in srgb, v-bind('token.colorSuccessBg') 15%, transparent);
 }
 
 .task-glass-card.is-overdue {
-  border-left: 2px solid v-bind('token.colorError');
+  border-left: 3px solid v-bind('token.colorError');
 }
 
 /* Custom Expand Icon */

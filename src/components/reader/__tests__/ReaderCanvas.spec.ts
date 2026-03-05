@@ -88,6 +88,31 @@ describe('ReaderCanvas', () => {
     expect(content.attributes('style')).toContain('transform: scale(1.5)')
   })
 
+  it('uses scroll container clearance instead of hardcoded content bottom padding', () => {
+    const wrapper = mount(ReaderCanvas, {
+      props: {
+        metadata: mockMetadata,
+        loading: false,
+        leftPageUrl: 'left.jpg',
+        rightPageUrl: 'right.jpg',
+        leftPageLabel: '1',
+        rightPageLabel: '2',
+        showHotspots: true,
+        canGoBack: true,
+        canGoForward: true,
+      },
+      global: {
+        stubs: ['a-spin', 'CustomerServiceOutlined', 'LinkOutlined'],
+      },
+    })
+
+    const scrollContainer = wrapper.find('.reader-scroll-container')
+    expect(scrollContainer.exists()).toBe(true)
+
+    const content = wrapper.find('.reader-content-container')
+    expect(content.classes()).not.toContain('pb-48')
+  })
+
   it('uses full-width page surface in single mode', () => {
     const wrapper = mount(ReaderCanvas, {
       props: {

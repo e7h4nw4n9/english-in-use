@@ -279,7 +279,7 @@ function getOverlayStyle(overlay: any) {
 
     <div
       ref="scrollContainerRef"
-      class="pinch-zoom-surface custom-scrollbar flex flex-1 justify-center overflow-auto"
+      class="reader-scroll-container pinch-zoom-surface custom-scrollbar flex-1 overflow-auto"
       @wheel="handleWheel"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
@@ -287,7 +287,7 @@ function getOverlayStyle(overlay: any) {
       @touchcancel="handleTouchCancel"
     >
       <div
-        class="reader-content-container flex w-full origin-top items-start justify-center gap-4 px-0 py-1 transition-transform duration-150 ease-out"
+        class="reader-content-container flex w-full origin-top items-start justify-center gap-4 px-0 pt-1 transition-transform duration-150 ease-out"
         :style="{ transform: `scale(${zoomLevel})` }"
       >
         <!-- Left Page -->
@@ -385,9 +385,32 @@ function getOverlayStyle(overlay: any) {
 .pinch-zoom-surface {
   touch-action: pan-x pan-y;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-padding-bottom: var(--reader-footer-clearance, 96px);
+}
+
+.pinch-zoom-surface::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pinch-zoom-surface::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pinch-zoom-surface::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ant-color-text-quaternary, #ccc) 30%, transparent);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.pinch-zoom-surface::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--ant-color-text-quaternary, #999) 60%, transparent);
+  background-clip: content-box;
 }
 
 .reader-content-container {
+  padding-bottom: calc(var(--reader-footer-clearance, 96px) + 8px);
   will-change: transform;
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -435,21 +458,29 @@ function getOverlayStyle(overlay: any) {
 }
 
 .dark .icon-wrapper {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(30, 41, 59, 0.8); /* slate-800 */
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* 统一深色图标 */
 .overlay-item .anticon {
   @apply transition-transform duration-300;
   font-size: 20px !important;
-  color: #1e293b; /* 优雅的深灰色 */
-  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.5));
+  color: #475569; /* slate-600 */
+}
+
+.dark .overlay-item .anticon {
+  color: #cbd5e1; /* slate-300 */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 
 .overlay-item:hover .icon-wrapper {
   @apply scale-110 shadow-md;
   background: rgba(255, 255, 255, 0.9);
+}
+
+.dark .overlay-item:hover .icon-wrapper {
+  background: rgba(51, 65, 85, 0.9); /* slate-700 */
 }
 
 .overlay-item:hover {

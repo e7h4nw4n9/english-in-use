@@ -320,17 +320,17 @@ onBeforeUnmount(() => {
   align-items: stretch;
   gap: 8px;
   min-width: 230px;
-  border: 1px solid color-mix(in srgb, var(--timer-border) 74%, transparent);
+  border: 1px solid color-mix(in srgb, var(--timer-border) 40%, #ffffff 15%);
   border-radius: 16px;
   background: linear-gradient(
     145deg,
-    color-mix(in srgb, var(--timer-bg) 80%, #ffffff 20%),
-    color-mix(in srgb, var(--timer-bg) 96%, #000000 4%)
+    color-mix(in srgb, var(--timer-bg) 95%, #ffffff 5%),
+    color-mix(in srgb, var(--timer-bg) 98%, #000000 2%)
   );
   box-shadow:
-    0 10px 26px rgb(15 23 42 / 18%),
-    inset 0 1px 0 rgb(255 255 255 / 32%);
-  backdrop-filter: blur(16px);
+    0 12px 48px -8px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
   color: var(--timer-text);
   cursor: grab;
   user-select: none;
@@ -339,6 +339,7 @@ onBeforeUnmount(() => {
 
 .timer-expanded-panel.is-dragging {
   cursor: grabbing;
+  box-shadow: 0 20px 64px -12px rgba(0, 0, 0, 0.6);
 }
 
 .timer-time-row {
@@ -348,9 +349,9 @@ onBeforeUnmount(() => {
 
 .timer-display {
   width: 100%;
-  border: 1px solid color-mix(in srgb, var(--timer-border) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--timer-border) 50%, #ffffff 10%);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--timer-bg) 76%, #ffffff 24%);
+  background: color-mix(in srgb, var(--timer-bg) 60%, transparent);
   padding: 8px 10px;
   text-align: center;
   font-size: 21px;
@@ -376,7 +377,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--timer-border) 26%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 :deep(.timer-main-btn.ant-btn .ant-btn-icon) {
@@ -398,8 +399,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--timer-border) 70%, transparent);
-  background: color-mix(in srgb, var(--timer-bg) 86%, #ffffff 14%);
+  border: 1px solid color-mix(in srgb, var(--timer-border) 50%, #ffffff 10%);
+  background: color-mix(in srgb, var(--timer-bg) 40%, transparent);
 }
 
 :deep(.timer-icon-btn.ant-btn .ant-btn-icon) {
@@ -430,25 +431,25 @@ onBeforeUnmount(() => {
 }
 
 :deep(.timer-icon-btn.ant-btn:not(:disabled):hover) {
-  border-color: color-mix(in srgb, var(--timer-border) 90%, transparent);
-  background: color-mix(in srgb, var(--timer-bg) 74%, #ffffff 26%);
+  border-color: color-mix(in srgb, var(--timer-border) 80%, #ffffff 20%);
+  background: color-mix(in srgb, var(--timer-bg) 60%, #ffffff 10%);
 }
 
 :deep(.timer-icon-btn.ant-btn:focus-visible),
 :deep(.timer-main-btn.ant-btn:focus-visible) {
-  outline: 2px solid color-mix(in srgb, var(--timer-border) 45%, #1677ff 55%);
+  outline: 2px solid var(--timer-border);
   outline-offset: 1px;
 }
 
 .timer-collapsed-chip {
-  border: 1px solid color-mix(in srgb, var(--timer-border) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--timer-border) 40%, #ffffff 15%);
   border-radius: 12px 0 0 12px;
   background: linear-gradient(
     145deg,
-    color-mix(in srgb, var(--timer-bg) 86%, #ffffff 14%),
-    color-mix(in srgb, var(--timer-bg) 96%, #000000 4%)
+    color-mix(in srgb, var(--timer-bg) 95%, #ffffff 5%),
+    color-mix(in srgb, var(--timer-bg) 98%, #000000 2%)
   );
-  box-shadow: 0 10px 24px rgb(15 23 42 / 17%);
+  box-shadow: 0 10px 32px -4px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(16px);
   color: var(--timer-text);
   font-size: 14px;
@@ -456,15 +457,13 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease;
+  transition: all 0.2s ease;
   padding: 8px 12px;
   min-width: 104px;
 }
 
 .timer-collapsed-chip:hover {
-  border-color: color-mix(in srgb, var(--timer-border) 92%, transparent);
-  background: color-mix(in srgb, var(--timer-bg) 76%, #ffffff 24%);
+  border-color: color-mix(in srgb, var(--timer-border) 80%, #ffffff 20%);
+  background: color-mix(in srgb, var(--timer-bg) 80%, #ffffff 10%);
 }
 </style>

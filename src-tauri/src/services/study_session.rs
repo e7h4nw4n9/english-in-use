@@ -309,16 +309,19 @@ pub async fn get_study_stats(
         .and_then(|row| json_string(row, "range_end"))
         .unwrap_or_default();
 
+    // 始终按日聚合，由前端决定如何展示横轴标记
+    let trend_key_expr = "date(s.start_at, 'localtime')";
+
     let all_sessions_sql = format!(
         "SELECT s.id AS session_id, s.book_id AS book_id, b.book_group AS book_group, b.product_code AS product_code, b.title AS book_title, \
                 s.resource_id AS resource_id, s.unit_name AS unit_name, s.entry_resource_id AS entry_resource_id, s.entry_unit_name AS entry_unit_name, \
                 s.visited_units_json AS visited_units_json, s.start_at AS start_at, s.end_at AS end_at, s.duration AS duration, \
-                date(s.start_at, 'localtime') AS stat_date \
+                {} AS stat_key \
          FROM study_sessions s \
          JOIN books b ON s.book_id = b.id \
          {} \
          ORDER BY s.start_at DESC, s.id DESC",
-        where_sql
+        trend_key_expr, where_sql
     );
     let all_rows = db
         .query(all_sessions_sql)
@@ -350,10 +353,10 @@ pub async fn get_study_stats(
             let start_at = json_string(row, "start_at")?;
             let end_at = json_string(row, "end_at")?;
             let duration = json_i64(row, "duration")?;
-            let stat_date = json_string(row, "stat_date")?;
+            let stat_key = json_string(row, "stat_key")?;
 
             trend_map
-                .entry(stat_date)
+                .entry(stat_key)
                 .and_modify(|sum| *sum += duration)
                 .or_insert(duration);
 
@@ -440,6 +443,71 @@ pub async fn get_study_stats(
         page_size,
         total_recent,
     })
+}
+
+pub async fn get_study_sessions_by_date(
+    db: &dyn Database,
+    date: &str,
+    filters: Option<StudyStatsFilters>,
+) -> Result<Vec<StudySessionListItem>, String> {
+    let escaped_date = escape_sql_literal(date);
+    let mut clauses = vec![format!(
+        "date(s.start_at, 'localtime') = '{}'",
+        escaped_date
+    )];
+
+    if let Some(filter) = filters {
+        if let Some(book_id) = filter.book_id {
+            clauses.push(format!("s.book_id = {}", book_id));
+        }
+        if let Some(book_group) = filter.book_group {
+            clauses.push(format!("b.book_group = {}", book_group));
+        }
+    }
+
+    let where_sql = format!("WHERE {}", clauses.join(" AND "));
+
+    let sql = format!(
+        "SELECT s.id AS session_id, s.book_id AS book_id, b.book_group AS book_group, b.product_code AS product_code, b.title AS book_title, \
+                s.resource_id AS resource_id, s.unit_name AS unit_name, s.entry_resource_id AS entry_resource_id, s.entry_unit_name AS entry_unit_name, \
+                s.visited_units_json AS visited_units_json, s.start_at AS start_at, s.end_at AS end_at, s.duration AS duration \
+         FROM study_sessions s \
+         JOIN books b ON s.book_id = b.id \
+         {} \
+         ORDER BY s.start_at DESC, s.id DESC",
+        where_sql
+    );
+
+    let rows = db.query(sql).await.map_err(|e| e.to_string())?;
+
+    let sessions = rows
+        .iter()
+        .filter_map(|row| {
+            let visited_units = row
+                .get("visited_units_json")
+                .and_then(|v| v.as_str())
+                .and_then(|raw| serde_json::from_str::<Vec<StudySessionUnitRef>>(raw).ok())
+                .unwrap_or_default();
+
+            Some(StudySessionListItem {
+                id: json_i64(row, "session_id")?,
+                book_id: json_i64(row, "book_id")?,
+                book_group: json_i32(row, "book_group")?,
+                product_code: json_string(row, "product_code")?,
+                book_title: json_string(row, "book_title")?,
+                resource_id: json_string(row, "resource_id")?,
+                unit_name: json_string(row, "unit_name")?,
+                entry_resource_id: json_string(row, "entry_resource_id")?,
+                entry_unit_name: json_string(row, "entry_unit_name")?,
+                visited_units,
+                start_at: json_string(row, "start_at")?,
+                end_at: json_string(row, "end_at")?,
+                duration: json_i64(row, "duration")?,
+            })
+        })
+        .collect();
+
+    Ok(sessions)
 }
 
 #[cfg(test)]

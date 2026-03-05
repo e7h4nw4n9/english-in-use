@@ -48,10 +48,15 @@ antMessage.config({
   maxCount: 3,
 })
 
-const props = defineProps<{
-  initialConfig?: AppConfig
-  allowBack?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    initialConfig?: AppConfig
+    allowBack?: boolean
+  }>(),
+  {
+    allowBack: true,
+  },
+)
 
 const emit = defineEmits<{
   (e: 'config-saved', config: AppConfig): void
@@ -63,6 +68,7 @@ const activeTab = ref<string[]>(['system'])
 
 const currentTab = computed(() => activeTab.value[0])
 const debugFeaturesAvailable = __DEBUG_FEATURES__
+const showBackButton = computed(() => props.allowBack !== false)
 
 // System Config
 const language = ref(props.initialConfig?.system?.language || 'en')
@@ -1264,6 +1270,7 @@ function getCurrentDatabase(): DatabaseConnection | null {
       <div class="config-title-row">
         <div class="config-header-left">
           <a-button
+            v-if="showBackButton"
             type="text"
             class="back-button"
             @click="handleBack"

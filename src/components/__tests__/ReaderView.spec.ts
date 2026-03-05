@@ -165,6 +165,36 @@ describe('ReaderView', () => {
     expect(readerStore.currentPageLabel).toBe('12')
   })
 
+  it('toggles root class when reader UI visibility changes', async () => {
+    const wrapper = mount(ReaderView, {
+      global: {
+        stubs: {
+          ReaderTOC: true,
+          ReaderCanvas: true,
+          ReaderFooter: true,
+          ReaderAudioPlayer: true,
+          ReaderExerciseModal: true,
+          ReaderDebugModal: true,
+          'a-modal': true,
+          'a-select': true,
+          'a-select-option': true,
+        },
+      },
+    })
+
+    const readerStore = useReaderStore()
+    const root = wrapper.find('.reader-view')
+    expect(root.classes()).not.toContain('reader-ui-hidden')
+
+    readerStore.hideUi()
+    await wrapper.vm.$nextTick()
+    expect(root.classes()).toContain('reader-ui-hidden')
+
+    readerStore.showUi()
+    await wrapper.vm.$nextTick()
+    expect(root.classes()).not.toContain('reader-ui-hidden')
+  })
+
   it('updates currentPageAudioFiles when page changes', async () => {
     const wrapper = mount(ReaderView, {
       global: {

@@ -130,7 +130,25 @@ const weekDates = computed(() => {
 
 const currentMonthKey = computed(() => anchorDate.value.slice(0, 7))
 
-const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const weekdayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+const weekdays = computed(() => weekdayKeys.map((key) => t(`studyPlan.weekdayShort.${key}`)))
+
+function getDateDayNumber(date: string): string {
+  return String(Number(date.slice(8)))
+}
+
+function getWeekdayLabel(date: string): string {
+  const day = parseDate(date).getDay()
+  const mondayFirstIndex = day === 0 ? 6 : day - 1
+  return weekdays.value[mondayFirstIndex]
+}
+
+const selectedDateLabel = computed(() => {
+  if (viewMode.value === 'week') {
+    return `${selectedDate.value} · ${getWeekdayLabel(selectedDate.value)}`
+  }
+  return selectedDate.value
+})
 
 function summaryOf(date: string): StudyTaskSummaryDay | null {
   return summaryByDate.value[date] || null
@@ -151,11 +169,11 @@ function isDateTasksLoading(date: string): boolean {
 function getDateCellStyle(date: string, selected: boolean) {
   const isMuted = viewMode.value === 'month' && !isCurrentMonthDate(date)
 
-  let backgroundColor = isMuted ? token.value.colorFillSecondary : token.value.colorFillTertiary
-  let borderColor = 'transparent'
+  let backgroundColor = isMuted ? 'transparent' : token.value.colorFillQuaternary
+  let borderColor = isMuted ? 'transparent' : token.value.colorBorderSecondary
 
   if (selected) {
-    backgroundColor = token.value.colorPrimaryBg
+    backgroundColor = `color-mix(in srgb, ${token.value.colorPrimaryBg}, transparent 20%)`
     borderColor = token.value.colorPrimary
   }
 
@@ -165,6 +183,7 @@ function getDateCellStyle(date: string, selected: boolean) {
     borderWidth: selected ? '2px' : '1px',
     borderStyle: 'solid',
     color: isMuted ? token.value.colorTextTertiary : token.value.colorText,
+    opacity: isMuted ? 0.4 : 1,
   }
 }
 
@@ -481,10 +500,17 @@ onMounted(async () => {
         </div>
 
         <template v-else>
-          <template v-if="viewMode === 'month'">
-            <div class="weekday-row">
-              <div v-for="day in weekdays" :key="`wk-${day}`" class="weekday-cell">{{ day }}</div>
+          <div class="weekday-row">
+            <div
+              v-for="(day, index) in weekdays"
+              :key="`wk-${weekdayKeys[index]}`"
+              class="weekday-cell"
+            >
+              {{ day }}
             </div>
+          </div>
+
+          <template v-if="viewMode === 'month'">
             <div class="date-grid-month">
               <button
                 v-for="date in monthCellDates"
@@ -499,21 +525,24 @@ onMounted(async () => {
                 @click="openMonthDrawer(date)"
               >
                 <div class="date-cell-head">
-                  <span class="date-number">{{ date.slice(8) }}</span>
+                  <span class="date-number">{{ getDateDayNumber(date) }}</span>
                   <span v-if="isTodayDate(date)" class="today-tag">
                     {{ t('studyPlan.nav.today') }}
                   </span>
                 </div>
-                <div class="date-badge-group">
-                  <span class="date-badge badge-completed">
-                    {{ t('studyPlan.done') }} {{ summaryOf(date)?.completed || 0 }}
-                  </span>
-                  <span class="date-badge badge-overdue">
-                    {{ t('studyPlan.overdue') }} {{ summaryOf(date)?.overdue || 0 }}
-                  </span>
-                  <span class="date-badge badge-total">
-                    {{ t('studyPlan.total') }} {{ summaryOf(date)?.total || 0 }}
-                  </span>
+                <div class="task-stats-list">
+                  <div class="stat-item completed">
+                    <span class="stat-label">{{ t('studyPlan.done') }}</span>
+                    <span class="stat-value">{{ summaryOf(date)?.completed || 0 }}</span>
+                  </div>
+                  <div class="stat-item overdue">
+                    <span class="stat-label">{{ t('studyPlan.overdue') }}</span>
+                    <span class="stat-value">{{ summaryOf(date)?.overdue || 0 }}</span>
+                  </div>
+                  <div class="stat-item total">
+                    <span class="stat-label">{{ t('studyPlan.total') }}</span>
+                    <span class="stat-value">{{ summaryOf(date)?.total || 0 }}</span>
+                  </div>
                 </div>
               </button>
             </div>
@@ -531,21 +560,24 @@ onMounted(async () => {
                 @click="selectWeekDate(date)"
               >
                 <div class="date-cell-head">
-                  <span class="date-number">{{ date }}</span>
+                  <span class="date-number">{{ getDateDayNumber(date) }}</span>
                   <span v-if="isTodayDate(date)" class="today-tag">
                     {{ t('studyPlan.nav.today') }}
                   </span>
                 </div>
-                <div class="date-badge-group">
-                  <span class="date-badge badge-completed">
-                    {{ t('studyPlan.done') }} {{ summaryOf(date)?.completed || 0 }}
-                  </span>
-                  <span class="date-badge badge-overdue">
-                    {{ t('studyPlan.overdue') }} {{ summaryOf(date)?.overdue || 0 }}
-                  </span>
-                  <span class="date-badge badge-total">
-                    {{ t('studyPlan.total') }} {{ summaryOf(date)?.total || 0 }}
-                  </span>
+                <div class="task-stats-list">
+                  <div class="stat-item completed">
+                    <span class="stat-label">{{ t('studyPlan.done') }}</span>
+                    <span class="stat-value">{{ summaryOf(date)?.completed || 0 }}</span>
+                  </div>
+                  <div class="stat-item overdue">
+                    <span class="stat-label">{{ t('studyPlan.overdue') }}</span>
+                    <span class="stat-value">{{ summaryOf(date)?.overdue || 0 }}</span>
+                  </div>
+                  <div class="stat-item total">
+                    <span class="stat-label">{{ t('studyPlan.total') }}</span>
+                    <span class="stat-value">{{ summaryOf(date)?.total || 0 }}</span>
+                  </div>
                 </div>
               </button>
             </div>
@@ -554,7 +586,9 @@ onMounted(async () => {
       </div>
 
       <div v-if="viewMode === 'week'" class="study-card week-task-panel">
-        <div class="week-panel-head">{{ t('studyPlan.taskListFor', { date: selectedDate }) }}</div>
+        <div class="week-panel-head">
+          {{ t('studyPlan.taskListFor', { date: selectedDateLabel }) }}
+        </div>
         <DailyTaskPanel
           :grouped-tasks="groupedTasksByDate[selectedDate] || []"
           :loading="isDateTasksLoading(selectedDate)"
@@ -567,7 +601,7 @@ onMounted(async () => {
 
       <a-drawer
         v-model:open="drawerOpen"
-        :title="t('studyPlan.taskListFor', { date: selectedDate })"
+        :title="t('studyPlan.taskListFor', { date: selectedDateLabel })"
         placement="bottom"
         :height="'70vh'"
         destroy-on-close
@@ -596,13 +630,13 @@ onMounted(async () => {
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 100%;
-  padding: 14px;
+  padding: 16px;
 }
 
 .study-plan-shell {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -615,25 +649,16 @@ onMounted(async () => {
   min-width: 0;
   border: 1px solid color-mix(in srgb, v-bind('token.colorBorderSecondary') 75%, transparent);
   border-radius: 16px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, v-bind('token.colorBgContainer') 96%, #ffffff 4%),
-      color-mix(in srgb, v-bind('token.colorFillAlter') 62%, #ffffff 38%)
-    ),
-    v-bind('token.colorBgContainer');
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #ffffff 60%, transparent),
-    0 16px 34px -30px color-mix(in srgb, v-bind('token.colorText') 45%, transparent);
+  background: v-bind('token.colorBgContainer');
 }
 
 .study-toolbar {
-  padding: 12px 14px;
+  padding: 14px 16px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .mode-switch {
@@ -649,10 +674,10 @@ onMounted(async () => {
   border: 0;
   background: transparent;
   color: v-bind('token.colorTextSecondary');
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1;
-  padding: 8px 12px;
+  padding: 8px 16px;
   border-radius: 999px;
   cursor: pointer;
   transition:
@@ -679,14 +704,14 @@ onMounted(async () => {
   flex-wrap: wrap;
   max-width: 100%;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .period-label {
   min-width: 0;
   flex: 1 1 140px;
   text-align: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: v-bind('token.colorText');
 }
@@ -696,40 +721,44 @@ onMounted(async () => {
 }
 
 .study-grid {
-  padding: 14px;
+  padding: 16px;
 }
 
 .weekday-row {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .weekday-cell {
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.3;
   font-weight: 700;
   color: v-bind('token.colorTextTertiary');
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .date-grid-month,
 .date-grid-week {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  gap: 12px;
 }
 
 .date-cell {
   cursor: pointer;
   position: relative;
   border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 8px;
+  border-radius: 16px;
+  padding: 12px;
   text-align: left;
-  min-height: 92px;
+  min-height: 128px;
   width: 100%;
+  display: flex;
+  flex-direction: column;
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -737,9 +766,9 @@ onMounted(async () => {
 }
 
 .date-cell:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: color-mix(in srgb, v-bind('token.colorPrimaryBorder') 78%, transparent);
-  box-shadow: 0 10px 16px -16px color-mix(in srgb, v-bind('token.colorPrimary') 40%, transparent);
+  box-shadow: 0 12px 20px -12px color-mix(in srgb, v-bind('token.colorPrimary') 30%, transparent);
 }
 
 .date-cell.is-selected {
@@ -747,118 +776,154 @@ onMounted(async () => {
 }
 
 .date-cell.is-muted .date-number {
-  opacity: 0.7;
+  opacity: 0.5;
 }
 
 .date-cell-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .date-number {
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 800;
+  color: v-bind('token.colorTextHeading');
 }
 
 .today-tag {
   position: absolute;
   top: 0;
   right: 0;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   color: #ffffff;
   background: v-bind('token.colorInfo');
-  padding: 2px 6px;
-  border-radius: 0 12px 0 12px;
+  padding: 3px 8px;
+  border-radius: 0 16px 0 16px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  box-shadow: -2px 2px 6px color-mix(in srgb, v-bind('token.colorInfo') 20%, transparent);
   z-index: 1;
 }
 
-.date-badge-group {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
+.task-stats-list {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: auto;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.date-badge {
-  font-size: 10px;
-  line-height: 1;
+  font-size: 11px;
+  line-height: 1.4;
   font-weight: 600;
-  padding: 4px 6px;
-  border-radius: 999px;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.badge-completed {
+.stat-label {
+  opacity: 0.85;
+}
+
+.stat-value {
+  font-weight: 800;
+}
+
+.stat-item.completed {
   color: v-bind('token.colorSuccess');
-  background: color-mix(in srgb, v-bind('token.colorSuccessBg') 80%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorSuccessBg') 70%, transparent);
 }
 
-.badge-overdue {
+.stat-item.overdue {
   color: v-bind('token.colorError');
-  background: color-mix(in srgb, v-bind('token.colorErrorBg') 82%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorErrorBg') 75%, transparent);
 }
 
-.badge-total {
+.stat-item.total {
   color: v-bind('token.colorPrimary');
-  background: color-mix(in srgb, v-bind('token.colorPrimaryBg') 84%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorPrimaryBg') 75%, transparent);
 }
 
 .week-task-panel {
-  padding: 14px;
+  padding: 16px;
 }
 
 .week-panel-head {
-  margin-bottom: 10px;
-  font-size: 14px;
+  margin-bottom: 12px;
+  font-size: 15px;
   line-height: 1.3;
   font-weight: 700;
   color: v-bind('token.colorTextHeading');
 }
 
 .loading-state {
-  padding: 20px 0;
+  padding: 32px 0;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
   color: v-bind('token.colorTextSecondary');
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1280px) {
   .date-grid-month,
   .date-grid-week,
   .weekday-row {
-    gap: 6px;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .study-plan-page {
+    padding: 20px;
+  }
+
+  .date-cell {
+    min-height: 140px;
+    padding: 14px;
+  }
+
+  .date-number {
+    font-size: 20px;
   }
 }
 
 @media (max-width: 768px) {
   .study-plan-page {
-    padding: 10px;
+    padding: 12px;
   }
 
   .period-label {
     flex-basis: 100%;
+    order: 2;
   }
 
   .date-grid-month,
-  .date-grid-week,
-  .weekday-row {
+  .date-grid-week {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .weekday-row {
     display: none;
+  }
+
+  .date-cell {
+    min-height: 124px;
+    padding: 10px;
+  }
+
+  .date-number {
+    font-size: 16px;
+  }
+
+  .stat-item {
+    font-size: 10px;
+    padding: 1px 4px;
   }
 }
 

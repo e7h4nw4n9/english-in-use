@@ -5,6 +5,7 @@ import type {
   StudyStatsFilters,
   StudyStatsPeriodType,
   StudyStatsResponse,
+  StudySessionListItem,
 } from '../../types'
 
 export async function saveStudySession(
@@ -20,4 +21,11 @@ export async function getStudyStats(
   pageSize: number = 20,
 ): Promise<StudyStatsResponse> {
   return await invoke('get_study_stats', { periodType, filters, page, pageSize })
+}
+
+export async function getStudySessionsByDate(
+  date: string,
+  filters?: StudyStatsFilters,
+): Promise<StudySessionListItem[]> {
+  return await invoke('get_study_sessions_by_date', { date, filters })
 }

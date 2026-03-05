@@ -29,3 +29,14 @@ pub async fn get_study_stats(
     )
     .await
 }
+
+#[tauri::command]
+pub async fn get_study_sessions_by_date(
+    state: State<'_, crate::database::DbState>,
+    date: String,
+    filters: Option<crate::services::study_session::StudyStatsFilters>,
+) -> Result<Vec<crate::services::study_session::StudySessionListItem>, String> {
+    let db_guard = state.db.read().await;
+    let db = db_guard.as_ref().ok_or("Database not initialized")?;
+    crate::services::study_session::get_study_sessions_by_date(db.as_ref(), &date, filters).await
+}

@@ -12,7 +12,7 @@
     <div v-else class="book-list-shell">
       <a-collapse
         v-model:activeKey="activeKeys"
-        class="book-list-collapse p-4 sm:p-6"
+        class="book-list-collapse p-4 sm:p-5"
         ghost
         expand-icon-position="right"
       >
@@ -23,7 +23,6 @@
                 <span class="group-marker" aria-hidden="true"></span>
                 <span class="group-name">{{ getGroupName(group.id) }}</span>
               </div>
-              <span class="group-count">{{ group.books.length }}</span>
             </div>
           </template>
 
@@ -46,7 +45,6 @@
                 </template>
                 <template v-else>
                   <div class="book-cover-placeholder"></div>
-                  <span class="book-code-badge">{{ book.product_code }}</span>
                 </template>
               </div>
 
@@ -54,7 +52,6 @@
                 <a-tooltip :title="book.title" placement="bottom">
                   <h3 class="book-title line-clamp-2">{{ book.title }}</h3>
                 </a-tooltip>
-                <p class="book-code">{{ book.product_code }}</p>
               </div>
             </button>
           </div>
@@ -175,15 +172,18 @@ onUnmounted(() => {
   max-width: 100%;
   min-width: 0;
   min-height: 100%;
+  padding: 14px;
+  overflow-y: auto;
   overflow-x: hidden;
 }
 
 .book-list-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  min-height: 100%;
-  overflow-x: hidden;
 }
 
 .book-empty-state {
@@ -205,7 +205,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  background: color-mix(in srgb, v-bind('token.colorFillSecondary') 80%, transparent);
+  background: color-mix(in srgb, v-bind('token.colorFillSecondary') 40%, transparent);
 }
 
 .book-empty-title {
@@ -231,7 +231,7 @@ onUnmounted(() => {
   width: 6px;
   height: 18px;
   border-radius: 999px;
-  background: linear-gradient(to bottom, v-bind('token.colorPrimary'), v-bind('token.colorInfo'));
+  background: v-bind('token.colorPrimary');
 }
 
 .group-name {
@@ -241,57 +241,36 @@ onUnmounted(() => {
   letter-spacing: -0.01em;
 }
 
-.group-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 24px;
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 700;
-  border-radius: 999px;
-  color: v-bind('token.colorPrimary');
-  background: color-mix(in srgb, v-bind('token.colorPrimaryBg') 60%, transparent);
-  backdrop-filter: blur(4px);
-  border: 1px solid color-mix(in srgb, v-bind('token.colorPrimaryBorder') 40%, transparent);
-}
-
 .book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   min-width: 0;
-  gap: 24px;
-  padding: 16px 0 12px;
+  gap: 16px;
+  padding: 10px 0 12px;
 }
 
 .book-item {
   cursor: pointer;
   position: relative;
-  border: 1px solid color-mix(in srgb, #ffffff 20%, transparent);
-  background: color-mix(in srgb, v-bind('token.colorBgContainer') 65%, transparent);
-  backdrop-filter: blur(16px);
-  border-radius: 20px;
-  padding: 12px;
+  border: 1px solid color-mix(in srgb, v-bind('token.colorBorderSecondary') 50%, transparent);
+  background: v-bind('token.colorBgContainer');
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 240px;
   text-align: left;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow:
-    0 4px 6px -1px color-mix(in srgb, v-bind('token.colorText') 5%, transparent),
-    0 2px 4px -2px color-mix(in srgb, v-bind('token.colorText') 5%, transparent);
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease;
 }
 
 .book-item:focus-visible {
   outline: 2px solid v-bind('token.colorPrimary');
-  outline-offset: 4px;
+  outline-offset: 2px;
 }
 
 .book-item:hover {
-  transform: translateY(-6px) scale(1.01);
-  border-color: color-mix(in srgb, #ffffff 40%, transparent);
-  background: color-mix(in srgb, v-bind('token.colorBgContainer') 80%, transparent);
-  box-shadow:
-    0 20px 25px -5px color-mix(in srgb, v-bind('token.colorText') 12%, transparent),
-    0 8px 10px -6px color-mix(in srgb, v-bind('token.colorText') 12%, transparent);
+  border-color: color-mix(in srgb, v-bind('token.colorPrimaryBorder') 50%, transparent);
+  transform: translateY(-2px);
 }
 
 .book-cover {
@@ -299,52 +278,26 @@ onUnmounted(() => {
   width: 100%;
   aspect-ratio: 3 / 4;
   overflow: hidden;
-  border-radius: 14px;
-  background: color-mix(in srgb, v-bind('token.colorFillAlter') 40%, transparent);
-  border: 1px solid color-mix(in srgb, #ffffff 15%, transparent);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  background: color-mix(in srgb, v-bind('token.colorFillAlter') 20%, transparent);
+  border: 1px solid color-mix(in srgb, v-bind('token.colorBorderSecondary') 50%, transparent);
 }
 
 .book-cover-placeholder {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    155deg,
-    color-mix(in srgb, v-bind('token.colorFillSecondary') 40%, transparent),
-    color-mix(in srgb, v-bind('token.colorFillTertiary') 30%, transparent)
-  );
-}
-
-.book-code-badge {
-  position: absolute;
-  left: 10px;
-  bottom: 10px;
-  max-width: calc(100% - 20px);
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 800;
-  padding: 6px 8px;
-  color: v-bind('token.colorTextSecondary');
-  background: color-mix(in srgb, #ffffff 70%, transparent);
-  backdrop-filter: blur(8px);
-  border-radius: 8px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: color-mix(in srgb, v-bind('token.colorFillSecondary') 20%, transparent);
 }
 
 .book-meta {
-  margin-top: 14px;
-  padding: 0 4px;
+  margin-top: 12px;
+  padding: 0 2px;
 }
 
 .book-title {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.35;
   font-weight: 700;
   text-align: left;
   color: v-bind('token.colorText');
@@ -356,21 +309,18 @@ onUnmounted(() => {
   color: v-bind('token.colorPrimary');
 }
 
-.book-code {
-  margin: 6px 0 0;
-  font-size: 10px;
-  line-height: 1.2;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: v-bind('token.colorTextTertiary');
-  opacity: 0.8;
-}
-
 @media (max-width: 768px) {
+  .book-list-container {
+    padding: 10px;
+  }
+
   .book-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    gap: 12px;
+  }
+
+  .book-item {
+    min-height: 210px;
   }
 }
 </style>

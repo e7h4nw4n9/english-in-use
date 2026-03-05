@@ -321,7 +321,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="readerRef" class="reader-view flex h-full flex-col bg-gray-100 dark:bg-[#1f1f1f]">
+  <div ref="readerRef" class="reader-view" :class="{ 'reader-ui-hidden': !isUiVisible }">
     <div class="relative flex flex-1 overflow-hidden">
       <Transition name="slide-left">
         <ReaderTOC v-show="isUiVisible && !isSidebarCollapsed" :metadata="metadata" />
@@ -426,6 +426,54 @@ onUnmounted(() => {
 </template>
 
 <style>
+.reader-view {
+  --reader-footer-safe-bottom: constant(safe-area-inset-bottom);
+  --reader-footer-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --reader-footer-dock-bottom: 16px;
+  --reader-footer-height: 54px;
+  --reader-footer-clearance: calc(
+    var(--reader-footer-dock-bottom) + var(--reader-footer-safe-bottom) +
+      var(--reader-footer-height) + 24px
+  );
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f3f4f6;
+}
+
+.reader-view.reader-ui-hidden {
+  --reader-footer-dock-bottom: 0px;
+  --reader-footer-height: 0px;
+  --reader-footer-clearance: 8px;
+}
+
+html.dark .reader-view {
+  background: #111827;
+}
+
+@media (max-width: 1024px) {
+  .reader-view {
+    --reader-footer-dock-bottom: 12px;
+    --reader-footer-height: 48px;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (hover: none) and (pointer: coarse) {
+    .reader-view {
+      --reader-footer-dock-bottom: 18px;
+      --reader-footer-height: 60px;
+    }
+  }
+
+  @media (hover: none) and (pointer: coarse) and (max-width: 1024px) {
+    .reader-view {
+      --reader-footer-dock-bottom: 14px;
+      --reader-footer-height: 54px;
+    }
+  }
+}
+
 /* Global styles for reader search and trees if needed */
 .modern-executive-search .ant-input {
   border-radius: 24px !important;
