@@ -25,6 +25,10 @@ fn get_local_db_version_file_path() -> Result<PathBuf, String> {
     Ok(data_dir.join(".db_version"))
 }
 
+/// 将简写版本补齐为可解析的三段语义版本。
+///
+/// # 参数
+/// - `v`：原始版本文本。
 fn normalize_version(v: &str) -> String {
     let trimmed = v.trim();
     let parts: Vec<&str> = trimmed.split('.').collect();
@@ -36,29 +40,24 @@ fn normalize_version(v: &str) -> String {
     }
 }
 
-fn parse_version(v: &str) -> Option<Version> {
-    Version::parse(&normalize_version(v)).ok()
+fn parse_version(v: &str) -> Result<Version, String> {
+    Version::parse(&normalize_version(v)).map_err(|error| format!("数据库版本无效 ({v}): {error}"))
 }
 
-fn is_same_version(a: &str, b: &str) -> bool {
-    match (parse_version(a), parse_version(b)) {
-        (Some(av), Some(bv)) => av == bv,
-        _ => a.trim() == b.trim(),
-    }
+fn is_same_version(a: &str, b: &str) -> Result<bool, String> {
+    Ok(parse_version(a)? == parse_version(b)?)
 }
 
-fn should_run_migration(current_db_version: &str, latest_migration_version: &str) -> bool {
-    if is_same_version(current_db_version, latest_migration_version) {
-        return false;
-    }
-
-    match (
-        parse_version(current_db_version),
-        parse_version(latest_migration_version),
-    ) {
-        (Some(current), Some(latest)) => current < latest,
-        _ => true,
-    }
+/// 比较数据库版本与最新迁移版本，判断是否需要升级。
+///
+/// # 参数
+/// - `current_db_version`：当前数据库版本。
+/// - `latest_migration_version`：最新内置迁移版本。
+fn should_run_migration(
+    current_db_version: &str,
+    latest_migration_version: &str,
+) -> Result<bool, String> {
+    Ok(parse_version(current_db_version)? < parse_version(latest_migration_version)?)
 }
 
 fn latest_migration_version() -> Option<&'static str> {
@@ -67,6 +66,10 @@ fn latest_migration_version() -> Option<&'static str> {
         .map(|migration| migration.version)
 }
 
+/// 读取本地数据库版本记录；文件不存在或为空时返回空值。
+///
+/// # 参数
+/// - `path`：目标文件或目录路径。
 fn read_local_db_version(path: &Path) -> Result<Option<String>, String> {
     if !path.exists() {
         return Ok(None);
@@ -81,11 +84,16 @@ fn read_local_db_version(path: &Path) -> Result<Option<String>, String> {
     Ok(Some(version))
 }
 
+/// 原子流程完成后写入本地数据库版本记录。
+///
+/// # 参数
+/// - `path`：目标文件或目录路径。
+/// - `version`：迁移完成后的数据库版本。
 fn write_local_db_version(path: &Path, version: &str) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        if !parent.exists() {
-            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-        }
+    if let Some(parent) = path.parent()
+        && !parent.exists()
+    {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
 
     fs::write(path, format!("{}\n", version.trim())).map_err(|e| e.to_string())
@@ -108,19 +116,24 @@ pub fn mark_as_initialized() -> Result<(), String> {
 }
 
 pub trait DatabaseInitHandler: Send + Sync {
+    /// 根据连接配置创建数据库实现。
     fn init_db(
         &self,
         config: &DatabaseConnection,
     ) -> impl std::future::Future<Output = anyhow::Result<Box<dyn Database>>> + Send;
+    /// 将数据库升级到当前应用支持的最新版本。
     fn migrate_up(
         &self,
         db: &dyn Database,
+        current_version: &str,
     ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send;
+    /// 写入本地数据库初始化完成标记。
     fn mark_initialized(&self) -> Result<(), String>;
 }
 
 struct DefaultInitHandler {
     app: AppHandle,
+    gateway: Option<crate::models::CloudflareGatewayConfig>,
 }
 
 impl DatabaseInitHandler for DefaultInitHandler {
@@ -130,13 +143,15 @@ impl DatabaseInitHandler for DefaultInitHandler {
     ) -> impl std::future::Future<Output = anyhow::Result<Box<dyn Database>>> + Send {
         let app = self.app.clone();
         let config = config.clone();
-        async move { database::init(&app, &config).await }
+        let gateway = self.gateway.clone();
+        async move { database::init(&app, &config, gateway.as_ref()).await }
     }
     fn migrate_up(
         &self,
         db: &dyn Database,
+        current_version: &str,
     ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
-        database::migrate_up(db, None)
+        database::migrate_up_from_version(db, current_version, None)
     }
     fn mark_initialized(&self) -> Result<(), String> {
         mark_as_initialized()
@@ -145,12 +160,16 @@ impl DatabaseInitHandler for DefaultInitHandler {
 
 /// 初始化数据库并根据标志执行迁移。返回布尔值表示是否执行了新的迁移。
 pub async fn init_database(app: &AppHandle) -> Result<bool, String> {
+    let db_state = app.state::<DbState>();
+    let _init_guard = db_state.init_lock.lock().await;
     let config = {
         use crate::services::config::ConfigState;
         let state = app.state::<ConfigState>();
         let config = state.0.read().unwrap();
         config.clone()
     };
+    let config_version = config.version;
+    let gateway = config.cloudflare_gateway.clone();
     let db_config = match config.database {
         Some(db_config) => db_config,
         None => {
@@ -159,11 +178,28 @@ pub async fn init_database(app: &AppHandle) -> Result<bool, String> {
             return Ok(false);
         }
     };
+    if matches!(db_config, DatabaseConnection::CloudflareGateway { .. }) && gateway.is_none() {
+        debug!("Cloudflare 网关尚未配置，跳过数据库初始化");
+        emit_progress(app, "db.init.done", 1.0);
+        return Ok(false);
+    }
+
+    if db_state.connection.read().await.as_ref() == Some(&db_config)
+        && *db_state.config_version.read().await == Some(config_version)
+        && db_state.db.read().await.is_some()
+    {
+        debug!("数据库已使用相同配置初始化，跳过重复初始化");
+        emit_progress(app, "db.init.done", 1.0);
+        return Ok(false);
+    }
 
     let init_flag_path = get_init_flag_path()?;
     let local_db_version_file_path = get_local_db_version_file_path()?;
     let latest_version = latest_migration_version();
-    let handler = DefaultInitHandler { app: app.clone() };
+    let handler = DefaultInitHandler {
+        app: app.clone(),
+        gateway,
+    };
 
     let (migrated, db) = init_database_internal(
         &db_config,
@@ -176,13 +212,27 @@ pub async fn init_database(app: &AppHandle) -> Result<bool, String> {
     .await?;
 
     // 将数据库句柄存入 DbState 以便全局使用
-    let db_state = app.state::<DbState>();
     let mut db_guard = db_state.db.write().await;
-    *db_guard = Some(db);
+    *db_guard = Some(std::sync::Arc::from(db));
+    drop(db_guard);
+    *db_state.connection.write().await = Some(db_config);
+    *db_state.config_version.write().await = Some(config_version);
+    app.state::<crate::commands::books::BookCacheState>()
+        .cache
+        .invalidate_all();
 
     Ok(migrated)
 }
 
+/// 执行可注入的数据库初始化、版本比较和迁移流程。
+///
+/// # 参数
+/// - `db_config`：待初始化的数据库配置。
+/// - `init_flag_path`：数据库初始化完成标记路径。
+/// - `local_db_version_file_path`：本地数据库版本记录路径。
+/// - `latest_migration_version`：当前应用内置的最新迁移版本。
+/// - `handler`：可注入的数据库初始化处理器。
+/// - `report_progress`：数据库初始化进度回调。
 pub async fn init_database_internal<H: DatabaseInitHandler + ?Sized>(
     db_config: &DatabaseConnection,
     init_flag_path: &Path,
@@ -210,20 +260,20 @@ pub async fn init_database_internal<H: DatabaseInitHandler + ?Sized>(
     report_progress("db.init.readLocalVersion", 0.15);
     let local_version = read_local_db_version(local_db_version_file_path)?;
 
-    if let Some(local_version) = local_version.as_deref() {
-        if is_same_version(local_version, latest_version) {
-            debug!(
-                "本地版本文件已是最新版本 {}，继续核对数据库实际版本",
-                latest_version
-            );
-        }
+    if let Some(local_version) = local_version.as_deref()
+        && is_same_version(local_version, latest_version)?
+    {
+        debug!(
+            "本地版本文件已是最新版本 {}，继续核对数据库实际版本",
+            latest_version
+        );
     }
 
     report_progress("db.init.readDbVersion", 0.3);
     let current_db_version = db.get_version().await.map_err(|e| e.to_string())?;
 
-    if !should_run_migration(&current_db_version, latest_version) {
-        if !is_same_version(&current_db_version, latest_version) {
+    if !should_run_migration(&current_db_version, latest_version)? {
+        if !is_same_version(&current_db_version, latest_version)? {
             info!(
                 "数据库版本 {} 高于程序最新迁移版本 {}，跳过迁移并同步本地版本文件",
                 current_db_version, latest_version
@@ -247,7 +297,7 @@ pub async fn init_database_internal<H: DatabaseInitHandler + ?Sized>(
     );
     report_progress("db.init.migrating", 0.55);
     handler
-        .migrate_up(db.as_ref())
+        .migrate_up(db.as_ref(), &current_db_version)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -299,12 +349,6 @@ mod tests {
                 Ok(version)
             })
         }
-        fn set_version(
-            &self,
-            _version: &str,
-        ) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + '_>> {
-            Box::pin(async { Ok(()) })
-        }
     }
 
     struct MockHandler {
@@ -332,6 +376,7 @@ mod tests {
         fn migrate_up(
             &self,
             _db: &dyn Database,
+            _current_version: &str,
         ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
             let migrate_calls = Arc::clone(&self.migrate_calls);
             let migrate_should_fail = self.migrate_should_fail;

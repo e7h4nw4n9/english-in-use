@@ -1,3 +1,4 @@
+use crate::database::{SqlStatement, SqlValue};
 use crate::models::{Book, BookGroup, BookSource, ReadingProgress};
 use crate::utils::cache::CacheKey;
 use log::info;
@@ -22,11 +23,7 @@ where
     F: FnOnce() -> Fut,
     Fut: Future<Output = Result<Vec<u8>, String>>,
 {
-    if local_path.exists()
-        && std::fs::metadata(local_path)
-            .map(|m| m.len() > 0)
-            .unwrap_or(false)
-    {
+    if crate::utils::cache::is_non_empty_file(local_path).await {
         return tokio::fs::read(local_path)
             .await
             .map_err(|e| format!("读取缓存文件失败 (path: {}): {}", local_path.display(), e));
@@ -47,6 +44,12 @@ where
 }
 
 #[tauri::command]
+/// 处理获取图书聚合元数据的 Tauri 命令。
+///
+/// # 参数
+/// - `app`：Tauri 应用句柄。
+/// - `config_state`：当前应用配置状态。
+/// - `product_code`：图书产品码。
 pub async fn get_book_metadata<R: Runtime>(
     app: AppHandle<R>,
     config_state: State<'_, crate::services::config::ConfigState>,
@@ -56,6 +59,13 @@ pub async fn get_book_metadata<R: Runtime>(
 }
 
 #[tauri::command]
+/// 处理解析页面图片资源的 Tauri 命令。
+///
+/// # 参数
+/// - `app`：Tauri 应用句柄。
+/// - `config_state`：当前应用配置状态。
+/// - `product_code`：图书产品码。
+/// - `page_label`：阅读页面标签。
 pub async fn resolve_page_resource<R: Runtime>(
     app: AppHandle<R>,
     config_state: State<'_, crate::services::config::ConfigState>,
@@ -66,6 +76,13 @@ pub async fn resolve_page_resource<R: Runtime>(
 }
 
 #[tauri::command]
+/// 处理解析图书相对资产的 Tauri 命令。
+///
+/// # 参数
+/// - `app`：Tauri 应用句柄。
+/// - `config_state`：当前应用配置状态。
+/// - `product_code`：图书产品码。
+/// - `relative_path`：图书目录内的相对资源路径。
 pub async fn resolve_book_asset<R: Runtime>(
     app: AppHandle<R>,
     config_state: State<'_, crate::services::config::ConfigState>,
@@ -76,6 +93,13 @@ pub async fn resolve_book_asset<R: Runtime>(
 }
 
 #[tauri::command]
+/// 处理解析练习入口资源的 Tauri 命令。
+///
+/// # 参数
+/// - `app`：Tauri 应用句柄。
+/// - `config_state`：当前应用配置状态。
+/// - `product_code`：图书产品码。
+/// - `resource_id`：练习或学习单元资源标识。
 pub async fn resolve_exercise_resource<R: Runtime>(
     app: AppHandle<R>,
     config_state: State<'_, crate::services::config::ConfigState>,
@@ -86,6 +110,13 @@ pub async fn resolve_exercise_resource<R: Runtime>(
 }
 
 #[tauri::command]
+/// 处理获取已加工练习 HTML 的 Tauri 命令。
+///
+/// # 参数
+/// - `app`：Tauri 应用句柄。
+/// - `config_state`：当前应用配置状态。
+/// - `product_code`：图书产品码。
+/// - `resource_id`：练习或学习单元资源标识。
 pub async fn get_exercise_html<R: Runtime>(
     app: AppHandle<R>,
     config_state: State<'_, crate::services::config::ConfigState>,
@@ -95,21 +126,29 @@ pub async fn get_exercise_html<R: Runtime>(
     application::get_exercise_html(app, config_state, product_code, resource_id).await
 }
 #[tauri::command]
+/// 读取指定图书当前保存的阅读进度。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
+/// - `product_code`：图书产品码。
 pub async fn get_reading_progress(
     state: State<'_, crate::database::DbState>,
     product_code: String,
 ) -> Result<Option<ReadingProgress>, String> {
     info!("正在获取书籍进度 (product_code: {})", product_code);
-    let db_guard = state.db.read().await;
-    let db = db_guard.as_ref().ok_or("Database not initialized")?;
-
-    let sql = format!(
-        "SELECT rp.* FROM reading_progress rp \
+    let db = state.get().await?;
+    let statement = SqlStatement::new(
+        "SELECT rp.book_id, rp.resource_id, rp.page_label, rp.scale, \
+                rp.offset_x, rp.offset_y, rp.updated_at \
+         FROM reading_progress rp \
          JOIN books b ON rp.book_id = b.id \
-         WHERE b.product_code = '{}'",
-        product_code
+         WHERE b.product_code = ?",
+        vec![SqlValue::Text(product_code)],
     );
-    let rows = db.query(sql).await.map_err(|e| e.to_string())?;
+    let rows = db
+        .query_statement(statement)
+        .await
+        .map_err(|e| e.to_string())?;
 
     if let Some(row) = rows.into_iter().next() {
         Ok(ReadingProgress::from_json(row))
@@ -119,6 +158,16 @@ pub async fn get_reading_progress(
 }
 
 #[tauri::command]
+/// 新增或更新指定图书的阅读位置与视图状态。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
+/// - `product_code`：图书产品码。
+/// - `resource_id`：练习或学习单元资源标识。
+/// - `page_label`：阅读页面标签。
+/// - `scale`：阅读器缩放比例。
+/// - `offset_x`：阅读器水平偏移量。
+/// - `offset_y`：阅读器垂直偏移量。
 pub async fn update_reading_progress(
     state: State<'_, crate::database::DbState>,
     product_code: String,
@@ -129,12 +178,10 @@ pub async fn update_reading_progress(
     offset_y: i32,
 ) -> Result<(), String> {
     info!("正在更新书籍进度 (product_code: {})", product_code);
-    let db_guard = state.db.read().await;
-    let db = db_guard.as_ref().ok_or("Database not initialized")?;
-
-    let sql = format!(
+    let db = state.get().await?;
+    let statement = SqlStatement::new(
         "INSERT INTO reading_progress (book_id, resource_id, page_label, scale, offset_x, offset_y) \
-         SELECT id, {}, {}, {}, {}, {} FROM books WHERE product_code = '{}' \
+         SELECT id, ?, ?, ?, ?, ? FROM books WHERE product_code = ? \
          ON CONFLICT(book_id) DO UPDATE SET \
          resource_id=excluded.resource_id, \
          page_label=excluded.page_label, \
@@ -142,23 +189,29 @@ pub async fn update_reading_progress(
          offset_x=excluded.offset_x, \
          offset_y=excluded.offset_y, \
          updated_at=CURRENT_TIMESTAMP",
-        resource_id
-            .map(|s| format!("'{}'", s))
-            .unwrap_or("NULL".to_string()),
-        page_label
-            .map(|s| format!("'{}'", s))
-            .unwrap_or("NULL".to_string()),
-        scale,
-        offset_x,
-        offset_y,
-        product_code
+        vec![
+            resource_id.map_or(SqlValue::Null, SqlValue::Text),
+            page_label.map_or(SqlValue::Null, SqlValue::Text),
+            SqlValue::Real(scale),
+            SqlValue::Integer(i64::from(offset_x)),
+            SqlValue::Integer(i64::from(offset_y)),
+            SqlValue::Text(product_code),
+        ],
     );
 
-    db.execute(sql).await.map_err(|e| e.to_string())?;
+    db.execute_statement(statement)
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
+/// 按分组读取书籍列表，并复用应用级缓存。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
+/// - `cache_state`：书籍列表缓存状态。
+/// - `group`：可选的图书分组筛选。
 pub async fn get_books(
     state: State<'_, crate::database::DbState>,
     cache_state: State<'_, BookCacheState>,
@@ -171,8 +224,7 @@ pub async fn get_books(
         return Ok(books);
     }
 
-    let db_guard = state.db.read().await;
-    let db = db_guard.as_ref().ok_or("Database not initialized")?;
+    let db = state.get().await?;
     let books = get_books_logic(db.as_ref(), group).await?;
 
     cache_state.cache.insert(key, books.clone()).await;
@@ -181,6 +233,12 @@ pub async fn get_books(
 }
 
 #[tauri::command]
+/// 从本地来源或 R2 缓存读取图书封面。
+///
+/// # 参数
+/// - `app`：Tauri 应用句柄。
+/// - `state`：对应命令使用的共享状态。
+/// - `book`：目标图书模型。
 pub async fn get_book_cover(
     app: tauri::AppHandle,
     state: State<'_, crate::services::config::ConfigState>,
@@ -208,7 +266,7 @@ pub async fn get_book_cover(
             );
             crate::utils::local::read_file(&path, &relative_path).await
         }
-        BookSource::CloudflareR2 { bucket_name, .. } => {
+        BookSource::CloudflareGateway {} => {
             let cache_dir = app
                 .path()
                 .app_cache_dir()
@@ -218,22 +276,21 @@ pub async fn get_book_cover(
             let product_code = book.product_code.clone();
 
             info!(
-                "读取封面（R2 源，本地优先）: product_code={}, bucket={}, key={}, cache_path={}",
+                "读取封面（网关源，本地优先）: product_code={}, key={}, cache_path={}",
                 product_code,
-                bucket_name,
                 key,
                 cache_cover_path.display()
             );
 
             read_cached_or_fetch_and_store(&cache_cover_path, || async {
-                let r2_state = app.state::<crate::utils::r2::R2ClientState>();
+                let r2_state = app.state::<crate::utils::gateway::GatewayClientState>();
                 let client = crate::utils::r2::get_client(&state, &r2_state).await?;
-                crate::utils::r2::get_object(&client, &bucket_name, &key)
+                crate::utils::r2::get_object(&client, &key)
                     .await
                     .map_err(|e| {
                         format!(
-                            "从 R2 下载封面失败 (product_code: {}, bucket: {}, key: {}): {}",
-                            product_code, bucket_name, key, e
+                            "从网关下载封面失败 (product_code: {}, key: {}): {}",
+                            product_code, key, e
                         )
                     })
             })
@@ -242,6 +299,11 @@ pub async fn get_book_cover(
     }
 }
 
+/// 执行书籍列表数据库查询，供命令和测试复用。
+///
+/// # 参数
+/// - `db`：目标数据库实现。
+/// - `group`：可选的图书分组筛选。
 pub async fn get_books_logic(
     db: &dyn crate::database::Database,
     group: Option<BookGroup>,
@@ -318,7 +380,8 @@ mod tests {
         db.execute("INSERT INTO books (book_group, product_code, title, author, product_type, sort_num) VALUES (1, 'book1', 'Title 1', NULL, 'imgbook', 1)".to_string()).await.unwrap();
 
         app.manage(DbState {
-            db: AsyncRwLock::new(Some(Box::new(db))),
+            db: AsyncRwLock::new(Some(std::sync::Arc::new(db))),
+            ..DbState::default()
         });
         app.manage(BookCacheState {
             cache: moka::future::Cache::new(10),
@@ -348,7 +411,8 @@ mod tests {
         db.execute("INSERT INTO books (id, book_group, product_code, title, product_type, sort_num) VALUES (999, 1, 'test', 'Test', 'imgbook', 1)".to_string()).await.unwrap();
 
         app.manage(DbState {
-            db: AsyncRwLock::new(Some(Box::new(db))),
+            db: AsyncRwLock::new(Some(std::sync::Arc::new(db))),
+            ..DbState::default()
         });
 
         let state = app.state::<DbState>();

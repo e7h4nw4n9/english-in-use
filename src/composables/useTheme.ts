@@ -2,6 +2,7 @@ import { ref, watch, onUnmounted, computed } from 'vue'
 
 type Theme = 'system' | 'light' | 'dark'
 
+/** 提供主题状态读取、应用和持久化能力。 */
 export function useTheme() {
   const currentTheme = ref<Theme>('system')
   const systemDarkMode = window.matchMedia('(prefers-color-scheme: dark)')
@@ -25,14 +26,14 @@ export function useTheme() {
     isSystemDark.value = e.matches
   }
 
-  // Initial listener
+  // 监听系统主题的初始变化。
   systemDarkMode.addEventListener('change', handleSystemChange)
 
   onUnmounted(() => {
     systemDarkMode.removeEventListener('change', handleSystemChange)
   })
 
-  // Watch for isDark changes and update DOM
+  // 响应主题状态变化并同步更新 DOM。
   watch(
     isDark,
     (val) => {

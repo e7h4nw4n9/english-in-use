@@ -1,14 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+/** 阅读器视图、缩放、页面和音频状态存储。 */
 export const useReaderStore = defineStore('reader', () => {
   const isSidebarCollapsed = ref(true)
   const viewMode = ref<'single' | 'spread'>('single')
   const zoomLevel = ref(1.0)
-  const currentPageLabel = ref('12') // Default start page based on our data observation
+  const currentPageLabel = ref('')
   const spreadOffset = ref(0)
 
-  // Audio State
+  // 音频状态。
   const currentAudioPath = ref<string | null>(null)
   const isPlaying = ref(false)
   const playbackRate = ref(1.0)
@@ -19,7 +20,7 @@ export const useReaderStore = defineStore('reader', () => {
   const isAudioBarCollapsed = ref(false)
   const showHotspots = ref(true)
 
-  // Exercise State
+  // 练习状态。
   const exerciseVisible = ref(false)
   const currentExerciseUrl = ref('')
   const currentExerciseHtml = ref('')

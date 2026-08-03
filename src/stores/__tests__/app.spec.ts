@@ -10,6 +10,10 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   debug: vi.fn(),
 }))
 
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: vi.fn(() => Promise.resolve(() => {})),
+}))
+
 vi.mock('../../lib/api', () => ({
   loadConfig: vi.fn(),
   checkConnectionStatus: vi.fn(),

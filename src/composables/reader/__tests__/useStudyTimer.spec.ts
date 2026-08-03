@@ -142,6 +142,7 @@ describe('useStudyTimer', () => {
     })
 
     expect(saveStudySessionMock).toHaveBeenCalledTimes(1)
+    const sessionEnd = new Date('2026-03-01T00:00:40.000Z')
     expect(saveStudySessionMock).toHaveBeenCalledWith({
       productCode: 'essgiuebk',
       entryResourceId: 'RE_U1',
@@ -161,6 +162,8 @@ describe('useStudyTimer', () => {
       startAt: '2026-03-01T00:00:00.000Z',
       endAt: '2026-03-01T00:00:40.000Z',
       duration: 40,
+      localDate: `${sessionEnd.getFullYear()}-${String(sessionEnd.getMonth() + 1).padStart(2, '0')}-${String(sessionEnd.getDate()).padStart(2, '0')}`,
+      timezoneOffsetMinutes: -sessionEnd.getTimezoneOffset(),
     })
     expect(harness.api.status.value).toBe('idle')
     expect(harness.api.visitedUnits.value).toEqual([])

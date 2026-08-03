@@ -1,12 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, defineAsyncComponent } from 'vue'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import AppHeader from './components/AppHeader.vue'
-import ConfigPage from './components/ConfigPage.vue'
-import BookList from './components/BookList.vue'
-import ReaderView from './components/ReaderView.vue'
-import StudyPlanPage from './components/study-plan/StudyPlanPage.vue'
-import StudyStatsPage from './components/study-stats/StudyStatsPage.vue'
 import LoadingOverlay from './components/common/loading/LoadingOverlay.vue'
 import type { AppInitProgress } from './types'
 import { useI18n } from 'vue-i18n'
@@ -21,6 +16,16 @@ import {
 import { useAppStore } from './stores/app'
 import { useReaderStore } from './stores/reader'
 import { storeToRefs } from 'pinia'
+
+const ConfigPage = defineAsyncComponent(() => import('./components/ConfigPage.vue'))
+const BookList = defineAsyncComponent(() => import('./components/BookList.vue'))
+const ReaderView = defineAsyncComponent(() => import('./components/ReaderView.vue'))
+const StudyPlanPage = defineAsyncComponent(
+  () => import('./components/study-plan/StudyPlanPage.vue'),
+)
+const StudyStatsPage = defineAsyncComponent(
+  () => import('./components/study-stats/StudyStatsPage.vue'),
+)
 
 type HomeTab = 'books' | 'studyPlan' | 'studyStats' | 'settings'
 

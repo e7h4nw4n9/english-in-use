@@ -10,12 +10,6 @@ use tauri::Manager;
 #[cfg(desktop)]
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 #[tauri::command]
 async fn check_connection_status(
     app: tauri::AppHandle,
@@ -75,6 +69,7 @@ fn setup_desktop_menu(_app: &mut tauri::App) -> tauri::Result<()> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// 启动 Tauri 应用并注册插件、共享状态、资源协议与命令。
 pub fn run() {
     let context = tauri::generate_context!();
 
@@ -100,7 +95,7 @@ pub fn run() {
         .manage(config_state)
         .manage(database::DbState::default())
         .manage(book_cache)
-        .manage(utils::r2::R2ClientState::default())
+        .manage(utils::gateway::GatewayClientState::default())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .targets([
@@ -113,7 +108,6 @@ pub fn run() {
                 .level(log_level)
                 .build(),
         )
-        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init());
 
     #[cfg(desktop)]
@@ -124,13 +118,26 @@ pub fn run() {
 
     builder
         .setup(|app| {
-            if let Ok(cache_dir) = app.path().app_cache_dir() {
-                if let Err(err) = app.asset_protocol_scope().allow_directory(&cache_dir, true) {
-                    log::warn!(
-                        "failed to extend asset protocol scope for cache dir: {}",
-                        err
-                    );
-                }
+            if let Ok(cache_dir) = app.path().app_cache_dir()
+                && let Err(err) = app.asset_protocol_scope().allow_directory(&cache_dir, true)
+            {
+                log::warn!(
+                    "failed to extend asset protocol scope for cache dir: {}",
+                    err
+                );
+            }
+            if let Some(crate::models::BookSource::Local { path }) = app
+                .state::<services::config::ConfigState>()
+                .0
+                .read()
+                .ok()
+                .and_then(|config| config.book_source.clone())
+                && let Err(err) = app.asset_protocol_scope().allow_directory(path, true)
+            {
+                log::warn!(
+                    "failed to extend asset protocol scope for book source: {}",
+                    err
+                );
             }
 
             // 初始化全局应用数据目录常量
@@ -161,7 +168,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
             commands::config::load_config,
             commands::config::save_config,
             commands::config::export_config,
@@ -169,7 +175,7 @@ pub fn run() {
             commands::config::validate_local_book_source,
             commands::db::get_default_sqlite_path,
             commands::db::resolve_sqlite_path,
-            commands::r2::test_r2_connection,
+            commands::r2::test_cloudflare_gateway,
             commands::r2::list_r2_objects,
             commands::r2::read_r2_object,
             commands::db::test_database_connection,
@@ -196,8 +202,6 @@ pub fn run() {
             commands::study_session::save_study_session,
             commands::study_session::get_study_stats,
             commands::study_session::get_study_sessions_by_date,
-            commands::system::restart,
-            commands::system::get_platform,
             check_connection_status
         ])
         .run(context)

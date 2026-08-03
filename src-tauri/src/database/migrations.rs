@@ -4,7 +4,7 @@ pub struct Migration {
     pub down: &'static str,
 }
 
-// NOTE: MIGRATIONS must be sorted by version in ascending order.
+// 迁移必须按版本号升序排列。
 pub const MIGRATIONS: &[Migration] = &[
     Migration {
         version: "0.1.0",
@@ -26,5 +26,26 @@ pub const MIGRATIONS: &[Migration] = &[
         version: "0.3.0",
         up: concat!(include_str!("../../migrations/0.3.0/up/study_sessions.sql")),
         down: concat!(include_str!("../../migrations/0.3.0/down/down.sql")),
+    },
+    Migration {
+        version: "0.4.0",
+        up: concat!(include_str!(
+            "../../migrations/0.4.0/up/study_session_local_date.sql"
+        )),
+        down: concat!(include_str!("../../migrations/0.4.0/down/down.sql")),
+    },
+    Migration {
+        version: "0.5.0",
+        up: concat!(include_str!(
+            "../../migrations/0.5.0/up/study_session_book_local_date.sql"
+        )),
+        down: concat!(include_str!("../../migrations/0.5.0/down/down.sql")),
+    },
+    Migration {
+        version: "0.6.0",
+        up: concat!(include_str!(
+            "../../migrations/0.6.0/up/reading_progress_primary_key.sql"
+        )),
+        down: concat!(include_str!("../../migrations/0.6.0/down/down.sql")),
     },
 ];

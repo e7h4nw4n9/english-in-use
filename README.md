@@ -34,6 +34,15 @@
 - `courses/` 是推荐目录；缺失时会提示告警，阅读功能仍可使用。
 - 系统会拒绝包含 `..` 的非法相对路径，避免越界读取本地文件。
 
+## Cloudflare 私有网关
+
+云端模式不再由客户端直接持有 D1 API Token 或 R2 Access Key。应用统一连接
+`worker/` 中的私有 Worker，由 Worker 通过绑定访问 D1 和 R2，并负责 D1 批处理、
+Session Bookmark 与不可变 R2 对象的边缘缓存。
+
+部署和绑定步骤见 [`worker/README.md`](worker/README.md)。旧版直连配置会被识别并保留
+本地设置，但必须重新填写网关地址和访问令牌后才能启用云端功能。
+
 ## 开发说明
 
 本项目使用 Tauri 2.0、Vue 3 开发。
@@ -65,6 +74,15 @@
 
 ```shell
 pnpm tauri build
+```
+
+### 更新应用图标
+
+修改 `src-tauri/icons/app-icon.png`、`app-icon-foreground.png` 或
+`app-icon-background.png` 后，统一重新生成桌面端和移动端图标：
+
+```shell
+pnpm tauri:icon
 ```
 
 ### iOS / iPad 测试
@@ -127,4 +145,4 @@ pnpm tauri build
    pnpm tauri:ios:build
    ```
 
-建议最少覆盖以下测试项：启动与渲染、核心业务路径、Rust command 错误分支、插件能力（dialog/fs/log/opener）和真机网络连通性。
+建议最少覆盖以下测试项：启动与渲染、核心业务路径、Rust command 错误分支、插件能力（dialog/fs/log）和真机网络连通性。

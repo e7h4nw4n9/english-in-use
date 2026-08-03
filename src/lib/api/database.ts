@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { DatabaseConnection, ConnectionStatus, BookSource } from '../../types'
+import type { CloudflareGatewayConfig, ConnectionStatus, DatabaseConnection } from '../../types'
 
 /**
  * 初始化数据库
@@ -30,16 +30,21 @@ export async function resolveSqlitePath(path: string): Promise<string> {
  * 测试数据库连接
  * @param connection 数据库连接配置
  */
-export async function testDatabaseConnection(connection: DatabaseConnection): Promise<void> {
-  await invoke('test_database_connection', { connection })
+export async function testDatabaseConnection(
+  connection: DatabaseConnection,
+  gateway?: CloudflareGatewayConfig,
+): Promise<void> {
+  await invoke('test_database_connection', { connection, gateway })
 }
 
 /**
- * 测试 Cloudflare R2 连接
- * @param source 图书源配置
+ * 同时测试私有网关的 D1 与 R2 绑定。
+ * @param gateway 网关地址和访问令牌。
  */
-export async function testR2Connection(source: BookSource): Promise<string[]> {
-  return await invoke<string[]>('test_r2_connection', { source })
+export async function testCloudflareGateway(
+  gateway: CloudflareGatewayConfig,
+): Promise<ConnectionStatus> {
+  return await invoke<ConnectionStatus>('test_cloudflare_gateway', { gateway })
 }
 
 /**

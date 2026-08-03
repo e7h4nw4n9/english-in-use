@@ -2,16 +2,16 @@
 import { useI18n } from 'vue-i18n'
 import { CopyOutlined, FolderOpenOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import type { DatabaseType } from '../../types'
+import CloudflareGatewaySettings from './CloudflareGatewaySettings.vue'
 
 const { t } = useI18n()
 
 interface Props {
   dbType: DatabaseType
   sqlitePath: string
-  d1Config: {
-    account_id: string
-    database_id: string
-    api_token: string
+  gatewayConfig: {
+    base_url: string
+    access_token: string
   }
   isTesting: boolean
 }
@@ -43,7 +43,9 @@ const emit = defineEmits<{
           @update:value="emit('update:dbType', $event)"
         >
           <a-radio-button value="SQLite">{{ t('config.localSqlite') }}</a-radio-button>
-          <a-radio-button value="CloudflareD1">{{ t('config.cloudD1') }}</a-radio-button>
+          <a-radio-button value="CloudflareGateway">{{
+            t('config.cloudGateway' as any)
+          }}</a-radio-button>
         </a-radio-group>
       </a-form-item>
 
@@ -88,34 +90,8 @@ const emit = defineEmits<{
         </a-form-item>
       </div>
 
-      <div v-else-if="dbType === 'CloudflareD1'">
-        <a-form-item :label="t('config.accountId')">
-          <a-input
-            v-model:value="d1Config.account_id"
-            autocomplete="off"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-          />
-        </a-form-item>
-        <a-form-item :label="t('config.databaseId')">
-          <a-input
-            v-model:value="d1Config.database_id"
-            autocomplete="off"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-          />
-        </a-form-item>
-        <a-form-item :label="t('config.apiToken')">
-          <a-input-password
-            v-model:value="d1Config.api_token"
-            autocomplete="off"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-          />
-        </a-form-item>
+      <div v-else-if="dbType === 'CloudflareGateway'">
+        <CloudflareGatewaySettings :gateway-config="gatewayConfig" />
       </div>
     </a-form>
 

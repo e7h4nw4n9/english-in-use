@@ -15,7 +15,7 @@ import { useReaderOverlayActions } from '../composables/reader/useReaderOverlayA
 import { useI18n } from 'vue-i18n'
 import type { StudySessionUnitRef } from '../types'
 
-// Components
+// 阅读器子组件。
 import ReaderTOC from './reader/ReaderTOC.vue'
 import ReaderCanvas from './reader/ReaderCanvas.vue'
 import ReaderFooter from './reader/ReaderFooter.vue'
@@ -39,7 +39,6 @@ const {
   currentExerciseResourceId,
   showHotspots,
   isUiVisible,
-  isPlaying,
   isSidebarCollapsed,
 } = storeToRefs(readerStore)
 
@@ -59,7 +58,7 @@ const {
   goForward,
 } = useReaderMetadata()
 
-const { toggleAudio, stopAndResetAudio, cleanup: audioCleanup } = useReaderAudio()
+const { toggleAudio, togglePlay, stopAndResetAudio, cleanup: audioCleanup } = useReaderAudio()
 const fallbackUnitTitle = computed(() => currentBook.value?.title || '')
 const effectiveDebugEnabled = computed(
   () => __DEBUG_FEATURES__ && Boolean(config.value?.system.enable_debug_tools),
@@ -173,6 +172,7 @@ function handleToggleAudio(path: string) {
   }
 }
 
+/** 捕获一次计时停止流程使用的稳定上下文快照。 */
 function captureStopContext(): StudyTimerStopContext | null {
   const wasRunning = studyTimerIsRunning.value
   if (wasRunning) {
@@ -197,6 +197,7 @@ function resetPendingFlowState() {
   shouldResumeRunningOnCancel.value = false
 }
 
+/** 用户取消退出时恢复计时器原有运行或暂停状态。 */
 function restoreRunningStateOnCancel() {
   if (shouldResumeRunningOnCancel.value) {
     resumeStudyTimer()
@@ -204,6 +205,9 @@ function restoreRunningStateOnCancel() {
   shouldResumeRunningOnCancel.value = false
 }
 
+/** 根据用户选择和停止快照确定会话最终归属单元。
+ * @param context - 计时停止上下文。
+ */
 function resolveAssignedUnitFromPicker(context: StudyTimerStopContext): StudySessionUnitRef {
   const matched = context.visitedUnits.find(
     (item) => item.resourceId === pendingAssignedResourceId.value,
@@ -211,6 +215,10 @@ function resolveAssignedUnitFromPicker(context: StudyTimerStopContext): StudySes
   return matched || context.entryUnit
 }
 
+/** 将停止上下文保存到选定单元，并处理失败后的恢复。
+ * @param context - 计时停止上下文。
+ * @param assignedUnit - 用户确认的会话归属单元。
+ */
 async function persistTimerContext(
   context: StudyTimerStopContext,
   assignedUnit: StudySessionUnitRef,
@@ -235,6 +243,7 @@ async function persistTimerContext(
   }
 }
 
+/** 暂停活动计时并打开保存归属确认流程。 */
 async function requestStopAndSaveTimer() {
   const context = captureStopContext()
   if (!context) return
@@ -251,6 +260,7 @@ async function requestStopAndSaveTimer() {
   await persistTimerContext(context, context.entryUnit, false)
 }
 
+/** 在关闭阅读器前完成必要的计时保存确认。 */
 async function handleRequestCloseReader() {
   const context = captureStopContext()
   if (!context) {
@@ -277,6 +287,7 @@ function handleDiscardAndExitReader() {
   appStore.currentBook = null
 }
 
+/** 使用当前选择的单元保存会话并继续待处理退出动作。 */
 async function handleConfirmSaveTimerPrompt() {
   const context = pendingStopContext.value
   if (!context) {
@@ -296,9 +307,7 @@ async function handleConfirmSaveTimerPrompt() {
 useReaderShortcuts({
   goBack,
   goForward,
-  togglePlayback: () => {
-    isPlaying.value = !isPlaying.value
-  },
+  togglePlayback: togglePlay,
   closeReader: () => {
     void handleRequestCloseReader()
   },
@@ -474,7 +483,7 @@ html.dark .reader-view {
   }
 }
 
-/* Global styles for reader search and trees if needed */
+/* 阅读器搜索和目录树使用的全局样式。 */
 .modern-executive-search .ant-input {
   border-radius: 24px !important;
   background-color: rgba(0, 0, 0, 0.025) !important;

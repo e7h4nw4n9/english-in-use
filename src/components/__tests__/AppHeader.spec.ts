@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import Antd from 'ant-design-vue'
+import { createPinia } from 'pinia'
 import AppHeader from '../AppHeader.vue'
+import i18n from '../../i18n'
 
 // Mock Tauri API
 vi.mock('@tauri-apps/api/window', () => ({
@@ -18,6 +21,9 @@ describe('AppHeader.vue', () => {
       props: {
         title,
       },
+      global: {
+        plugins: [createPinia(), i18n, Antd],
+      },
     })
 
     expect(wrapper.text()).toContain(title)
@@ -27,6 +33,9 @@ describe('AppHeader.vue', () => {
     const wrapper = mount(AppHeader, {
       props: {
         title: 'Test Title',
+      },
+      global: {
+        plugins: [createPinia(), i18n, Antd],
       },
     })
 

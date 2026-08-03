@@ -8,6 +8,10 @@ interface UseReaderOverlayActionsOptions {
   toggleAudio: (productCode: string, path: string) => void | Promise<void>
 }
 
+/**
+ * 将页面热点统一分派到翻页、音频或练习动作。
+ * @param options - 当前图书、页面引用和动作回调。
+ */
 export function useReaderOverlayActions({
   currentBook,
   currentPageLabel,

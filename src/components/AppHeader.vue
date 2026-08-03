@@ -69,19 +69,20 @@ const getStatusText = (s: ServiceStatusType) => {
 }
 
 const isTesting = computed(
-  () => status.value.r2.status === 'Testing' || status.value.d1.status === 'Testing',
+  () => status.value.r2.status === 'Testing' || status.value.database.status === 'Testing',
 )
 const effectiveDebugEnabled = computed(
   () => __DEBUG_FEATURES__ && Boolean(config.value?.system.enable_debug_tools),
 )
 const hasError = computed(
-  () => status.value.r2.status === 'Disconnected' || status.value.d1.status === 'Disconnected',
+  () =>
+    status.value.r2.status === 'Disconnected' || status.value.database.status === 'Disconnected',
 )
 
 const overallStatusColor = computed(() => {
   if (isTesting.value) return token.value.colorInfo
   if (hasError.value) return token.value.colorError
-  if (status.value.r2.status === 'Connected' || status.value.d1.status === 'Connected')
+  if (status.value.r2.status === 'Connected' || status.value.database.status === 'Connected')
     return token.value.colorSuccess
   return token.value.colorTextDisabled
 })
@@ -104,21 +105,21 @@ onMounted(async () => {
       data-tauri-drag-region
       class="relative flex h-full w-full items-center justify-between px-3"
     >
-      <!-- Left: Spacer -->
+      <!-- 左侧占位 -->
       <div class="no-drag z-10 flex min-w-[80px] items-center"></div>
 
-      <!-- Center: Title -->
+      <!-- 中间标题 -->
       <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div data-tauri-drag-region class="title-text pointer-events-auto max-w-[60%] truncate">
           {{ currentBook ? currentUnitName : title }}
         </div>
       </div>
 
-      <!-- Right: Actions (Status, Debug) -->
+      <!-- 右侧连接状态和调试操作 -->
       <div class="no-drag z-10 flex min-w-[80px] items-center justify-end gap-1">
         <span v-if="buildStamp" class="build-stamp"> Build {{ buildStamp }} </span>
 
-        <!-- Connection Status Trigger -->
+        <!-- 连接状态入口 -->
         <a-tooltip placement="bottomRight" :mouse-enter-delay="0.5">
           <template #title>
             <div class="flex flex-col gap-1 py-1 text-[10px]">
@@ -129,9 +130,11 @@ onMounted(async () => {
                 }}</span>
               </div>
               <div class="flex items-center justify-between gap-4">
-                <span class="opacity-70">Cloudflare D1</span>
-                <span :style="{ color: getStatusColor(status.d1) }">{{
-                  getStatusText(status.d1)
+                <span class="opacity-70">{{
+                  config?.database?.type === 'SQLite' ? 'SQLite' : 'Cloudflare D1'
+                }}</span>
+                <span :style="{ color: getStatusColor(status.database) }">{{
+                  getStatusText(status.database)
                 }}</span>
               </div>
             </div>
@@ -162,7 +165,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Connection Status Modal -->
+    <!-- 连接状态弹窗 -->
     <a-modal
       v-model:open="connectionModalVisible"
       :title="t('footer.connectionStatus')"
@@ -172,7 +175,7 @@ onMounted(async () => {
       destroy-on-close
     >
       <div class="flex flex-col gap-6 py-4">
-        <!-- R2 Status -->
+        <!-- R2 状态 -->
         <div class="status-card">
           <div class="mb-2 flex items-center justify-between">
             <span class="text-xs font-bold uppercase tracking-wider opacity-60">Cloudflare R2</span>
@@ -217,20 +220,22 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- D1 Status -->
+        <!-- D1 状态 -->
         <div class="status-card">
           <div class="mb-2 flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider opacity-60">Cloudflare D1</span>
+            <span class="text-xs font-bold uppercase tracking-wider opacity-60">{{
+              config?.database?.type === 'SQLite' ? 'SQLite' : 'Cloudflare D1'
+            }}</span>
             <a-tag
               :color="
-                status.d1.status === 'Connected'
+                status.database.status === 'Connected'
                   ? 'success'
-                  : status.d1.status === 'Disconnected'
+                  : status.database.status === 'Disconnected'
                     ? 'error'
                     : 'default'
               "
             >
-              {{ getStatusText(status.d1) }}
+              {{ getStatusText(status.database) }}
             </a-tag>
           </div>
           <div
@@ -238,16 +243,16 @@ onMounted(async () => {
           >
             <div class="mt-0.5">
               <CheckCircleOutlined
-                v-if="status.d1.status === 'Connected'"
+                v-if="status.database.status === 'Connected'"
                 :style="{ color: token.colorSuccess }"
               />
               <SyncOutlined
-                v-else-if="status.d1.status === 'Testing'"
+                v-else-if="status.database.status === 'Testing'"
                 spin
                 :style="{ color: token.colorInfo }"
               />
               <ExclamationCircleOutlined
-                v-else-if="status.d1.status === 'Disconnected'"
+                v-else-if="status.database.status === 'Disconnected'"
                 :style="{ color: token.colorError }"
               />
               <ClockCircleOutlined v-else :style="{ color: token.colorTextDisabled }" />
@@ -255,7 +260,9 @@ onMounted(async () => {
             <div class="flex-1 overflow-hidden">
               <div class="text-xs font-medium">
                 {{
-                  status.d1.status === 'Disconnected' ? status.d1.message : getStatusText(status.d1)
+                  status.database.status === 'Disconnected'
+                    ? status.database.message
+                    : getStatusText(status.database)
                 }}
               </div>
             </div>

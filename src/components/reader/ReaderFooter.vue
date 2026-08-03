@@ -404,7 +404,7 @@ onBeforeUnmount(() => {
   min-height: var(--reader-footer-height, 54px);
   width: fit-content;
   max-width: 96vw;
-  /* Liquid Glass Core */
+  /* 液态玻璃核心样式。 */
   background: color-mix(in srgb, v-bind('token.colorBgElevated') 70%, transparent);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);

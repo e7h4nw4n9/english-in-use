@@ -15,6 +15,10 @@ function isIpadDevice() {
   return isLegacyIpad || isIpadOs
 }
 
+/**
+ * 根据容器宽度和 iPad 方向自动约束阅读器视图模式。
+ * @param options - 视图模式、缩放、窄屏阈值和设备覆盖配置。
+ */
 export function useReaderViewportMode({
   viewMode,
   zoomLevel,

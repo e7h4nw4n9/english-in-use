@@ -71,6 +71,9 @@ function clearPinchDebounceTimer() {
   }
 }
 
+/** 应用合并后的双指缩放值，限制更新频率和缩放边界。
+ * @param force - 是否忽略防抖间隔立即应用。
+ */
 function applyPendingPinchZoom(force = false) {
   if (pinchPendingZoom.value === null) return
 
@@ -91,6 +94,9 @@ function applyPendingPinchZoom(force = false) {
   readerStore.setZoomLevel(zoomLevel.value + delta * PINCH_SMOOTHING_FACTOR)
 }
 
+/** 合并连续双指缩放事件并延迟提交最终缩放值。
+ * @param targetZoom - 本次手势计算出的目标缩放值。
+ */
 function queuePinchZoom(targetZoom: number) {
   pinchPendingZoom.value = targetZoom
   if (pinchDebounceTimer.value !== null) return
@@ -122,10 +128,14 @@ function isAppleTouchDevice() {
   return isLegacyIos || isIpadOs
 }
 
+/** 判断当前设备和缩放状态是否允许滑动翻页。 */
 function shouldHandleSwipeNavigation() {
   return isAppleTouchDevice() && zoomLevel.value <= 1.02
 }
 
+/** 初始化双指缩放或单指滑动手势状态。
+ * @param e - 触摸开始事件。
+ */
 function handleTouchStart(e: TouchEvent) {
   if (e.touches.length === 1) {
     const touch = e.touches[0]
@@ -144,6 +154,9 @@ function handleTouchStart(e: TouchEvent) {
   clearPinchDebounceTimer()
 }
 
+/** 更新缩放或滑动手势，并阻止冲突的浏览器默认行为。
+ * @param e - 触摸移动事件。
+ */
 function handleTouchMove(e: TouchEvent) {
   if (e.touches.length === 1 && swipeStartPoint.value && !pinchStartDistance.value) {
     if (!shouldHandleSwipeNavigation()) return
@@ -164,7 +177,7 @@ function handleTouchMove(e: TouchEvent) {
     if (swipeDirectionLock.value !== 'horizontal') return
     if (absDeltaY > SWIPE_MAX_VERTICAL_DRIFT) return
 
-    // Keep iOS from scrolling horizontally while user is swiping pages.
+    // 用户滑动翻页时阻止 iOS 同步触发页面横向滚动。
     e.preventDefault()
 
     if (swipeTriggered.value || absDeltaX < SWIPE_TRIGGER_DISTANCE) return
@@ -196,6 +209,9 @@ function handleTouchMove(e: TouchEvent) {
   queuePinchZoom(pinchStartZoom.value * adjustedRatio)
 }
 
+/** 结束当前手势，并在达到阈值时触发翻页。
+ * @param e - 触摸结束事件。
+ */
 function handleTouchEnd(e: TouchEvent) {
   if (e.touches.length < 2) {
     applyPendingPinchZoom(true)
@@ -290,7 +306,7 @@ function getOverlayStyle(overlay: any) {
         class="reader-content-container flex w-full origin-top items-start justify-center gap-4 px-0 pt-1 transition-transform duration-150 ease-out"
         :style="{ transform: `scale(${zoomLevel})` }"
       >
-        <!-- Left Page -->
+        <!-- 左页 -->
         <div
           v-if="leftPageLabel"
           class="page-surface relative overflow-hidden bg-white shadow-xl dark:bg-black"
@@ -330,14 +346,14 @@ function getOverlayStyle(overlay: any) {
           </div>
         </div>
 
-        <!-- Placeholder for Empty Left Page in Spread Mode -->
+        <!-- 跨页模式下的空白左页占位 -->
         <div
           v-else-if="viewMode === 'spread'"
           :style="pageSurfaceStyle"
           class="pointer-events-none opacity-0"
         ></div>
 
-        <!-- Right Page -->
+        <!-- 右页 -->
         <div
           v-if="viewMode === 'spread' && rightPageLabel"
           class="page-surface relative overflow-hidden bg-white shadow-xl dark:bg-black"

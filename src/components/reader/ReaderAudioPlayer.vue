@@ -44,7 +44,7 @@ const EXPANDED_WIDTH = 280
 const VIEWPORT_MARGIN = 12
 const DEFAULT_TOP = 80
 
-// Use state for position to survive re-renders
+// 使用状态保存位置，避免组件重新渲染后丢失。
 const position = ref({ x: window.innerWidth - EXPANDED_WIDTH - VIEWPORT_MARGIN, y: DEFAULT_TOP })
 const lastExpandedPosition = ref({ x: position.value.x, y: position.value.y })
 
@@ -77,7 +77,7 @@ async function keepPlayerInViewport() {
   lastExpandedPosition.value = clampPosition(lastExpandedPosition.value)
 }
 
-// Handle position memory and auto-snap
+// 管理位置记忆和自动吸附。
 watch(isCollapsed, async (val) => {
   if (val) {
     lastExpandedPosition.value = { ...position.value }
@@ -110,7 +110,7 @@ const audioProgress = computed(() => {
   return (audioCurrentTime.value / audioDuration.value) * 100
 })
 
-// Drag Player logic
+// 播放器拖动逻辑。
 const onDragStart = (e: PointerEvent) => {
   isDragging.value = true
   startPos.value = { x: e.clientX - position.value.x, y: e.clientY - position.value.y }
@@ -140,7 +140,7 @@ const onDragEnd = (e: PointerEvent) => {
   el.removeEventListener('pointercancel', onDragEnd as any)
 }
 
-// Seek logic
+// 播放进度拖动逻辑。
 const handleSeek = (e: PointerEvent) => {
   if (isAudioLoading.value || !progressRef.value || audioDuration.value === 0) return
   const rect = progressRef.value.getBoundingClientRect()
@@ -224,7 +224,7 @@ onBeforeUnmount(() => {
         top: `${position.y}px`,
       }"
     >
-      <!-- Header / Drag Handle -->
+      <!-- 标题和拖动区域 -->
       <div
         v-if="!isCollapsed"
         class="drag-handle flex cursor-move items-center justify-between px-4 py-2.5"
@@ -253,9 +253,9 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- Expanded Player -->
+      <!-- 展开的播放器 -->
       <div v-if="!isCollapsed" class="player-content px-5 pb-5 pt-1">
-        <!-- Main Controls -->
+        <!-- 主要播放控制 -->
         <div class="mb-4 mt-1 flex items-center justify-center gap-4" @pointerdown.stop>
           <a-button
             type="text"
@@ -292,7 +292,7 @@ onBeforeUnmount(() => {
           </a-button>
         </div>
 
-        <!-- Integrated Progress and Time Display -->
+        <!-- 进度和时间显示 -->
         <div class="flex items-center gap-3 px-1">
           <span class="font-mono text-[9px] font-bold tabular-nums opacity-40">{{
             formatTime(audioCurrentTime)
@@ -331,7 +331,7 @@ onBeforeUnmount(() => {
         </p>
       </div>
 
-      <!-- Mini Mode (Collapsed) -->
+      <!-- 收起后的迷你模式 -->
       <div
         v-else
         class="mini-mode-container flex cursor-move flex-col items-center gap-2 p-2"
@@ -490,7 +490,7 @@ onBeforeUnmount(() => {
   -webkit-app-region: no-drag;
 }
 
-/* Ensure no transition during dragging seek */
+/* 拖动进度时禁用过渡动画。 */
 .no-transition {
   transition: none !important;
 }

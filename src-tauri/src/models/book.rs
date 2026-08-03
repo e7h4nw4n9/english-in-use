@@ -14,6 +14,10 @@ pub struct Book {
 }
 
 impl Book {
+    /// 将数据库 JSON 行转换为图书模型。
+    ///
+    /// # 参数
+    /// - `value`：数据库返回的 JSON 值。
     pub fn from_json(value: serde_json::Value) -> Option<Self> {
         let obj = value.as_object()?;
 

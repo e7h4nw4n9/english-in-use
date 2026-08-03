@@ -99,12 +99,21 @@ vi.mock('../../lib/api', () => ({
   getDefaultSqlitePath: vi.fn(() => Promise.resolve('/mock/path.db')),
   resolveSqlitePath: vi.fn((path: string) => Promise.resolve(path)),
   testDatabaseConnection: vi.fn(),
-  testR2Connection: vi.fn(),
+  testCloudflareGateway: vi.fn(() =>
+    Promise.resolve({
+      r2: { status: 'Connected' },
+      database: { status: 'Connected' },
+    }),
+  ),
 }))
 
 const commonStubs = {
   'a-button': {
     template: '<button class="a-button-stub" @click="$emit(\'click\')"><slot /></button>',
+  },
+  'a-alert': {
+    props: ['message'],
+    template: '<div class="a-alert-stub">{{ message }}</div>',
   },
   'a-menu': { template: '<div><slot /></div>' },
   'a-menu-item': { template: '<div><slot /></div>' },
@@ -231,6 +240,42 @@ describe('ConfigPage.vue Core Logic', () => {
     expect(wrapper.emitted('config-saved')).toBeTruthy()
   })
 
+  it('loads a redacted gateway import into the form without overwriting saved config', async () => {
+    const redactedConfig = {
+      system: {
+        language: 'en',
+        theme: 'system',
+        log_level: 'info',
+        enable_auto_check: true,
+        check_interval_mins: 5,
+        auto_start_study_timer: false,
+      },
+      book_source: { type: 'CloudflareGateway', details: {} },
+      database: { type: 'CloudflareGateway', details: {} },
+      cloudflare_gateway: {
+        base_url: 'https://gateway.example.com/',
+        access_token: '',
+      },
+      gateway_configuration_required: true,
+    }
+    ;(dialog.open as any).mockResolvedValue('/path/to/redacted.toml')
+    ;(api.importConfig as any).mockResolvedValue(redactedConfig)
+
+    const wrapper = mount(ConfigPage, {
+      global: { stubs: commonStubs },
+    })
+    const importBtn = wrapper
+      .findAll('.a-button-stub')
+      .find((button) => button.text().includes('config.importConfig'))
+    await importBtn?.trigger('click')
+    await flushPromises()
+
+    expect(api.saveConfig).not.toHaveBeenCalled()
+    expect(api.initializeDatabase).not.toHaveBeenCalled()
+    expect(wrapper.emitted('config-saved')).toBeFalsy()
+    expect(wrapper.text()).toContain('config.gatewayMigrationRequired')
+  })
+
   it('auto-fills sqlite path from default when imported config path is empty', async () => {
     const mockConfig = {
       system: {
@@ -309,22 +354,16 @@ describe('ConfigPage.vue Core Logic', () => {
             auto_start_study_timer: false,
           },
           book_source: {
-            type: 'CloudflareR2',
-            details: {
-              account_id: 'acc',
-              bucket_name: 'bucket',
-              access_key_id: 'key',
-              secret_access_key: 'secret',
-              public_url: 'https://example.com',
-            },
+            type: 'CloudflareGateway',
+            details: {},
           },
           database: {
-            type: 'CloudflareD1',
-            details: {
-              account_id: 'acc',
-              database_id: 'db',
-              api_token: 'token',
-            },
+            type: 'CloudflareGateway',
+            details: {},
+          },
+          cloudflare_gateway: {
+            base_url: 'https://gateway.example.com/',
+            access_token: 'token',
           },
         } as any,
       },
@@ -338,10 +377,47 @@ describe('ConfigPage.vue Core Logic', () => {
     await flushPromises()
 
     expect(api.saveConfig).toHaveBeenCalled()
-    expect(api.testR2Connection).toHaveBeenCalled()
-    expect(api.testDatabaseConnection).toHaveBeenCalled()
+    expect(api.testCloudflareGateway).toHaveBeenCalled()
     expect(setGlobalLoadingMessage).toHaveBeenCalledWith('config.initializingDatabase')
     expect(api.initializeDatabase).toHaveBeenCalled()
+  })
+
+  it('ignores an unselected R2 failure when only the gateway database is configured', async () => {
+    ;(api.testCloudflareGateway as any).mockResolvedValue({
+      r2: { status: 'Disconnected', message: 'unused R2' },
+      database: { status: 'Connected' },
+    })
+    const wrapper = mount(ConfigPage, {
+      props: {
+        initialConfig: {
+          system: {
+            language: 'en',
+            theme: 'system',
+            log_level: 'info',
+            enable_auto_check: true,
+            check_interval_mins: 5,
+            auto_start_study_timer: false,
+          },
+          book_source: { type: 'Local', details: { path: '/books' } },
+          database: { type: 'CloudflareGateway', details: {} },
+          cloudflare_gateway: {
+            base_url: 'https://gateway.example.com/',
+            access_token: 'token',
+          },
+        } as any,
+      },
+      global: { stubs: commonStubs },
+    })
+
+    const saveBtn = wrapper
+      .findAll('.a-button-stub')
+      .find((button) => button.text().includes('config.saveConfig'))
+    await saveBtn?.trigger('click')
+    await flushPromises()
+
+    expect(api.initializeDatabase).toHaveBeenCalled()
+    const antd = await import('ant-design-vue')
+    expect(antd.message.warning).not.toHaveBeenCalled()
   })
 
   it('shows warning when cloud connection check fails but import still succeeds', async () => {
@@ -355,28 +431,21 @@ describe('ConfigPage.vue Core Logic', () => {
         auto_start_study_timer: false,
       },
       book_source: {
-        type: 'CloudflareR2',
-        details: {
-          account_id: 'acc',
-          bucket_name: 'bucket',
-          access_key_id: 'key',
-          secret_access_key: 'secret',
-          public_url: 'https://example.com',
-        },
+        type: 'CloudflareGateway',
+        details: {},
       },
       database: {
-        type: 'CloudflareD1',
-        details: {
-          account_id: 'acc',
-          database_id: 'db',
-          api_token: 'token',
-        },
+        type: 'CloudflareGateway',
+        details: {},
+      },
+      cloudflare_gateway: {
+        base_url: 'https://gateway.example.com/',
+        access_token: 'token',
       },
     }
     ;(dialog.open as any).mockResolvedValue('/path/to/import.toml')
     ;(api.importConfig as any).mockResolvedValue(mockConfig)
-    ;(api.testR2Connection as any).mockRejectedValue(new Error('r2 down'))
-    ;(api.testDatabaseConnection as any).mockRejectedValue(new Error('d1 down'))
+    ;(api.testCloudflareGateway as any).mockRejectedValue(new Error('gateway down'))
 
     const wrapper = mount(ConfigPage, {
       global: { stubs: commonStubs },
@@ -395,8 +464,8 @@ describe('ConfigPage.vue Core Logic', () => {
     expect(api.initializeDatabase).not.toHaveBeenCalled()
   })
 
-  it('shows warning when D1 check fails but save still succeeds', async () => {
-    ;(api.testDatabaseConnection as any).mockRejectedValue(new Error('d1 down'))
+  it('shows warning when gateway check fails but save still succeeds', async () => {
+    ;(api.testCloudflareGateway as any).mockRejectedValue(new Error('gateway down'))
 
     const wrapper = mount(ConfigPage, {
       props: {
@@ -416,12 +485,12 @@ describe('ConfigPage.vue Core Logic', () => {
             },
           },
           database: {
-            type: 'CloudflareD1',
-            details: {
-              account_id: 'acc',
-              database_id: 'db',
-              api_token: 'token',
-            },
+            type: 'CloudflareGateway',
+            details: {},
+          },
+          cloudflare_gateway: {
+            base_url: 'https://gateway.example.com/',
+            access_token: 'token',
           },
         } as any,
       },

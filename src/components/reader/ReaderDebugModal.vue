@@ -91,7 +91,7 @@ const DebugTocNode = defineComponent({
         </div>
       </div>
 
-      <!-- Current Exercises Section -->
+      <!-- 当前练习信息 -->
       <div>
         <div class="mb-2 border-b font-bold text-orange-500">Current Exercises:</div>
         <div v-if="currentPageExercises.length > 0" class="space-y-1">

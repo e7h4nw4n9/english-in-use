@@ -1,4 +1,4 @@
-use super::Database;
+use super::{Database, DatabaseFuture, SqlStatement, SqlValue};
 use crate::models::ServiceStatus;
 use anyhow::{Context, Result};
 use log::{debug, error, info};
@@ -65,14 +65,18 @@ pub struct SqliteDatabase {
 }
 
 impl SqliteDatabase {
+    /// 打开 SQLite 数据库并准备连接池。
+    ///
+    /// # 参数
+    /// - `path`：目标文件或目录路径。
     pub async fn new(path: &str) -> Result<Self> {
         info!("正在连接 SQLite 数据库: {}", path);
-        // Ensure directory exists
-        if let Some(parent) = std::path::Path::new(path).parent() {
-            if !parent.exists() {
-                debug!("创建数据库目录: {:?}", parent);
-                std::fs::create_dir_all(parent)?;
-            }
+        // 建立连接前确保数据库父目录存在。
+        if let Some(parent) = std::path::Path::new(path).parent()
+            && !parent.exists()
+        {
+            debug!("创建数据库目录: {:?}", parent);
+            std::fs::create_dir_all(parent)?;
         }
 
         let pool = SqlitePoolOptions::new()
@@ -83,14 +87,18 @@ impl SqliteDatabase {
         Ok(Self { pool })
     }
 
+    /// 检查 SQLite 路径是否可以建立数据库连接。
+    ///
+    /// # 参数
+    /// - `path`：目标文件或目录路径。
     pub async fn check_status(path: &str) -> ServiceStatus {
         debug!("执行 SQLite 状态检查: {}", path);
         let path_obj = std::path::Path::new(path);
-        if let Some(parent) = path_obj.parent() {
-            if let Err(e) = std::fs::create_dir_all(parent) {
-                error!("创建 SQLite 目录失败: {}", e);
-                return ServiceStatus::Disconnected(format!("Failed to create directory: {}", e));
-            }
+        if let Some(parent) = path_obj.parent()
+            && let Err(e) = std::fs::create_dir_all(parent)
+        {
+            error!("创建 SQLite 目录失败: {}", e);
+            return ServiceStatus::Disconnected(format!("Failed to create directory: {}", e));
         }
 
         match SqlitePoolOptions::new()
@@ -114,13 +122,71 @@ impl SqliteDatabase {
             .map(T::to_json)
             .unwrap_or(Value::Null)
     }
+
+    /// 按统一 SqlValue 类型顺序绑定 SQLite 查询参数。
+    ///
+    /// # 参数
+    /// - `query`：待绑定参数的 SQLite 查询。
+    /// - `params`：顺序绑定参数。
+    fn bind_query<'q>(
+        mut query: sqlx::query::Query<'q, Sqlite, sqlx::sqlite::SqliteArguments<'q>>,
+        params: &[SqlValue],
+    ) -> sqlx::query::Query<'q, Sqlite, sqlx::sqlite::SqliteArguments<'q>> {
+        for value in params {
+            query = match value {
+                SqlValue::Null => query.bind(Option::<String>::None),
+                SqlValue::Integer(value) => query.bind(*value),
+                SqlValue::Real(value) => query.bind(*value),
+                SqlValue::Text(value) => query.bind(value.clone()),
+                SqlValue::Boolean(value) => query.bind(*value),
+            };
+        }
+        query
+    }
+
+    /// 根据 SQLite 运行时列类型将查询结果转换为 JSON 行。
+    ///
+    /// # 参数
+    /// - `rows`：SQLite 查询结果行流。
+    fn rows_to_json(rows: Vec<SqliteRow>) -> Vec<Value> {
+        let mut results = Vec::new();
+        for row in rows {
+            let mut map = serde_json::Map::new();
+            for col in row.columns() {
+                let name = col.name();
+                let raw_value = row.try_get_raw(name);
+                let value = if raw_value.as_ref().map_or(true, |value| value.is_null()) {
+                    Value::Null
+                } else {
+                    // 查询表达式未必有可靠的声明类型，应以当前值的运行时类型解码。
+                    let type_name = raw_value
+                        .as_ref()
+                        .map(|value| value.type_info().name().to_string())
+                        .unwrap_or_default();
+                    match SqliteAffinity::from_type_name(&type_name) {
+                        SqliteAffinity::Integer => Self::decode::<i64>(&row, name),
+                        SqliteAffinity::Real => Self::decode::<f64>(&row, name),
+                        SqliteAffinity::Text => Self::decode::<String>(&row, name),
+                        SqliteAffinity::Boolean => Self::decode::<bool>(&row, name),
+                        SqliteAffinity::Blob => {
+                            let v: Vec<u8> = row.try_get(name).unwrap_or_default();
+                            match String::from_utf8(v) {
+                                Ok(s) => Value::String(s),
+                                Err(_) => Value::String("<BINARY>".to_string()),
+                            }
+                        }
+                    }
+                };
+                map.insert(name.to_string(), value);
+            }
+            results.push(Value::Object(map));
+        }
+        results
+    }
 }
 
 impl Database for SqliteDatabase {
-    fn execute(
-        &self,
-        sql: String,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+    fn execute(&self, sql: String) -> DatabaseFuture<'_, ()> {
         Box::pin(async move {
             debug!("执行 SQL (SQLite): {}", sql);
             sqlx::query(&sql).execute(&self.pool).await.map_err(|e| {
@@ -131,92 +197,84 @@ impl Database for SqliteDatabase {
         })
     }
 
-    fn query(
-        &self,
-        sql: String,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<Value>>> + Send + '_>> {
+    fn query(&self, sql: String) -> DatabaseFuture<'_, Vec<Value>> {
         Box::pin(async move {
             debug!("执行查询 (SQLite): {}", sql);
             let rows = sqlx::query(&sql).fetch_all(&self.pool).await?;
-            let mut results = Vec::new();
-            for row in rows {
-                let mut map = serde_json::Map::new();
-                for col in row.columns() {
-                    let name = col.name();
-                    let value = if row.try_get_raw(name).map_or(true, |v| v.is_null()) {
-                        Value::Null
-                    } else {
-                        match SqliteAffinity::from_type_name(col.type_info().name()) {
-                            SqliteAffinity::Integer => Self::decode::<i64>(&row, name),
-                            SqliteAffinity::Real => Self::decode::<f64>(&row, name),
-                            SqliteAffinity::Text => Self::decode::<String>(&row, name),
-                            SqliteAffinity::Boolean => Self::decode::<bool>(&row, name),
-                            SqliteAffinity::Blob => {
-                                let v: Vec<u8> = row.try_get(name).unwrap_or_default();
-                                match String::from_utf8(v) {
-                                    Ok(s) => Value::String(s),
-                                    Err(_) => Value::String("<BINARY>".to_string()),
-                                }
-                            }
-                        }
-                    };
-                    map.insert(name.to_string(), value);
-                }
-                results.push(Value::Object(map));
+            Ok(Self::rows_to_json(rows))
+        })
+    }
+
+    fn execute_statement(&self, statement: SqlStatement) -> DatabaseFuture<'_, ()> {
+        Box::pin(async move {
+            debug!("执行参数化 SQL (SQLite): {}", statement.sql);
+            Self::bind_query(sqlx::query(&statement.sql), &statement.params)
+                .execute(&self.pool)
+                .await?;
+            Ok(())
+        })
+    }
+
+    fn query_statement(&self, statement: SqlStatement) -> DatabaseFuture<'_, Vec<Value>> {
+        Box::pin(async move {
+            debug!("执行参数化查询 (SQLite): {}", statement.sql);
+            let rows = Self::bind_query(sqlx::query(&statement.sql), &statement.params)
+                .fetch_all(&self.pool)
+                .await?;
+            Ok(Self::rows_to_json(rows))
+        })
+    }
+
+    fn execute_batch(&self, statements: Vec<SqlStatement>) -> DatabaseFuture<'_, ()> {
+        Box::pin(async move {
+            let mut transaction = self.pool.begin().await?;
+            for statement in statements {
+                Self::bind_query(sqlx::query(&statement.sql), &statement.params)
+                    .execute(&mut *transaction)
+                    .await?;
             }
+            transaction.commit().await?;
+            Ok(())
+        })
+    }
+
+    fn query_batch(&self, statements: Vec<SqlStatement>) -> DatabaseFuture<'_, Vec<Vec<Value>>> {
+        Box::pin(async move {
+            let mut transaction = self.pool.begin().await?;
+            let mut results = Vec::with_capacity(statements.len());
+            for statement in statements {
+                let rows = Self::bind_query(sqlx::query(&statement.sql), &statement.params)
+                    .fetch_all(&mut *transaction)
+                    .await?;
+                results.push(Self::rows_to_json(rows));
+            }
+            transaction.commit().await?;
             Ok(results)
         })
     }
 
-    fn get_version(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String>> + Send + '_>> {
-        use sqlx::Row;
+    fn get_version(&self) -> DatabaseFuture<'_, String> {
         Box::pin(async move {
-            let exists: bool = sqlx::query_scalar(
+            let table_count: i64 = sqlx::query_scalar(
                 "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='_app_meta'",
             )
             .fetch_one(&self.pool)
-            .await
-            .unwrap_or(false);
+            .await?;
 
-            if !exists {
+            if table_count == 0 {
                 debug!("表 _app_meta 不存在，初始版本为 0.0.0");
                 return Ok("0.0.0".to_string());
             }
 
-            let row = sqlx::query("SELECT version FROM _app_meta LIMIT 1")
+            let version = sqlx::query_scalar::<_, String>("SELECT version FROM _app_meta LIMIT 1")
                 .fetch_optional(&self.pool)
-                .await?;
-
-            let version = match row {
-                Some(r) => match r.try_get::<String, _>(0) {
-                    Ok(s) => s,
-                    _ => match r.try_get::<i64, _>(0) {
-                        Ok(i) => i.to_string(),
-                        _ => "0.0.0".to_string(),
-                    },
-                },
-                None => "0.0.0".to_string(),
-            };
+                .await?
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| anyhow::anyhow!("_app_meta.version 缺失或格式无效"))?;
 
             debug!("当前数据库版本 (SQLite): {}", version);
             Ok(version)
-        })
-    }
-
-    fn set_version(
-        &self,
-        version: &str,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
-        let version = version.to_string();
-        Box::pin(async move {
-            debug!("设置数据库版本 (SQLite): {}", version);
-            sqlx::query("UPDATE _app_meta SET version = ?")
-                .bind(version)
-                .execute(&self.pool)
-                .await?;
-            Ok(())
         })
     }
 }
@@ -224,7 +282,6 @@ impl Database for SqliteDatabase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::database::migrations::MIGRATIONS;
     use tempfile::NamedTempFile;
 
     #[tokio::test]
@@ -240,10 +297,9 @@ mod tests {
         let v = db.get_version().await.expect("Failed to get version");
         assert_eq!(v, "0.0.0");
 
-        db.execute(MIGRATIONS[0].up.to_string())
+        crate::database::migrate_up_from_version(&db, "0.0.0", Some("0.1.0"))
             .await
             .expect("Migration failed");
-        db.set_version("0.1.0").await.expect("Set version failed");
 
         let v = db.get_version().await.expect("Failed to get version");
         assert_eq!(v, "0.1.0");
@@ -252,5 +308,57 @@ mod tests {
         db.execute("SELECT * FROM _app_meta".to_string())
             .await
             .expect("Table should exist");
+    }
+
+    #[tokio::test]
+    async fn test_query_decodes_expression_runtime_types() {
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        let db = SqliteDatabase::new(&path).await.unwrap();
+
+        let rows = db
+            .query(
+                "SELECT 42 AS integer_value, 1.5 AS real_value, 'text' AS text_value".to_string(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(rows[0]["integer_value"], 42);
+        assert_eq!(rows[0]["real_value"], 1.5);
+        assert_eq!(rows[0]["text_value"], "text");
+    }
+
+    #[tokio::test]
+    async fn test_existing_meta_table_requires_version() {
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        let db = SqliteDatabase::new(&path).await.unwrap();
+
+        db.execute("CREATE TABLE _app_meta (version TEXT NOT NULL)".to_string())
+            .await
+            .unwrap();
+
+        let error = db.get_version().await.unwrap_err();
+        assert!(error.to_string().contains("version"));
+    }
+
+    #[tokio::test]
+    async fn test_migration_rejects_invalid_current_version() {
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        let db = SqliteDatabase::new(&path).await.unwrap();
+
+        db.execute("CREATE TABLE _app_meta (version TEXT NOT NULL)".to_string())
+            .await
+            .unwrap();
+        db.execute("INSERT INTO _app_meta (version) VALUES ('invalid')".to_string())
+            .await
+            .unwrap();
+
+        let version = db.get_version().await.unwrap();
+        let error = crate::database::migrate_up_from_version(&db, &version, None)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("数据库版本无效"));
     }
 }

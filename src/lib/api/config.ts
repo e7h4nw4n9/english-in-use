@@ -27,8 +27,12 @@ export async function saveConfig(config: AppConfig): Promise<void> {
  * @param path 目标文件路径
  * @param config 要导出的配置
  */
-export async function exportConfig(path: string, config: AppConfig): Promise<void> {
-  await invoke('export_config', { path, config })
+export async function exportConfig(
+  path: string,
+  config: AppConfig,
+  includeSecrets = false,
+): Promise<void> {
+  await invoke('export_config', { path, config, includeSecrets })
 }
 
 /**

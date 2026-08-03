@@ -1,3 +1,4 @@
+-- statement-breakpoint
 -- Table Name: reading_progress
 -- Comment: 用户阅读进度记录
 

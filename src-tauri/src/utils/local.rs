@@ -38,6 +38,11 @@ pub fn get_app_cache_dir() -> Result<&'static PathBuf, String> {
         .ok_or_else(|| "应用缓存目录未初始化".to_string())
 }
 
+/// 拒绝指向项目临时目录的外部配置路径。
+///
+/// # 参数
+/// - `path`：目标文件或目录路径。
+/// - `field_name`：用于错误定位的配置字段名称。
 pub fn ensure_path_not_in_project_temp(path: &Path, field_name: &str) -> Result<(), String> {
     if is_path_in_project_temp(path) {
         return Err(format!(
@@ -50,6 +55,10 @@ pub fn ensure_path_not_in_project_temp(path: &Path, field_name: &str) -> Result<
     Ok(())
 }
 
+/// 判断路径是否位于项目临时目录中。
+///
+/// # 参数
+/// - `path`：目标文件或目录路径。
 pub fn is_path_in_project_temp(path: &Path) -> bool {
     let cwd = std::env::current_dir().ok();
     let candidates =
@@ -87,11 +96,7 @@ pub async fn read_app_file(key: &str) -> Option<Vec<u8>> {
     let data_dir_str = data_dir.to_string_lossy();
     let safe_key = key.trim_start_matches('/');
 
-    // 重构：直接调用 read_file
-    match read_file(&data_dir_str, safe_key).await {
-        Ok(bytes) => Some(bytes),
-        Err(_) => None,
-    }
+    read_file(&data_dir_str, safe_key).await.ok()
 }
 
 /// 从本地应用缓存目录读取文件
@@ -100,10 +105,7 @@ pub async fn read_cache_file(key: &str) -> Option<Vec<u8>> {
     let cache_dir_str = cache_dir.to_string_lossy();
     let safe_key = key.trim_start_matches('/');
 
-    match read_file(&cache_dir_str, safe_key).await {
-        Ok(bytes) => Some(bytes),
-        Err(_) => None,
-    }
+    read_file(&cache_dir_str, safe_key).await.ok()
 }
 
 /// 将文件保存到本地应用数据目录，并保持路径结构
@@ -185,14 +187,14 @@ fn resolve_path_within_base(
         ));
     }
 
-    if let Ok(canonical_candidate) = candidate.canonicalize() {
-        if !canonical_candidate.starts_with(&base_canonical) {
-            return Err(format!(
-                "[ERR_PATH_OUTSIDE_BASE] Resolved path escapes base directory (base: {}, path: {})",
-                base_canonical.display(),
-                canonical_candidate.display()
-            ));
-        }
+    if let Ok(canonical_candidate) = candidate.canonicalize()
+        && !canonical_candidate.starts_with(&base_canonical)
+    {
+        return Err(format!(
+            "[ERR_PATH_OUTSIDE_BASE] Resolved path escapes base directory (base: {}, path: {})",
+            base_canonical.display(),
+            canonical_candidate.display()
+        ));
     }
 
     Ok(candidate)

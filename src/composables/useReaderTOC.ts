@@ -1,6 +1,10 @@
 import { ref, computed, watch } from 'vue'
 import type { BookMetadata, TocNode } from '../types'
 
+/**
+ * 提供目录搜索、过滤和展开状态。
+ * @param metadata - 当前图书元数据引用。
+ */
 export function useReaderTOC(metadata: { value: BookMetadata | null }) {
   const tocSearchText = ref('')
   const expandedKeys = ref<string[]>([])
@@ -36,7 +40,7 @@ export function useReaderTOC(metadata: { value: BookMetadata | null }) {
     return keys
   }
 
-  // Auto-expand all nodes when metadata or filter changes
+  // 元数据或过滤结果变化后自动展开所有可见目录节点。
   watch(
     [() => metadata.value, () => filteredToc.value],
     ([meta, filtered]) => {

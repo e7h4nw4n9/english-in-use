@@ -19,11 +19,14 @@ CREATE TABLE IF NOT EXISTS study_sessions (
     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
 );
 
+-- statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_study_sessions_book_start
     ON study_sessions (book_id, start_at);
 
+-- statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_study_sessions_resource_start
     ON study_sessions (resource_id, start_at);
 
+-- statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_study_sessions_start
     ON study_sessions (start_at);

@@ -1,5 +1,5 @@
-export type BookSourceType = 'Local' | 'CloudflareR2'
-export type DatabaseType = 'SQLite' | 'CloudflareD1'
+export type BookSourceType = 'Local' | 'CloudflareGateway'
+export type DatabaseType = 'SQLite' | 'CloudflareGateway'
 
 export interface LocalBookSource {
   type: 'Local'
@@ -8,18 +8,12 @@ export interface LocalBookSource {
   }
 }
 
-export interface CloudflareR2BookSource {
-  type: 'CloudflareR2'
-  details: {
-    account_id: string
-    bucket_name: string
-    access_key_id: string
-    secret_access_key: string
-    public_url?: string
-  }
+export interface CloudflareGatewayBookSource {
+  type: 'CloudflareGateway'
+  details: Record<string, never>
 }
 
-export type BookSource = LocalBookSource | CloudflareR2BookSource
+export type BookSource = LocalBookSource | CloudflareGatewayBookSource
 
 export interface SQLiteDatabase {
   type: 'SQLite'
@@ -28,16 +22,17 @@ export interface SQLiteDatabase {
   }
 }
 
-export interface CloudflareD1Database {
-  type: 'CloudflareD1'
-  details: {
-    account_id: string
-    database_id: string
-    api_token: string
-  }
+export interface CloudflareGatewayDatabase {
+  type: 'CloudflareGateway'
+  details: Record<string, never>
 }
 
-export type DatabaseConnection = SQLiteDatabase | CloudflareD1Database
+export type DatabaseConnection = SQLiteDatabase | CloudflareGatewayDatabase
+
+export interface CloudflareGatewayConfig {
+  base_url: string
+  access_token: string
+}
 
 export interface SystemConfig {
   language: string
@@ -53,6 +48,8 @@ export interface AppConfig {
   system: SystemConfig
   book_source: BookSource | null
   database: DatabaseConnection | null
+  cloudflare_gateway?: CloudflareGatewayConfig | null
+  gateway_configuration_required?: boolean
 }
 
 export type ServiceStatusType =
@@ -63,7 +60,7 @@ export type ServiceStatusType =
 
 export interface ConnectionStatus {
   r2: ServiceStatusType
-  d1: ServiceStatusType
+  database: ServiceStatusType
 }
 
 export interface AppInitProgress {
@@ -240,6 +237,8 @@ export interface SaveStudySessionPayload {
   startAt: string
   endAt: string
   duration: number
+  localDate: string
+  timezoneOffsetMinutes: number
 }
 
 export interface SaveStudySessionResponse {

@@ -3,6 +3,7 @@
 
 # 前端依赖文件
 node_modules
+.pnpm-store
 
 # 编译文件
 dist
@@ -14,9 +15,10 @@ AGENTS.md
 
 # 其他文件
 coverage
+src-tauri/lcov.info
 design-system
 scripts
-specs
+# specs
 todo.md
 
 # Tauri generated
@@ -25,3 +27,7 @@ src-tauri/gen
 # Secrets / cert material
 src-tauri/certs/*
 !src-tauri/certs/README.md
+
+# Cloudflare 本地部署配置与状态
+worker/wrangler.jsonc
+worker/.wrangler

@@ -16,13 +16,13 @@ impl From<i32> for BookGroup {
     }
 }
 
-impl Into<i32> for BookGroup {
-    fn into(self) -> i32 {
-        self as i32
+impl From<BookGroup> for i32 {
+    fn from(value: BookGroup) -> Self {
+        value as i32
     }
 }
 
-// Custom serialization to/from i32 for BookGroup
+// BookGroup 与数据库整数值之间的自定义序列化。
 impl Serialize for BookGroup {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

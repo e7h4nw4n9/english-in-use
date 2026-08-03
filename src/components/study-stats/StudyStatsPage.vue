@@ -32,6 +32,8 @@ const detailModalVisible = ref(false)
 const detailLoading = ref(false)
 const detailDate = ref('')
 const detailSessions = ref<StudySessionListItem[]>([])
+let statsRequestVersion = 0
+let detailRequestVersion = 0
 
 const periodOptions: StudyStatsPeriodType[] = ['week', 'month', 'year']
 
@@ -151,6 +153,7 @@ function resolveSeriesLabel(seriesKey: string): string {
   return t('studyStats.seriesOther')
 }
 
+/** 根据当前界面筛选项构造后端统计过滤条件。 */
 function buildFilters(): StudyStatsFilters | undefined {
   const filters: StudyStatsFilters = {}
 
@@ -169,32 +172,55 @@ function buildFilters(): StudyStatsFilters | undefined {
   return filters
 }
 
+/** 刷新当前周期和分页下的学习统计。 */
 async function refreshStats() {
+  const requestVersion = ++statsRequestVersion
   loading.value = true
   try {
-    stats.value = await getStudyStats(periodType.value, buildFilters(), page.value, pageSize.value)
+    const response = await getStudyStats(
+      periodType.value,
+      buildFilters(),
+      page.value,
+      pageSize.value,
+    )
+    if (requestVersion === statsRequestVersion) {
+      stats.value = response
+    }
   } catch (error) {
+    if (requestVersion !== statsRequestVersion) return
     const errorText = error instanceof Error ? error.message : String(error)
     message.error(t('studyStats.loadFailed', { error: errorText }))
   } finally {
-    loading.value = false
+    if (requestVersion === statsRequestVersion) {
+      loading.value = false
+    }
   }
 }
 
+/** 加载并展示趋势日期对应的会话明细。
+ * @param item - 被选择的趋势数据点。
+ */
 async function showDateDetails(item: StudyStatsTrendItem) {
   if (item.duration <= 0) return
   if (periodType.value === 'year') return // 年视图点击暂不展开详情，或未来可实现按月展开
 
+  const requestVersion = ++detailRequestVersion
   detailDate.value = item.date
   detailModalVisible.value = true
   detailLoading.value = true
   try {
-    detailSessions.value = await getStudySessionsByDate(item.date, buildFilters())
+    const sessions = await getStudySessionsByDate(item.date, buildFilters())
+    if (requestVersion === detailRequestVersion) {
+      detailSessions.value = sessions
+    }
   } catch (error) {
+    if (requestVersion !== detailRequestVersion) return
     message.error(String(error))
     detailModalVisible.value = false
   } finally {
-    detailLoading.value = false
+    if (requestVersion === detailRequestVersion) {
+      detailLoading.value = false
+    }
   }
 }
 

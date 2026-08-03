@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReadingProgress {
-    pub id: i32,
     pub book_id: i32,
     pub resource_id: Option<String>,
     pub page_label: Option<String>,
@@ -13,10 +12,13 @@ pub struct ReadingProgress {
 }
 
 impl ReadingProgress {
+    /// 将数据库 JSON 行转换为阅读进度模型。
+    ///
+    /// # 参数
+    /// - `value`：数据库返回的 JSON 值。
     pub fn from_json(value: serde_json::Value) -> Option<Self> {
         let obj = value.as_object()?;
 
-        let id = obj.get("id")?.as_i64()? as i32;
         let book_id = obj.get("book_id")?.as_i64()? as i32;
         let resource_id = obj
             .get("resource_id")
@@ -30,7 +32,6 @@ impl ReadingProgress {
         let updated_at = obj.get("updated_at")?.as_str()?.to_string();
 
         Some(Self {
-            id,
             book_id,
             resource_id,
             page_label,
@@ -50,7 +51,6 @@ mod tests {
     #[test]
     fn test_reading_progress_from_json() {
         let val = json!({
-            "id": 1,
             "book_id": 101,
             "resource_id": "RE_001",
             "page_label": "1",
@@ -61,7 +61,6 @@ mod tests {
         });
 
         let progress = ReadingProgress::from_json(val).unwrap();
-        assert_eq!(progress.id, 1);
         assert_eq!(progress.book_id, 101);
         assert_eq!(progress.resource_id, Some("RE_001".to_string()));
         assert_eq!(progress.scale, 1.5);

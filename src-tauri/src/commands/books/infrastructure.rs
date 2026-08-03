@@ -1,6 +1,6 @@
 use log::warn;
 use serde::Serialize;
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Runtime};
 use tokio::sync::Semaphore;
@@ -18,6 +18,59 @@ struct ExerciseDownloadProgressEvent {
     done: bool,
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct DownloadProgress<'a> {
+    product_code: &'a str,
+    resource_id: Option<&'a str>,
+    stage: &'a str,
+}
+
+impl<'a> DownloadProgress<'a> {
+    /// 创建练习资源下载进度上下文。
+    pub fn new(product_code: &'a str, resource_id: Option<&'a str>, stage: &'a str) -> Self {
+        Self {
+            product_code,
+            resource_id,
+            stage,
+        }
+    }
+
+    /// 计算并发送一次下载进度事件。
+    pub fn emit<R: Runtime>(
+        self,
+        app: &AppHandle<R>,
+        total_files: usize,
+        completed_files: usize,
+        failed_files: usize,
+        done: bool,
+    ) {
+        let percent = if total_files == 0 {
+            if done { 100.0 } else { 0.0 }
+        } else {
+            (completed_files as f64 / total_files as f64) * 100.0
+        };
+        emit_exercise_download_progress(
+            app,
+            ExerciseDownloadProgressEvent {
+                product_code: self.product_code.to_string(),
+                resource_id: self.resource_id.map(str::to_string),
+                stage: self.stage.to_string(),
+                total_files,
+                completed_files,
+                failed_files,
+                percent,
+                done,
+            },
+        );
+    }
+}
+
+pub(super) struct DownloadBatchOptions<'a> {
+    pub cache_container_path: PathBuf,
+    pub container_code: &'a str,
+    pub progress: Option<DownloadProgress<'a>>,
+}
+
 #[derive(Default)]
 pub(super) struct DownloadBatchStats {
     pub total_files: usize,
@@ -32,6 +85,28 @@ enum DownloadTaskResult {
     Skipped,
 }
 
+/// 将 R2 对象键转换为容器内的安全相对路径。
+fn safe_relative_object_path(key: &str, container_code: &str) -> Result<PathBuf, String> {
+    let prefix = format!("courses/{container_code}/");
+    let relative = key
+        .strip_prefix(&prefix)
+        .ok_or_else(|| format!("对象键不属于预期容器: {key}"))?;
+
+    if relative.is_empty() || relative.contains('\\') || relative.contains('\0') {
+        return Err(format!("对象键包含非法路径: {key}"));
+    }
+
+    let relative_path = Path::new(relative);
+    if relative_path
+        .components()
+        .any(|component| !matches!(component, Component::Normal(_)))
+    {
+        return Err(format!("对象键包含路径穿越片段: {key}"));
+    }
+
+    Ok(relative_path.to_path_buf())
+}
+
 fn emit_exercise_download_progress<R: Runtime>(
     app: &AppHandle<R>,
     payload: ExerciseDownloadProgressEvent,
@@ -41,130 +116,92 @@ fn emit_exercise_download_progress<R: Runtime>(
     }
 }
 
+/// 并发下载一批 R2 对象，并持续汇总下载结果和进度。
 pub(super) async fn download_r2_objects_concurrently<R: Runtime>(
     app: &AppHandle<R>,
-    client: &aws_sdk_s3::Client,
-    bucket_name: &str,
+    client: &crate::utils::gateway::GatewayClient,
     keys: Vec<String>,
-    cache_container_path: PathBuf,
-    container_code: &str,
-    product_code: &str,
-    resource_id: Option<&str>,
-    stage: &str,
-    emit_progress: bool,
+    options: DownloadBatchOptions<'_>,
 ) -> DownloadBatchStats {
     let max_concurrent_downloads = if cfg!(target_os = "ios") { 3 } else { 8 };
 
-    let mut pending_keys = Vec::new();
+    let mut pending_downloads = Vec::new();
     let mut skipped_existing = 0usize;
+    let mut rejected_keys = 0usize;
     let total_keys = keys.len();
 
     for key in keys {
-        let relative_part = key
-            .strip_prefix(&format!("courses/{}/", container_code))
-            .unwrap_or(&key);
-        let target_path = cache_container_path.join(relative_part);
-        if target_path.exists() {
+        let relative_path = match safe_relative_object_path(&key, options.container_code) {
+            Ok(path) => path,
+            Err(err) => {
+                rejected_keys += 1;
+                warn!("拒绝不安全的 R2 对象键: {}", err);
+                continue;
+            }
+        };
+        let target_path = options.cache_container_path.join(relative_path);
+        if crate::utils::cache::is_non_empty_file(&target_path).await {
             skipped_existing += 1;
         } else {
-            pending_keys.push(key);
+            pending_downloads.push((key, target_path));
         }
     }
 
     let mut stats = DownloadBatchStats {
         total_files: total_keys,
-        completed_files: skipped_existing,
+        completed_files: skipped_existing + rejected_keys,
         skipped_files: skipped_existing,
+        failed_files: rejected_keys,
         ..DownloadBatchStats::default()
     };
 
     if stats.total_files == 0 {
-        if emit_progress {
-            emit_exercise_download_progress(
+        if let Some(progress) = options.progress {
+            progress.emit(app, 0, 0, 0, true);
+        }
+        return stats;
+    }
+
+    if pending_downloads.is_empty() {
+        if let Some(progress) = options.progress {
+            progress.emit(
                 app,
-                ExerciseDownloadProgressEvent {
-                    product_code: product_code.to_string(),
-                    resource_id: resource_id.map(str::to_string),
-                    stage: stage.to_string(),
-                    total_files: 0,
-                    completed_files: 0,
-                    failed_files: 0,
-                    percent: 100.0,
-                    done: true,
-                },
+                stats.total_files,
+                stats.completed_files,
+                stats.failed_files,
+                true,
             );
         }
         return stats;
     }
 
-    if pending_keys.is_empty() {
-        if emit_progress {
-            emit_exercise_download_progress(
-                app,
-                ExerciseDownloadProgressEvent {
-                    product_code: product_code.to_string(),
-                    resource_id: resource_id.map(str::to_string),
-                    stage: stage.to_string(),
-                    total_files: stats.total_files,
-                    completed_files: stats.completed_files,
-                    failed_files: 0,
-                    percent: 100.0,
-                    done: true,
-                },
-            );
-        }
-        return stats;
-    }
-
-    if emit_progress {
-        let percent = (stats.completed_files as f64 / stats.total_files as f64) * 100.0;
-        emit_exercise_download_progress(
+    if let Some(progress) = options.progress {
+        progress.emit(
             app,
-            ExerciseDownloadProgressEvent {
-                product_code: product_code.to_string(),
-                resource_id: resource_id.map(str::to_string),
-                stage: stage.to_string(),
-                total_files: stats.total_files,
-                completed_files: stats.completed_files,
-                failed_files: 0,
-                percent,
-                done: false,
-            },
+            stats.total_files,
+            stats.completed_files,
+            stats.failed_files,
+            false,
         );
     }
 
     let semaphore = Arc::new(Semaphore::new(max_concurrent_downloads));
     let mut join_set = tokio::task::JoinSet::new();
 
-    for key in pending_keys {
+    for (key, target_path) in pending_downloads {
         let client = client.clone();
-        let bucket_name = bucket_name.to_string();
-        let cache_container_path = cache_container_path.clone();
-        let container_code = container_code.to_string();
         let semaphore = semaphore.clone();
 
         join_set.spawn(async move {
             let _permit = semaphore.acquire_owned().await.map_err(|e| e.to_string())?;
 
-            let relative_part = key
-                .strip_prefix(&format!("courses/{}/", container_code))
-                .unwrap_or(&key);
-            let target_path = cache_container_path.join(relative_part);
-
-            if target_path.exists() {
+            if crate::utils::cache::is_non_empty_file(&target_path).await {
                 return Ok::<DownloadTaskResult, String>(DownloadTaskResult::Skipped);
             }
 
-            let data = crate::utils::r2::get_object(&client, &bucket_name, &key)
+            crate::utils::r2::download_object_to_path(&client, &key, &target_path)
                 .await
                 .map_err(|e| format!("下载对象失败 (key: {}): {}", key, e))?;
-            if let Some(parent) = target_path.parent() {
-                std::fs::create_dir_all(parent)
-                    .map_err(|e| format!("创建下载目录失败 (path: {}): {}", parent.display(), e))?;
-            }
-            std::fs::write(&target_path, data).map_err(|e| {
-                format!("写入下载文件失败 (path: {}): {}", target_path.display(), e)
-            })?;
 
             Ok::<DownloadTaskResult, String>(DownloadTaskResult::Downloaded)
         });
@@ -190,23 +227,57 @@ pub(super) async fn download_r2_objects_concurrently<R: Runtime>(
             }
         }
 
-        if emit_progress {
-            let percent = (stats.completed_files as f64 / stats.total_files as f64) * 100.0;
-            emit_exercise_download_progress(
+        if let Some(progress) = options.progress {
+            progress.emit(
                 app,
-                ExerciseDownloadProgressEvent {
-                    product_code: product_code.to_string(),
-                    resource_id: resource_id.map(str::to_string),
-                    stage: stage.to_string(),
-                    total_files: stats.total_files,
-                    completed_files: stats.completed_files,
-                    failed_files: stats.failed_files,
-                    percent,
-                    done: stats.completed_files >= stats.total_files,
-                },
+                stats.total_files,
+                stats.completed_files,
+                stats.failed_files,
+                stats.completed_files >= stats.total_files,
             );
         }
     }
 
     stats
+}
+
+#[cfg(test)]
+mod tests {
+    use super::safe_relative_object_path;
+    use std::path::PathBuf;
+
+    #[test]
+    fn accepts_object_key_inside_expected_container() {
+        assert_eq!(
+            safe_relative_object_path("courses/container/books/book.json", "container").unwrap(),
+            PathBuf::from("books/book.json")
+        );
+    }
+
+    #[test]
+    fn rejects_path_traversal_and_foreign_prefixes() {
+        for key in [
+            "courses/container/../config.toml",
+            "courses/container/books\\..\\config.toml",
+            "/absolute/path",
+            "courses/other/book.json",
+        ] {
+            assert!(
+                safe_relative_object_path(key, "container").is_err(),
+                "{key}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn empty_file_is_not_treated_as_valid_cache() {
+        let directory = tempfile::tempdir().unwrap();
+        let empty_file = directory.path().join("empty.js");
+        let complete_file = directory.path().join("complete.js");
+        tokio::fs::write(&empty_file, []).await.unwrap();
+        tokio::fs::write(&complete_file, b"content").await.unwrap();
+
+        assert!(!crate::utils::cache::is_non_empty_file(&empty_file).await);
+        assert!(crate::utils::cache::is_non_empty_file(&complete_file).await);
+    }
 }

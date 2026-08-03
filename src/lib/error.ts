@@ -6,6 +6,10 @@ export interface ParsedCommandError {
 
 const CODE_PREFIX_REGEX = /^\[([A-Z0-9_]+)\]\s*(.*)$/
 
+/**
+ * 从 Tauri 命令错误中提取稳定错误码和可读消息。
+ * @param error - 未知来源的命令错误。
+ */
 export function parseCommandError(error: unknown): ParsedCommandError {
   const raw = error instanceof Error ? error.message : String(error ?? '')
   const match = raw.match(CODE_PREFIX_REGEX)
@@ -25,6 +29,10 @@ export function parseCommandError(error: unknown): ParsedCommandError {
   }
 }
 
+/**
+ * 返回适合直接展示给用户的命令错误文本。
+ * @param error - 未知来源的命令错误。
+ */
 export function getReadableCommandError(error: unknown): string {
   const parsed = parseCommandError(error)
 

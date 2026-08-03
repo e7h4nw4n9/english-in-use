@@ -1,6 +1,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 import { saveStudySession } from '@/lib/api/studyTimer'
 import type { SaveStudySessionPayload, StudySessionUnitRef } from '@/types'
+import { formatLocalDate } from '@/lib/datetime'
 
 export type StudyTimerStatus = 'idle' | 'running' | 'paused'
 
@@ -20,6 +21,10 @@ interface UseStudyTimerOptions {
   autoStart: Ref<boolean>
 }
 
+/** 将当前资源信息规范化为可保存的计时单元。
+ * @param resourceId - 当前资源标识。
+ * @param unitName - 当前单元名称。
+ */
 function toTimerUnit(resourceId: string | null, unitName: string): StudySessionUnitRef | null {
   const normalizedResourceId = resourceId?.trim() || ''
   if (!normalizedResourceId) return null
@@ -39,6 +44,10 @@ function formatHms(totalSeconds: number): string {
   return [hours, minutes, seconds].map((part) => String(part).padStart(2, '0')).join(':')
 }
 
+/**
+ * 管理学习计时器生命周期、单元轨迹和会话保存。
+ * @param options - 图书、当前单元和自动开始的响应式状态。
+ */
 export function useStudyTimer({
   productCode,
   currentResourceId,
@@ -109,6 +118,7 @@ export function useStudyTimer({
     trackedUnit.value = unit
   }
 
+  /** 从阅读器入口单元开始一次新的计时会话。 */
   function start(): boolean {
     if (status.value !== 'idle') return false
     const code = productCode.value?.trim() || ''
@@ -135,6 +145,7 @@ export function useStudyTimer({
     return true
   }
 
+  /** 冻结当前已用时间并进入暂停状态。 */
   function pause(): boolean {
     if (status.value !== 'running' || runningSinceMs.value === null) return false
 
@@ -146,6 +157,7 @@ export function useStudyTimer({
     return true
   }
 
+  /** 从暂停状态继续累计当前会话时间。 */
   function resume(): boolean {
     if (status.value !== 'paused') return false
     runningSinceMs.value = Date.now()
@@ -155,6 +167,9 @@ export function useStudyTimer({
     return true
   }
 
+  /** 清空当前会话状态。
+   * @param keepAutoStartConsumed - 是否保留自动开始已消费标记。
+   */
   function reset(keepAutoStartConsumed = true) {
     status.value = 'idle'
     sessionStartMs.value = null
@@ -176,6 +191,7 @@ export function useStudyTimer({
     return start()
   }
 
+  /** 生成停止确认和持久化共用的不可变会话快照。 */
   function buildStopContext(): StudyTimerStopContext | null {
     if (!hasActiveSession.value) return null
 
@@ -205,6 +221,10 @@ export function useStudyTimer({
     }
   }
 
+  /** 将停止快照保存到用户确认的归属单元。
+   * @param context - 停止时捕获的会话快照。
+   * @param assignedUnit - 会话最终归属单元。
+   */
   async function saveWithAssignedUnit(
     context: StudyTimerStopContext,
     assignedUnit: StudySessionUnitRef,
@@ -219,6 +239,8 @@ export function useStudyTimer({
       startAt: context.startAt,
       endAt: context.endAt,
       duration: context.duration,
+      localDate: formatLocalDate(new Date(context.endAt)),
+      timezoneOffsetMinutes: -new Date(context.endAt).getTimezoneOffset(),
     }
     await saveStudySession(payload)
     reset(true)
@@ -228,6 +250,7 @@ export function useStudyTimer({
     reset(true)
   }
 
+  /** 页面进入后台时自动暂停，返回前台时恢复自动暂停的会话。 */
   function handleVisibilityChange() {
     if (!document.hidden) return
     if (status.value !== 'running') return

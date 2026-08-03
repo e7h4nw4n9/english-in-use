@@ -138,6 +138,10 @@ function findBestAudioNodeForPage(
   return found
 }
 
+/**
+ * 根据当前页面解析目录路径、学习计划锚点和匹配音频。
+ * @param options - 元数据、页面标签、视图模式和回退标题引用。
+ */
 export function useReaderTocContext({
   metadata,
   currentPageLabel,

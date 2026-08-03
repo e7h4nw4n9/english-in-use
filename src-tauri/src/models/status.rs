@@ -12,5 +12,5 @@ pub enum ServiceStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectionStatus {
     pub r2: ServiceStatus,
-    pub d1: ServiceStatus,
+    pub database: ServiceStatus,
 }

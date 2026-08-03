@@ -30,7 +30,7 @@ describe('createExerciseBridge', () => {
     const iframe = document.createElement('iframe')
     Object.defineProperty(iframe, 'contentWindow', {
       configurable: true,
-      value: window,
+      value: source,
     })
 
     const detach = createExerciseBridge({
@@ -67,7 +67,7 @@ describe('createExerciseBridge', () => {
     detach()
   })
 
-  it('accepts opaque-origin hello handshake when source identity mismatches', () => {
+  it('rejects opaque-origin messages when source identity mismatches', () => {
     const postMessageSpy = vi.spyOn(window, 'postMessage').mockImplementation(() => {})
     const onLog = vi.fn()
 
@@ -84,6 +84,7 @@ describe('createExerciseBridge', () => {
       }),
       onLog,
     })
+    onLog.mockClear()
 
     window.dispatchEvent(
       new MessageEvent('message', {
@@ -96,19 +97,8 @@ describe('createExerciseBridge', () => {
       }),
     )
 
-    expect(postMessageSpy).toHaveBeenCalled()
-    const [payload] = postMessageSpy.mock.calls[0] ?? []
-    expect(payload).toMatchObject({
-      type: 'hello-ack',
-      id: 'hello-1',
-    })
-    expect(onLog).toHaveBeenCalledWith(
-      'bridge: accepting opaque-origin handshake fallback',
-      expect.objectContaining({
-        origin: 'null',
-        type: 'hello',
-      }),
-    )
+    expect(postMessageSpy).not.toHaveBeenCalled()
+    expect(onLog).not.toHaveBeenCalled()
 
     detach()
     postMessageSpy.mockRestore()

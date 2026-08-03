@@ -35,7 +35,7 @@ const emit = defineEmits<{
   (e: 'update:checkIntervalMins', value: number): void
 }>()
 
-// Dev migration features
+// 开发环境数据库迁移功能。
 const isDev = import.meta.env.DEV
 const currentVersion = ref<string>('')
 const availableVersions = ref<string[]>([])
@@ -155,7 +155,7 @@ onMounted(() => {
         />
       </a-form-item>
 
-      <!-- Dev Migration Section -->
+      <!-- 开发环境迁移区域 -->
       <template v-if="isDev">
         <a-divider />
         <h3 class="section-title">{{ t('config.dbMigration') }}</h3>

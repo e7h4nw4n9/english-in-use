@@ -3,7 +3,7 @@ import { message as antMessage } from 'ant-design-vue'
 import type { Ref } from 'vue'
 import { getExerciseHtml } from '@/lib/api/books'
 import { getReadableCommandError } from '@/lib/error'
-import { extractExerciseRuntimePaths, prepareExerciseHtml } from '@/lib/exercise/runtime'
+import { extractExerciseRuntimePaths } from '@/lib/exercise/runtime'
 import type { Book, ExerciseDownloadProgressEvent, ExerciseInfo } from '@/types'
 
 interface ExerciseAppStore {
@@ -25,6 +25,10 @@ interface UseReaderExerciseLoaderOptions {
   t: (key: string) => string
 }
 
+/**
+ * 协调练习依赖下载、HTML 加载、进度展示和错误反馈。
+ * @param options - 当前图书、练习状态、全局加载状态和翻译函数。
+ */
 export function useReaderExerciseLoader({
   currentBook,
   appStore,
@@ -52,6 +56,7 @@ export function useReaderExerciseLoader({
             }
           })()}`
     const line = `[ExerciseLoader] ${message}${payloadText}`
+    if (import.meta.env.MODE === 'test') return
 
     try {
       const logger = await import('@tauri-apps/plugin-log')
@@ -132,17 +137,16 @@ export function useReaderExerciseLoader({
         url: res.url,
         preview: res.html.slice(0, 160),
       })
-      const prepared = prepareExerciseHtml(res.html)
-      const runtimePaths = extractExerciseRuntimePaths(prepared.html)
-      void logExerciseEvent('info', 'html prepared', {
+      const runtimePaths = extractExerciseRuntimePaths(res.html)
+      void logExerciseEvent('info', 'html ready', {
         resourceId: exercise.resource_id,
-        length: prepared.html.length,
+        length: res.html.length,
         hasEnginePath: Boolean(runtimePaths.engine),
         hasDpPath: Boolean(runtimePaths.dp),
         enginePathPrefix: runtimePaths.engine ? runtimePaths.engine.slice(0, 80) : '',
       })
 
-      currentExerciseHtml.value = prepared.html
+      currentExerciseHtml.value = res.html
       currentExerciseUrl.value = res.url
       currentExerciseTitle.value = exercise.name
       currentExerciseResourceId.value = exercise.resource_id

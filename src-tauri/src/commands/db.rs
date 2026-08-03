@@ -1,4 +1,4 @@
-use crate::models::DatabaseConnection;
+use crate::models::{CloudflareGatewayConfig, DatabaseConnection};
 use log::{error, info};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -65,6 +65,7 @@ fn resolve_sqlite_path_internal(path: &Path) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
+/// 返回应用默认 SQLite 数据库文件路径。
 pub fn get_default_sqlite_path() -> Result<String, String> {
     info!("正在获取默认 SQLite 路径");
     let path = crate::utils::local::get_app_data_dir()?.join("english-in-use.db");
@@ -72,6 +73,10 @@ pub fn get_default_sqlite_path() -> Result<String, String> {
 }
 
 #[tauri::command]
+/// 将用户选择的目录或文件解析为实际 SQLite 文件路径。
+///
+/// # 参数
+/// - `path`：目标文件或目录路径。
 pub fn resolve_sqlite_path(path: String) -> Result<String, String> {
     let path_buf = resolve_file_path(&path)?;
     let resolved = resolve_sqlite_path_internal(&path_buf)?;
@@ -79,6 +84,10 @@ pub fn resolve_sqlite_path(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+/// 初始化当前配置的数据库并执行必要迁移。
+///
+/// # 参数
+/// - `app`：Tauri 应用句柄。
 pub async fn initialize_database(app: AppHandle) -> Result<bool, String> {
     info!("正在通过命令初始化数据库...");
     crate::services::db_init::init_database(&app).await
@@ -86,7 +95,14 @@ pub async fn initialize_database(app: AppHandle) -> Result<bool, String> {
 
 #[tauri::command]
 
-pub async fn test_database_connection(connection: DatabaseConnection) -> Result<String, String> {
+/// 检查给定数据库连接配置是否可用。
+///
+/// # 参数
+/// - `connection`：数据库连接配置。
+pub async fn test_database_connection(
+    connection: DatabaseConnection,
+    gateway: Option<CloudflareGatewayConfig>,
+) -> Result<String, String> {
     info!("正在测试数据库连接...");
 
     use crate::models::ServiceStatus;
@@ -94,7 +110,7 @@ pub async fn test_database_connection(connection: DatabaseConnection) -> Result<
 
     let status = timeout(
         Duration::from_secs(DB_CHECK_TIMEOUT_SECS),
-        crate::database::check_status(&connection),
+        crate::database::check_status(&connection, gateway.as_ref()),
     )
     .await
     .map_err(|_| {
@@ -124,55 +140,69 @@ pub async fn test_database_connection(connection: DatabaseConnection) -> Result<
 }
 
 #[tauri::command]
+/// 返回所有内置数据库迁移版本。
 pub async fn get_migration_versions() -> Result<Vec<String>, String> {
     use crate::database::migrations::MIGRATIONS;
     Ok(MIGRATIONS.iter().map(|m| m.version.to_string()).collect())
 }
 
 #[tauri::command]
+/// 读取当前数据库记录的应用版本。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
 pub async fn get_current_db_version(
     state: State<'_, crate::database::DbState>,
 ) -> Result<String, String> {
-    let db_guard = state.db.read().await;
-    if let Some(db) = db_guard.as_ref() {
-        db.get_version().await.map_err(|e| e.to_string())
-    } else {
-        Err("Database not initialized".to_string())
-    }
+    state
+        .get()
+        .await?
+        .get_version()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
+/// 将当前数据库升级到指定版本或最新版本。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
+/// - `book_cache`：书籍列表缓存状态。
+/// - `target_version`：目标迁移版本；为空时使用默认目标。
 pub async fn execute_migration_up(
     state: State<'_, crate::database::DbState>,
+    book_cache: State<'_, crate::commands::books::BookCacheState>,
     target_version: Option<String>,
 ) -> Result<(), String> {
-    let db_guard = state.db.read().await;
-    if let Some(db) = db_guard.as_ref() {
-        crate::database::migrate_up(db.as_ref(), target_version.as_deref())
-            .await
-            .map_err(|e| e.to_string())?;
+    let db = state.get().await?;
+    crate::database::migrate_up(db.as_ref(), target_version.as_deref())
+        .await
+        .map_err(|e| e.to_string())?;
 
-        // 迁移成功后确保标记为已初始化
-        let _ = crate::services::db_init::mark_as_initialized();
-        Ok(())
-    } else {
-        Err("Database not initialized".to_string())
-    }
+    // 迁移成功后确保标记为已初始化
+    let _ = crate::services::db_init::mark_as_initialized();
+    book_cache.cache.invalidate_all();
+    Ok(())
 }
 
 #[tauri::command]
+/// 将当前数据库降级到指定版本或前一版本。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
+/// - `book_cache`：书籍列表缓存状态。
+/// - `target_version`：目标迁移版本；为空时使用默认目标。
 pub async fn execute_migration_down(
     state: State<'_, crate::database::DbState>,
+    book_cache: State<'_, crate::commands::books::BookCacheState>,
     target_version: Option<String>,
 ) -> Result<(), String> {
-    let db_guard = state.db.read().await;
-    if let Some(db) = db_guard.as_ref() {
-        crate::database::migrate_down(db.as_ref(), target_version.as_deref())
-            .await
-            .map_err(|e| e.to_string())
-    } else {
-        Err("Database not initialized".to_string())
-    }
+    let db = state.get().await?;
+    crate::database::migrate_down(db.as_ref(), target_version.as_deref())
+        .await
+        .map_err(|e| e.to_string())?;
+    book_cache.cache.invalidate_all();
+    Ok(())
 }
 
 #[cfg(test)]
@@ -186,20 +216,16 @@ mod tests {
         let path = file.path().to_str().unwrap().to_string();
 
         let conn = DatabaseConnection::SQLite { path };
-        let result = test_database_connection(conn).await;
+        let result = test_database_connection(conn, None).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Connection successful");
     }
 
     #[tokio::test]
     async fn test_database_connection_d1_failure() {
-        let conn = DatabaseConnection::CloudflareD1 {
-            account_id: "".to_string(),
-            database_id: "".to_string(),
-            api_token: "".to_string(),
-        };
+        let conn = DatabaseConnection::CloudflareGateway {};
         // This should fail because empty strings are invalid for D1 client creation
-        let result = test_database_connection(conn).await;
+        let result = test_database_connection(conn, None).await;
         assert!(result.is_err());
     }
 

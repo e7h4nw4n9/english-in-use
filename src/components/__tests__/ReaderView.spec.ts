@@ -161,6 +161,7 @@ describe('ReaderView', () => {
       },
     })
 
+    await flushPromises()
     const readerStore = useReaderStore()
     expect(readerStore.currentPageLabel).toBe('12')
   })

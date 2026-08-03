@@ -15,12 +15,14 @@ CREATE TABLE IF NOT EXISTS study_plan_units (
     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
 );
 
+-- statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_study_plan_units_book_status
     ON study_plan_units (book_id, plan_status);
 
 -- Table Name: study_tasks
 -- Comment: 学习任务明细（每个计划固定7阶段）
 
+-- statement-breakpoint
 CREATE TABLE IF NOT EXISTS study_tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_unit_id INTEGER NOT NULL,
@@ -36,8 +38,10 @@ CREATE TABLE IF NOT EXISTS study_tasks (
     FOREIGN KEY (plan_unit_id) REFERENCES study_plan_units(id) ON DELETE CASCADE
 );
 
+-- statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_study_tasks_date_status
     ON study_tasks (scheduled_date, task_status);
 
+-- statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_study_tasks_plan_stage
     ON study_tasks (plan_unit_id, review_stage);

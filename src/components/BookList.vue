@@ -79,6 +79,8 @@ const loading = ref(true)
 const books = ref<Book[]>([])
 const covers = ref<Record<number, string>>({})
 const activeKeys = ref<number[]>([BookGroup.Vocabulary, BookGroup.Grammar])
+let fetchGeneration = 0
+let disposed = false
 
 const openBook = (book: Book) => {
   appStore.currentBook = book
@@ -94,12 +96,12 @@ const groupedBooks = computed(() => {
     groups[book.book_group].push(book)
   })
 
-  // Sort books within each group by sort_num
+  // 按 sort_num 对每个分组内的图书排序。
   Object.values(groups).forEach((groupBooks) => {
     groupBooks.sort((a, b) => a.sort_num - b.sort_num)
   })
 
-  // Convert to array and sort by group ID
+  // 转换为数组后按分组标识排序。
   return Object.keys(groups)
     .map((key) => ({
       id: parseInt(key) as BookGroup,
@@ -119,46 +121,70 @@ const getGroupName = (groupId: BookGroup) => {
   }
 }
 
+/** 推断封面资源的 MIME 类型。 */
+const getCoverMimeType = (coverPath: string) => {
+  const normalizedPath = coverPath.toLowerCase()
+  if (normalizedPath.endsWith('.png')) return 'image/png'
+  if (normalizedPath.endsWith('.webp')) return 'image/webp'
+  if (normalizedPath.endsWith('.svg')) return 'image/svg+xml'
+  return 'image/jpeg'
+}
+
+/** 使用固定数量的工作协程加载封面，避免一次创建过多请求。 */
+const loadCovers = async (items: Book[], generation: number) => {
+  let nextIndex = 0
+  const workerCount = Math.min(4, items.length)
+  const worker = async () => {
+    while (nextIndex < items.length) {
+      const book = items[nextIndex++]
+      if (!book.cover) continue
+      try {
+        const bytes = await getBookCover(book)
+        if (!bytes || bytes.length === 0) continue
+
+        const url = bytesToImageUrl(bytes, getCoverMimeType(book.cover))
+        if (disposed || generation !== fetchGeneration) {
+          URL.revokeObjectURL(url)
+          return
+        }
+        covers.value[book.id] = url
+      } catch (err) {
+        console.error(`Failed to load cover for book ${book.title}:`, err)
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, worker))
+}
+
+/** 加载书籍列表；封面在列表显示后于后台继续加载。 */
 const fetchBooks = async () => {
+  const generation = ++fetchGeneration
   loading.value = true
   try {
-    books.value = await getBooks()
-    // Load covers for each book
-    const coverPromises = books.value.map(async (book) => {
-      if (book.cover) {
-        try {
-          const bytes = await getBookCover(book)
-
-          if (!bytes || bytes.length === 0) return
-
-          // Determine mime type from extension
-          let mimeType = 'image/jpeg'
-          const coverLower = book.cover.toLowerCase()
-          if (coverLower.endsWith('.png')) mimeType = 'image/png'
-          else if (coverLower.endsWith('.webp')) mimeType = 'image/webp'
-          else if (coverLower.endsWith('.svg')) mimeType = 'image/svg+xml'
-
-          covers.value[book.id] = bytesToImageUrl(bytes, mimeType)
-        } catch (err) {
-          console.error(`Failed to load cover for book ${book.title}:`, err)
-        }
-      }
-    })
-
-    await Promise.all(coverPromises)
+    const loadedBooks = await getBooks()
+    if (disposed || generation !== fetchGeneration) return
+    books.value = loadedBooks
+    loading.value = false
+    void loadCovers(loadedBooks, generation)
   } catch (error) {
     console.error('Failed to fetch books:', error)
   } finally {
-    loading.value = false
+    if (!disposed && generation === fetchGeneration) {
+      loading.value = false
+    }
   }
 }
 
 onMounted(() => {
+  disposed = false
   fetchBooks()
 })
 
 onUnmounted(() => {
-  // Clean up object URLs to prevent memory leaks
+  disposed = true
+  fetchGeneration++
+  // 释放对象 URL，避免封面缓存造成内存泄漏。
   Object.values(covers.value).forEach((url) => {
     URL.revokeObjectURL(url)
   })

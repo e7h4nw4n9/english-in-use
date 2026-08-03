@@ -2,18 +2,16 @@
 import { useI18n } from 'vue-i18n'
 import { FolderOpenOutlined } from '@ant-design/icons-vue'
 import type { BookSourceType } from '../../types'
+import CloudflareGatewaySettings from './CloudflareGatewaySettings.vue'
 
 const { t } = useI18n()
 
 interface Props {
   sourceType: BookSourceType
   localBookPath: string
-  r2Config: {
-    account_id: string
-    bucket_name: string
-    access_key_id: string
-    secret_access_key: string
-    public_url: string
+  gatewayConfig: {
+    base_url: string
+    access_token: string
   }
   isTesting: boolean
 }
@@ -43,7 +41,9 @@ const emit = defineEmits<{
           @update:value="emit('update:sourceType', $event)"
         >
           <a-radio-button value="Local">{{ t('config.localFolder') }}</a-radio-button>
-          <a-radio-button value="CloudflareR2">{{ t('config.cloudR2') }}</a-radio-button>
+          <a-radio-button value="CloudflareGateway">{{
+            t('config.cloudGateway' as any)
+          }}</a-radio-button>
         </a-radio-group>
       </a-form-item>
 
@@ -66,56 +66,11 @@ const emit = defineEmits<{
       </div>
 
       <div v-else>
-        <a-form-item :label="t('config.accountId')">
-          <a-input
-            v-model:value="r2Config.account_id"
-            autocomplete="off"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-          />
-        </a-form-item>
-        <a-form-item :label="t('config.bucketName')">
-          <a-input
-            v-model:value="r2Config.bucket_name"
-            autocomplete="off"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-          />
-        </a-form-item>
-        <a-form-item :label="t('config.accessKeyId')">
-          <a-input
-            v-model:value="r2Config.access_key_id"
-            autocomplete="off"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-          />
-        </a-form-item>
-        <a-form-item :label="t('config.secretAccessKey')">
-          <a-input-password
-            v-model:value="r2Config.secret_access_key"
-            autocomplete="off"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-          />
-        </a-form-item>
-        <a-form-item :label="t('config.publicUrl')">
-          <a-input
-            v-model:value="r2Config.public_url"
-            placeholder="https://..."
-            autocomplete="off"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-          />
-        </a-form-item>
+        <CloudflareGatewaySettings :gateway-config="gatewayConfig" />
       </div>
     </a-form>
 
-    <div v-if="sourceType === 'CloudflareR2'" class="form-footer-actions">
+    <div v-if="sourceType === 'CloudflareGateway'" class="form-footer-actions">
       <a-button @click="emit('test-connection')" :loading="isTesting">
         {{ t('config.testConnection') }}
       </a-button>

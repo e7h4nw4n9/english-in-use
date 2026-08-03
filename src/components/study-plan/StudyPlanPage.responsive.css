@@ -1,0 +1,64 @@
+@media (max-width: 1280px) {
+  .date-grid-month,
+  .date-grid-week,
+  .weekday-row {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .study-plan-page {
+    padding: 20px;
+  }
+
+  .date-cell {
+    min-height: 140px;
+    padding: 14px;
+  }
+
+  .date-number {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .study-plan-page {
+    padding: 12px;
+  }
+
+  .period-label {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .date-grid-month,
+  .date-grid-week {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .weekday-row {
+    display: none;
+  }
+
+  .date-cell {
+    min-height: 124px;
+    padding: 10px;
+  }
+
+  .date-number {
+    font-size: 16px;
+  }
+
+  .stat-item {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-btn,
+  .date-cell {
+    transition: none;
+  }
+}

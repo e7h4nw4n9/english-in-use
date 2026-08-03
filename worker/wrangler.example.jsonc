@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "english-in-use-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-03",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "english-in-use",
+      "database_id": "替换为 D1 database_id",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BOOKS",
+      "bucket_name": "替换为 R2 bucket_name",
+    },
+  ],
+}

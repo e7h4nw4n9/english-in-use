@@ -199,7 +199,7 @@ function onMarkTaskDone(task: StudyTaskItem) {
   padding: 16px;
 }
 
-/* Series Collapse Styling */
+/* 系列折叠面板样式。 */
 :deep(.series-collapse) {
   background: transparent;
 }
@@ -272,7 +272,7 @@ function onMarkTaskDone(task: StudyTaskItem) {
   font-weight: 800;
 }
 
-/* Book Collapse Styling */
+/* 图书折叠面板样式。 */
 .series-content {
   min-width: 0;
   padding: 0 8px 8px;
@@ -336,7 +336,7 @@ function onMarkTaskDone(task: StudyTaskItem) {
   white-space: nowrap;
 }
 
-/* Task Card Styling */
+/* 任务卡片样式。 */
 .task-list {
   display: flex;
   flex-direction: column;
@@ -446,7 +446,7 @@ function onMarkTaskDone(task: StudyTaskItem) {
   box-shadow: 0 2px 6px color-mix(in srgb, v-bind('token.colorPrimary') 20%, transparent);
 }
 
-/* Status Variants */
+/* 不同任务状态样式。 */
 .task-glass-card.is-done {
   opacity: 0.6;
   background: color-mix(in srgb, v-bind('token.colorSuccessBg') 15%, transparent);
@@ -456,7 +456,7 @@ function onMarkTaskDone(task: StudyTaskItem) {
   border-left: 3px solid v-bind('token.colorError');
 }
 
-/* Custom Expand Icon */
+/* 自定义展开图标。 */
 .custom-expand-icon {
   display: flex;
   align-items: center;
@@ -475,7 +475,7 @@ function onMarkTaskDone(task: StudyTaskItem) {
   background: color-mix(in srgb, v-bind('token.colorPrimary') 10%, transparent);
 }
 
-/* Loading & Empty States */
+/* 加载和空状态样式。 */
 .loading-state {
   display: flex;
   flex-direction: column;

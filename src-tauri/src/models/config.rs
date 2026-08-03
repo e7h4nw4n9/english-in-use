@@ -3,29 +3,57 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(tag = "type", content = "details")]
 pub enum BookSource {
-    Local {
-        path: String,
-    },
-    CloudflareR2 {
-        account_id: String,
-        bucket_name: String,
-        access_key_id: String,
-        secret_access_key: String,
-        public_url: Option<String>,
-    },
+    Local { path: String },
+    CloudflareGateway {},
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(tag = "type", content = "details")]
 pub enum DatabaseConnection {
-    SQLite {
-        path: String,
-    },
-    CloudflareD1 {
-        account_id: String,
-        database_id: String,
-        api_token: String,
-    },
+    SQLite { path: String },
+    CloudflareGateway {},
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct CloudflareGatewayConfig {
+    pub base_url: String,
+    pub access_token: String,
+}
+
+impl CloudflareGatewayConfig {
+    /// 校验并规范化网关地址与访问令牌。
+    pub fn normalized(&self) -> Result<Self, String> {
+        let mut url = reqwest::Url::parse(self.base_url.trim())
+            .map_err(|error| format!("Cloudflare 网关地址无效: {error}"))?;
+        if !matches!(url.scheme(), "https" | "http") {
+            return Err("Cloudflare 网关仅支持 HTTP(S) 地址".to_string());
+        }
+        let is_loopback = url
+            .host_str()
+            .is_some_and(|host| matches!(host, "localhost" | "127.0.0.1" | "::1"));
+        if url.scheme() != "https" && !is_loopback {
+            return Err("Cloudflare 网关必须使用 HTTPS".to_string());
+        }
+        if !url.username().is_empty()
+            || url.password().is_some()
+            || url.query().is_some()
+            || url.fragment().is_some()
+        {
+            return Err("Cloudflare 网关地址不能包含用户信息、查询参数或片段".to_string());
+        }
+        if !url.path().ends_with('/') {
+            let normalized_path = format!("{}/", url.path());
+            url.set_path(&normalized_path);
+        }
+        let access_token = self.access_token.trim();
+        if access_token.is_empty() {
+            return Err("Cloudflare 网关访问令牌不能为空".to_string());
+        }
+        Ok(Self {
+            base_url: url.to_string(),
+            access_token: access_token.to_string(),
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -90,6 +118,10 @@ pub struct AppConfig {
     pub system: SystemConfig,
     pub book_source: Option<BookSource>,
     pub database: Option<DatabaseConnection>,
+    #[serde(default)]
+    pub cloudflare_gateway: Option<CloudflareGatewayConfig>,
+    #[serde(default)]
+    pub gateway_configuration_required: bool,
 }
 
 impl PartialEq for AppConfig {
@@ -97,12 +129,82 @@ impl PartialEq for AppConfig {
         self.system == other.system
             && self.book_source == other.book_source
             && self.database == other.database
+            && self.cloudflare_gateway == other.cloudflare_gateway
+            && self.gateway_configuration_required == other.gateway_configuration_required
     }
 }
 
 impl AppConfig {
+    /// 创建默认配置。
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// 校验所有配置来源都必须满足的基础约束。
+    fn validate_common(&self) -> Result<(), String> {
+        if !matches!(self.system.language.as_str(), "en" | "zh") {
+            return Err(format!("不支持的语言: {}", self.system.language));
+        }
+        if !matches!(self.system.theme.as_str(), "system" | "light" | "dark") {
+            return Err(format!("不支持的主题: {}", self.system.theme));
+        }
+        if !matches!(
+            self.system.log_level.as_str(),
+            "error" | "warn" | "info" | "debug" | "trace"
+        ) {
+            return Err(format!("不支持的日志级别: {}", self.system.log_level));
+        }
+        if !(1..=1440).contains(&self.system.check_interval_mins) {
+            return Err("自动检查间隔必须在 1 到 1440 分钟之间".to_string());
+        }
+
+        if let Some(BookSource::Local { path }) = &self.book_source
+            && path.trim().is_empty()
+        {
+            return Err("本地图书目录不能为空".to_string());
+        }
+
+        if let Some(DatabaseConnection::SQLite { path }) = &self.database
+            && path.trim().is_empty()
+        {
+            return Err("SQLite 路径不能为空".to_string());
+        }
+
+        Ok(())
+    }
+
+    /// 加载配置时只校验不会阻止旧版云配置迁移的公共字段。
+    pub(crate) fn validate_common_for_load(&self) -> Result<(), String> {
+        self.validate_common()
+    }
+
+    /// 校验即将投入运行的完整配置。
+    pub fn validate(&self) -> Result<(), String> {
+        self.validate_common()?;
+        let uses_gateway = matches!(self.book_source, Some(BookSource::CloudflareGateway { .. }))
+            || matches!(
+                self.database,
+                Some(DatabaseConnection::CloudflareGateway { .. })
+            );
+        if uses_gateway {
+            let gateway = self
+                .cloudflare_gateway
+                .as_ref()
+                .ok_or_else(|| "需要配置 Cloudflare 网关".to_string())?;
+            gateway.normalized()?;
+        }
+        Ok(())
+    }
+
+    /// 校验导入配置；允许凭据被成对脱敏，保存前仍会执行完整校验。
+    pub fn validate_import(&self) -> Result<(), String> {
+        self.validate_common()?;
+        if let Some(gateway) = &self.cloudflare_gateway
+            && gateway.base_url.trim().is_empty()
+        {
+            return Err("Cloudflare 网关地址不能为空".to_string());
+        }
+        Ok(())
     }
 }
 
@@ -160,5 +262,25 @@ mod tests {
         assert!(!config.system.enable_debug_tools);
         assert_eq!(config.system.check_interval_mins, 5);
         assert!(!config.system.auto_start_study_timer);
+    }
+
+    #[test]
+    fn test_validation_rejects_zero_check_interval() {
+        let mut config = AppConfig::new();
+        config.system.check_interval_mins = 0;
+
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn test_validation_rejects_incomplete_remote_config() {
+        let mut config = AppConfig::new();
+        config.database = Some(DatabaseConnection::CloudflareGateway {});
+        config.cloudflare_gateway = Some(CloudflareGatewayConfig {
+            base_url: "https://gateway.example.com".to_string(),
+            access_token: String::new(),
+        });
+
+        assert!(config.validate().is_err());
     }
 }

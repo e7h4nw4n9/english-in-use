@@ -7,11 +7,12 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { notification } from 'ant-design-vue'
 import i18n from '../i18n'
 
+/** 应用配置、连接状态和全局加载状态存储。 */
 export const useAppStore = defineStore('app', () => {
   const config = ref<AppConfig | null>(null)
   const connectionStatus = ref<ConnectionStatus>({
     r2: { status: 'NotConfigured' },
-    d1: { status: 'NotConfigured' },
+    database: { status: 'NotConfigured' },
   })
   const isLoading = ref(true)
   const loadingMessage = ref('')
@@ -30,29 +31,36 @@ export const useAppStore = defineStore('app', () => {
   const isConfigValid = computed(() => {
     if (!config.value) return false
 
-    // Check book source
+    // 检查图书来源连接。
     const bs = config.value.book_source
     if (!bs) return false
     if (bs.type === 'Local') {
       if (!bs.details.path) return false
-    } else if (bs.type === 'CloudflareR2') {
-      const d = bs.details
-      if (!d.account_id || !d.bucket_name || !d.access_key_id || !d.secret_access_key) return false
     }
 
-    // Check database
+    // 检查数据库连接。
     const db = config.value.database
     if (!db) return false
     if (db.type === 'SQLite') {
       if (!db.details.path) return false
-    } else if (db.type === 'CloudflareD1') {
-      const d = db.details
-      if (!d.account_id || !d.database_id || !d.api_token) return false
+    }
+
+    const usesGateway = bs.type === 'CloudflareGateway' || db.type === 'CloudflareGateway'
+    if (usesGateway) {
+      const gateway = config.value.cloudflare_gateway
+      if (
+        config.value.gateway_configuration_required ||
+        !gateway?.base_url ||
+        !gateway.access_token
+      ) {
+        return false
+      }
     }
 
     return true
   })
 
+  /** 加载配置、初始化数据库并启动连接监控。 */
   async function initApp() {
     isLoading.value = true
     loadingMessage.value = i18n.global.t('app.loading')
@@ -63,7 +71,7 @@ export const useAppStore = defineStore('app', () => {
         const newStatus = event.payload
         const oldStatus = connectionStatus.value
 
-        // Error notifications
+        // 显示初始化失败通知。
         if (newStatus.r2.status === 'Disconnected' && oldStatus.r2.status !== 'Disconnected') {
           notification.error({
             message: i18n.global.t('footer.connectionError'),
@@ -72,10 +80,13 @@ export const useAppStore = defineStore('app', () => {
           })
         }
 
-        if (newStatus.d1.status === 'Disconnected' && oldStatus.d1.status !== 'Disconnected') {
+        if (
+          newStatus.database.status === 'Disconnected' &&
+          oldStatus.database.status !== 'Disconnected'
+        ) {
           notification.error({
             message: i18n.global.t('footer.connectionError'),
-            description: `D1: ${sanitizeErrorMessage(newStatus.d1.message)}`,
+            description: `Database: ${sanitizeErrorMessage(newStatus.database.message)}`,
             placement: 'bottomRight',
           })
         }
@@ -95,15 +106,7 @@ export const useAppStore = defineStore('app', () => {
         const didMigrate = await initializeDatabase()
         info(`数据库初始化完成，是否执行迁移: ${didMigrate}`)
 
-        // If using Cloudflare D1 and migration ran, wait a couple of seconds
-        // for the database to be fully ready on the network
-        if (didMigrate && config.value?.database?.type === 'CloudflareD1') {
-          debug('检测到 Cloudflare D1 迁移执行，等待 2 秒以确保连接就绪...')
-          loadingMessage.value = i18n.global.t('config.waitingForDatabase')
-          await new Promise((resolve) => setTimeout(resolve, 2000))
-        }
-
-        // Initial status check
+        // 执行首次连接状态检查。
         if (config.value.system.enable_auto_check) {
           updateConnectionStatus()
         }
@@ -115,6 +118,7 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  /** 主动刷新一次远程服务和数据库连接状态。 */
   async function updateConnectionStatus() {
     try {
       const status = await checkConnectionStatus()
@@ -124,6 +128,7 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  /** 从后端重新加载配置并替换当前状态。 */
   async function refreshConfig() {
     try {
       config.value = await loadConfig()

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatIsoToLocalMinute } from '../datetime'
+import { formatIsoToLocalMinute, generateDateRange, generateMonthRange } from '../datetime'
 
 function localMinuteString(input: string): string {
   const date = new Date(input)
@@ -28,5 +28,31 @@ describe('formatIsoToLocalMinute', () => {
   it('falls back to original value when timestamp is invalid', () => {
     const invalid = 'invalid-timestamp'
     expect(formatIsoToLocalMinute(invalid)).toBe(invalid)
+  })
+})
+
+describe('generateDateRange', () => {
+  it('generates inclusive local date range', () => {
+    expect(generateDateRange('2026-03-01', '2026-03-03')).toEqual([
+      '2026-03-01',
+      '2026-03-02',
+      '2026-03-03',
+    ])
+  })
+
+  it('returns empty array for invalid or reverse range', () => {
+    expect(generateDateRange('2026-03-32', '2026-04-01')).toEqual([])
+    expect(generateDateRange('2026-04-03', '2026-04-01')).toEqual([])
+  })
+})
+
+describe('generateMonthRange', () => {
+  it('generates inclusive local month range', () => {
+    expect(generateMonthRange('2026-11-15', '2027-02-01')).toEqual([
+      '2026-11',
+      '2026-12',
+      '2027-01',
+      '2027-02',
+    ])
   })
 })

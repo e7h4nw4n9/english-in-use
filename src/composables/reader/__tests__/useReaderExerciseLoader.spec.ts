@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { listen } from '@tauri-apps/api/event'
 import { getExerciseHtml } from '@/lib/api/books'
-import { extractExerciseRuntimePaths, prepareExerciseHtml } from '@/lib/exercise/runtime'
+import { extractExerciseRuntimePaths } from '@/lib/exercise/runtime'
 import { useReaderExerciseLoader } from '../useReaderExerciseLoader'
 import type { Book } from '@/types'
 
@@ -15,7 +15,6 @@ vi.mock('@/lib/api/books', () => ({
 }))
 
 vi.mock('@/lib/exercise/runtime', () => ({
-  prepareExerciseHtml: vi.fn((html: string) => ({ html: `prepared:${html}` })),
   extractExerciseRuntimePaths: vi.fn(() => ({
     engine: 'eiuasset://localhost/tmp/engine/',
     dp: 'eiuasset://localhost/tmp/dp/',
@@ -94,9 +93,8 @@ describe('useReaderExerciseLoader', () => {
     await openExercise({ name: 'Practice 1', resource_id: 'RE_0001' })
 
     expect(getExerciseHtml).toHaveBeenCalledWith('essgiuebk', 'RE_0001')
-    expect(prepareExerciseHtml).toHaveBeenCalledWith('<html>exercise</html>')
-    expect(extractExerciseRuntimePaths).toHaveBeenCalledWith('prepared:<html>exercise</html>')
-    expect(currentExerciseHtml.value).toBe('prepared:<html>exercise</html>')
+    expect(extractExerciseRuntimePaths).toHaveBeenCalledWith('<html>exercise</html>')
+    expect(currentExerciseHtml.value).toBe('<html>exercise</html>')
     expect(currentExerciseTitle.value).toBe('Practice 1')
     expect(currentExerciseResourceId.value).toBe('RE_0001')
     expect(currentExerciseUrl.value).toBe('eiuasset://localhost/exercise.html')

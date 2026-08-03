@@ -23,10 +23,10 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' asset: eiuasset: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' asset: eiuasset: blob: https:; style-src 'self' 'unsafe-inline' asset: eiuasset: https:; img-src 'self' asset: eiuasset: blob: data: https:; connect-src 'self' asset: eiuasset: https:; frame-src 'self' asset: eiuasset: blob: https:;",
+      "csp": "default-src 'self' asset: eiuasset:; script-src 'self' 'unsafe-inline' 'unsafe-eval' asset: eiuasset: blob: https://*.avallain.net https://*.amazonaws.com; style-src 'self' 'unsafe-inline' asset: eiuasset: https://*.avallain.net https://*.amazonaws.com; img-src 'self' asset: eiuasset: blob: data: https://*.avallain.net https://*.amazonaws.com; media-src 'self' asset: eiuasset: blob: https://*.avallain.net https://*.amazonaws.com; connect-src 'self' asset: eiuasset: https://*.avallain.net https://*.amazonaws.com; frame-src 'self' asset: eiuasset: blob:;",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**", "$APPCACHE/**"]
+        "scope": ["$APPCACHE/**"]
       }
     }
   },

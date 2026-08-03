@@ -10,12 +10,10 @@
     "fs:allow-log-meta-recursive",
     "fs:scope-applog-index",
     "fs:scope-applog-recursive",
-    "opener:default",
     "log:default",
     "dialog:allow-open",
     "dialog:allow-save",
     "core:window:allow-start-dragging",
-    "window-state:default",
-    "fs:default"
+    "window-state:default"
   ]
 }

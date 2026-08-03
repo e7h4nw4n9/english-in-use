@@ -6,5 +6,7 @@ CREATE TABLE IF NOT EXISTS _app_meta (
 );
 
 -- Initial Data
+-- statement-breakpoint
 delete from _app_meta;
+-- statement-breakpoint
 INSERT INTO _app_meta (version) VALUES ('0.1.0');

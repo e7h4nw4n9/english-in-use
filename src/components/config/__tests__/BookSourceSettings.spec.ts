@@ -40,12 +40,9 @@ const commonStubs = {
 }
 
 describe('BookSourceSettings.vue', () => {
-  const r2Config = {
-    account_id: 'acc1',
-    bucket_name: 'buck1',
-    access_key_id: 'key1',
-    secret_access_key: 'sec1',
-    public_url: 'http://pub',
+  const gatewayConfig = {
+    base_url: 'https://gateway.example.com',
+    access_token: 'token',
   }
 
   it('renders local folder settings when sourceType is Local', () => {
@@ -53,7 +50,7 @@ describe('BookSourceSettings.vue', () => {
       props: {
         sourceType: 'Local',
         localBookPath: '/test/path',
-        r2Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
@@ -64,21 +61,21 @@ describe('BookSourceSettings.vue', () => {
     expect(wrapper.text()).toContain('config.folderPath')
   })
 
-  it('renders R2 settings when sourceType is CloudflareR2', () => {
+  it('renders gateway settings when sourceType is CloudflareGateway', () => {
     const wrapper = mount(BookSourceSettings, {
       props: {
-        sourceType: 'CloudflareR2',
+        sourceType: 'CloudflareGateway',
         localBookPath: '',
-        r2Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
     })
 
-    expect(wrapper.text()).toContain('config.accountId')
-    expect(wrapper.text()).toContain('config.bucketName')
+    expect(wrapper.text()).toContain('config.gatewayUrl')
+    expect(wrapper.text()).toContain('config.gatewayToken')
     const inputs = wrapper.findAll('input')
-    expect(inputs.length).toBeGreaterThan(3)
+    expect(inputs).toHaveLength(2)
   })
 
   it('emits update:sourceType when radio button is clicked', async () => {
@@ -86,19 +83,19 @@ describe('BookSourceSettings.vue', () => {
       props: {
         sourceType: 'Local',
         localBookPath: '',
-        r2Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
     })
 
-    const r2Button = wrapper
+    const gatewayButton = wrapper
       .findAll('.radio-button-stub')
-      .find((b) => b.text().includes('config.cloudR2'))
-    await r2Button?.trigger('click')
+      .find((b) => b.text().includes('config.cloudGateway'))
+    await gatewayButton?.trigger('click')
 
     expect(wrapper.emitted()).toHaveProperty('update:sourceType')
-    expect(wrapper.emitted()['update:sourceType'][0]).toEqual(['CloudflareR2'])
+    expect(wrapper.emitted()['update:sourceType'][0]).toEqual(['CloudflareGateway'])
   })
 
   it('emits select-folder when folder icon is clicked', async () => {
@@ -106,7 +103,7 @@ describe('BookSourceSettings.vue', () => {
       props: {
         sourceType: 'Local',
         localBookPath: '',
-        r2Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },

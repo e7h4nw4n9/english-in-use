@@ -73,7 +73,6 @@ const commonStubs = {
   'a-spin': { props: ['tip'], template: '<div class="a-spin-stub">{{tip}}</div>' },
   'a-progress': { props: ['percent'], template: '<div class="a-progress-stub">{{percent}}</div>' },
   AppHeader: { props: ['title'], template: '<div class="header-stub">{{title}}</div>' },
-  AppFooter: { template: '<div class="footer-stub" />' },
   ConfigPage: { template: '<div class="config-page-stub" />' },
   BookList: { template: '<div class="book-list-stub" />' },
   StudyStatsPage: { template: '<div class="study-stats-page-stub" />' },
@@ -126,7 +125,7 @@ describe('App Flow Integration', () => {
     ;(api.initializeDatabase as any).mockResolvedValue(false)
     ;(api.checkConnectionStatus as any).mockResolvedValue({
       r2: { status: 'NotConfigured' },
-      d1: { status: 'Connected' },
+      database: { status: 'Connected' },
     })
 
     const wrapper = mount(App, {

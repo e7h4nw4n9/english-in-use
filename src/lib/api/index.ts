@@ -1,6 +1,5 @@
 export * from './config'
 export * from './database'
-export * from './system'
 export * from './books'
 export * from './studyPlan'
 export * from './studyTimer'

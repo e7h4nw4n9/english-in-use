@@ -1,20 +1,18 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { CloseOutlined, FullscreenExitOutlined, FullscreenOutlined } from '@ant-design/icons-vue'
 import { useReaderStore } from '../../stores/reader'
 import { useReaderExercise } from '../../composables/useReaderExercise'
-import { getPlatform } from '../../lib/api/system'
+import {
+  useExerciseDiagnostics,
+  type ExerciseDebugMeta,
+} from '../../composables/reader/useExerciseDiagnostics'
+import { useExerciseModalGeometry } from '../../composables/reader/useExerciseModalGeometry'
 import {
   extractExerciseRuntimePaths,
   type ExerciseRuntimeContext,
 } from '../../lib/exercise/runtime'
-
-interface ExerciseDebugMeta {
-  productCode?: string
-  pageLabel?: string
-  unitName?: string
-}
 
 const props = withDefaults(
   defineProps<{
@@ -36,42 +34,56 @@ const {
   currentExerciseResourceId,
 } = storeToRefs(readerStore)
 
-const currentPlatform = ref<string>('unknown')
 const iframeRef = ref<HTMLIFrameElement | null>(null)
-const logPanelRef = ref<HTMLElement | null>(null)
-const debugLogLines = ref<string[]>([])
-const isCopyingLogs = ref(false)
-
-const MAX_DEBUG_LOG_LINES = 220
-const MAX_DEBUG_PAYLOAD_CHARS = 1400
-const MAX_BACKEND_LOG_FILES = 2
-const MAX_BACKEND_LOG_CHARS_PER_FILE = 120_000
-const BACKEND_LOG_FALLBACK_NAMES = [
-  'app.log',
-  'app.log.1',
-  'app.log.2',
-  'app',
-  'app.txt',
-  'app-0.log',
-  'app-1.log',
-]
-
 const runtimePaths = computed(() => extractExerciseRuntimePaths(currentExerciseHtml.value))
 const showDebugPanel = computed(() => props.enableDebugPanel)
-const iframeSandbox = computed(() =>
-  showDebugPanel.value
-    ? undefined
-    : 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups',
+const iframeSandbox = computed(
+  () => 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups',
 )
-const debugPanelHeight = computed(() => (showDebugPanel.value ? (isPhone.value ? 150 : 190) : 0))
-const debugLogText = computed(() => debugLogLines.value.join('\n'))
 const activeExerciseSrc = computed(() => currentExerciseUrl.value || '')
-
+const debugMeta = computed(() => props.debugMeta)
 const contextRef = computed<ExerciseRuntimeContext>(() => ({
   resourceId: currentExerciseResourceId.value || currentExerciseTitle.value || 'exercise',
   title: currentExerciseTitle.value,
   paths: runtimePaths.value,
 }))
+
+const {
+  isPhone,
+  isMaximized,
+  modalWidth,
+  modalBodyHeight,
+  modalStyle,
+  canResize,
+  startDragging,
+  startResizing,
+  closeModal,
+  toggleMaximize,
+} = useExerciseModalGeometry(exerciseVisible)
+
+const {
+  logPanelRef,
+  debugLogLines,
+  debugLogText,
+  isCopyingLogs,
+  appendDebugLog,
+  clearDebugLogs,
+  copyDebugLogs,
+  handleIframeLoad,
+  handleIframeError,
+} = useExerciseDiagnostics({
+  showDebugPanel,
+  exerciseVisible,
+  iframeRef,
+  currentExerciseUrl,
+  currentExerciseHtml,
+  currentExerciseTitle,
+  currentExerciseResourceId,
+  activeExerciseSrc,
+  runtimePaths,
+  iframeSandbox,
+  debugMeta,
+})
 
 useReaderExercise({
   iframeRef,
@@ -82,641 +94,7 @@ useReaderExercise({
   },
 })
 
-function payloadToText(payload: unknown): string {
-  if (payload === undefined) return ''
-  try {
-    const serialized = JSON.stringify(payload)
-    if (serialized.length <= MAX_DEBUG_PAYLOAD_CHARS) {
-      return serialized
-    }
-    return `${serialized.slice(0, MAX_DEBUG_PAYLOAD_CHARS)}...<truncated>`
-  } catch {
-    const fallback = String(payload)
-    if (fallback.length <= MAX_DEBUG_PAYLOAD_CHARS) {
-      return fallback
-    }
-    return `${fallback.slice(0, MAX_DEBUG_PAYLOAD_CHARS)}...<truncated>`
-  }
-}
-
-function scrollLogPanelToBottom() {
-  if (!showDebugPanel.value) return
-  if (typeof window === 'undefined') return
-  window.requestAnimationFrame(() => {
-    if (!logPanelRef.value) return
-    logPanelRef.value.scrollTop = logPanelRef.value.scrollHeight
-  })
-}
-
-function appendDebugLog(level: 'info' | 'error', message: string, payload?: unknown) {
-  if (!showDebugPanel.value) return ''
-  const payloadText = payload === undefined ? '' : ` | payload=${payloadToText(payload)}`
-  const timestamp = new Date().toISOString()
-  const line = `[${timestamp}] [${level.toUpperCase()}] ${message}${payloadText}`
-  if (debugLogLines.value.length >= MAX_DEBUG_LOG_LINES) {
-    debugLogLines.value = [...debugLogLines.value.slice(-(MAX_DEBUG_LOG_LINES - 1)), line]
-  } else {
-    debugLogLines.value = [...debugLogLines.value, line]
-  }
-  scrollLogPanelToBottom()
-  return line
-}
-
-function clearDebugLogs() {
-  debugLogLines.value = []
-}
-
-async function readKnownBackendLogs(
-  readTextFile: (path: string, options: { baseDir: number }) => Promise<string>,
-  appLogBaseDir: number,
-) {
-  const sections: string[] = []
-  for (const name of BACKEND_LOG_FALLBACK_NAMES) {
-    try {
-      const fullText = await readTextFile(name, { baseDir: appLogBaseDir })
-      const text =
-        fullText.length <= MAX_BACKEND_LOG_CHARS_PER_FILE
-          ? fullText
-          : `...<truncated head>\n${fullText.slice(-MAX_BACKEND_LOG_CHARS_PER_FILE)}`
-      sections.push(
-        [
-          `backend_file: ${name}`,
-          `backend_file_chars: ${fullText.length}`,
-          'backend_file_content_begin',
-          text,
-          'backend_file_content_end',
-        ].join('\n'),
-      )
-    } catch {
-      // Ignore missing files in fallback probing.
-    }
-  }
-  return sections
-}
-
-async function buildBackendLogSection() {
-  try {
-    const [{ readDir, readTextFile, stat }, { BaseDirectory }] = await Promise.all([
-      import('@tauri-apps/plugin-fs'),
-      import('@tauri-apps/api/path'),
-    ])
-    let entries: Awaited<ReturnType<typeof readDir>> = []
-    try {
-      entries = await readDir('', { baseDir: BaseDirectory.AppLog })
-    } catch (error) {
-      const fallbackSections = await readKnownBackendLogs(readTextFile, BaseDirectory.AppLog)
-      if (fallbackSections.length > 0) {
-        return [
-          'backend_logs_note: readDir failed, used known file name fallback',
-          `backend_logs_note_error: ${String(error)}`,
-          '',
-          fallbackSections.join('\n\n'),
-        ].join('\n')
-      }
-      return `backend_logs_unavailable: ${String(error)}\n`
-    }
-
-    const candidates = entries.filter((entry) => entry.isFile && /^app(\.|-|$)/i.test(entry.name))
-    if (!candidates.length) {
-      const fallbackSections = await readKnownBackendLogs(readTextFile, BaseDirectory.AppLog)
-      if (fallbackSections.length > 0) {
-        return fallbackSections.join('\n\n')
-      }
-      return 'backend_logs: none (no app*.log files found)\n'
-    }
-
-    const withStats = await Promise.all(
-      candidates.map(async (entry) => {
-        try {
-          const info = await stat(entry.name, { baseDir: BaseDirectory.AppLog })
-          const mtime = info.mtime ? new Date(info.mtime).getTime() : 0
-          return { name: entry.name, mtime }
-        } catch {
-          return { name: entry.name, mtime: 0 }
-        }
-      }),
-    )
-
-    const sorted = withStats
-      .sort((a, b) => b.mtime - a.mtime || a.name.localeCompare(b.name))
-      .slice(0, MAX_BACKEND_LOG_FILES)
-
-    const sections: string[] = []
-    for (const item of sorted) {
-      try {
-        const fullText = await readTextFile(item.name, { baseDir: BaseDirectory.AppLog })
-        const text =
-          fullText.length <= MAX_BACKEND_LOG_CHARS_PER_FILE
-            ? fullText
-            : `...<truncated head>\n${fullText.slice(-MAX_BACKEND_LOG_CHARS_PER_FILE)}`
-        sections.push(
-          [
-            `backend_file: ${item.name}`,
-            `backend_file_chars: ${fullText.length}`,
-            'backend_file_content_begin',
-            text,
-            'backend_file_content_end',
-          ].join('\n'),
-        )
-      } catch (error) {
-        sections.push(
-          [`backend_file: ${item.name}`, `backend_file_error: ${String(error)}`].join('\n'),
-        )
-      }
-    }
-
-    return sections.join('\n\n')
-  } catch (error) {
-    return `backend_logs_unavailable: ${String(error)}\n`
-  }
-}
-
-async function copyDebugLogs() {
-  if (!showDebugPanel.value) return
-  if (isCopyingLogs.value) return
-  isCopyingLogs.value = true
-  void logModalEvent('info', 'debug log copy started')
-
-  try {
-    const backendLogSection = await buildBackendLogSection()
-    const copyText = [
-      '# exercise iframe debug copy',
-      `generated_at: ${new Date().toISOString()}`,
-      `product_code: ${props.debugMeta.productCode || ''}`,
-      `page_label: ${props.debugMeta.pageLabel || ''}`,
-      `unit_name: ${props.debugMeta.unitName || ''}`,
-      `resource_id: ${currentExerciseResourceId.value || ''}`,
-      `exercise_title: ${currentExerciseTitle.value || ''}`,
-      `active_src: ${activeExerciseSrc.value}`,
-      `user_agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : ''}`,
-      '',
-      '## frontend_log_lines',
-      debugLogText.value || '[no logs]',
-      '',
-      '## backend_log_files',
-      backendLogSection,
-      '',
-    ].join('\n')
-
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(copyText)
-      void logModalEvent('info', 'debug log copied to clipboard', {
-        chars: copyText.length,
-      })
-      return
-    }
-
-    void logModalEvent('error', 'debug log copy failed', {
-      reason: 'clipboard API unavailable',
-    })
-  } catch (error) {
-    void logModalEvent('error', 'debug log copy failed', {
-      error: String(error),
-    })
-  } finally {
-    isCopyingLogs.value = false
-  }
-}
-
-const logModalEvent = async (level: 'info' | 'error', message: string, payload?: unknown) => {
-  if (!showDebugPanel.value) return
-  const payloadText = payload === undefined ? '' : ` | payload=${payloadToText(payload)}`
-  const line = `[ExerciseModal] ${message}${payloadText}`
-  appendDebugLog(level, line)
-
-  try {
-    const logger = await import('@tauri-apps/plugin-log')
-    if (level === 'error') {
-      await logger.error(line)
-    } else {
-      await logger.info(line)
-    }
-  } catch {
-    if (level === 'error') {
-      console.error(line)
-    } else {
-      console.info(line)
-    }
-  }
-}
-
-function handleIframeLoad() {
-  void logModalEvent('info', 'iframe load event triggered')
-}
-
-function handleIframeError() {
-  void logModalEvent('error', 'iframe error', {
-    hasUrlSrc: Boolean(currentExerciseUrl.value),
-  })
-}
-
-function isFromExerciseIframe(source: MessageEventSource | null): boolean {
-  return Boolean(iframeRef.value?.contentWindow && source === iframeRef.value.contentWindow)
-}
-
-function handleWindowMessage(event: MessageEvent) {
-  if (!showDebugPanel.value) return
-  if (!exerciseVisible.value) return
-
-  // Try to parse message regardless of strict source check if it looks like our log type
-  let parsedData: any = null
-  try {
-    parsedData = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
-  } catch (e) {}
-
-  if (!isFromExerciseIframe(event.source)) {
-    // If it's a runtime log but source check failed (can happen in some WebView versions),
-    // allow it if the shape matches
-    if (parsedData?.type === 'eiu-exercise-runtime-log') {
-      const level = typeof parsedData.level === 'string' ? parsedData.level : 'info'
-      void logModalEvent(level as any, `bridge: iframe ${level}`, parsedData.payload)
-    }
-    return
-  }
-
-  const data = parsedData || event.data
-  const payload =
-    typeof data === 'string'
-      ? {
-          type: 'string',
-          preview: data.slice(0, 180),
-        }
-      : data && typeof data === 'object'
-        ? {
-            type: String((data as Record<string, unknown>).type || 'object'),
-            keys: Object.keys(data as Record<string, unknown>).slice(0, 10),
-          }
-        : {
-            type: typeof data,
-            preview: String(data),
-          }
-
-  void logModalEvent('info', 'iframe window message', {
-    origin: event.origin || '',
-    ...payload,
-  })
-}
-
-function handleWindowError(event: ErrorEvent) {
-  if (!showDebugPanel.value) return
-  if (!exerciseVisible.value) return
-  void logModalEvent('error', 'window error while exercise visible', {
-    message: event.message,
-    filename: event.filename,
-    lineno: event.lineno,
-    colno: event.colno,
-  })
-}
-
-function handleWindowUnhandledRejection(event: PromiseRejectionEvent) {
-  if (!showDebugPanel.value) return
-  if (!exerciseVisible.value) return
-  void logModalEvent('error', 'window unhandled rejection while exercise visible', {
-    reason: String(event.reason),
-  })
-}
-
-const TOOLBAR_HEIGHT = 40
-const INITIAL_ASPECT_RATIO = 1.5
-const FIXED_MODAL_WIDTH = 350
-const FIXED_MODAL_HEIGHT = 650 // FIXED_MODAL_WIDTH * INITIAL_ASPECT_RATIO
-
-const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1280)
-const viewportHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 800)
-const isMaximized = ref(false)
-const modalPosition = ref({ x: 0, y: 0 })
-const lastNormalPosition = ref<{ x: number; y: number } | null>(null)
-const manualSize = ref<{ width: number; height: number } | null>(null)
-
-const dragState = ref({
-  dragging: false,
-  startX: 0,
-  startY: 0,
-  originX: 0,
-  originY: 0,
-  pointerId: null as number | null,
-})
-const resizeState = ref({
-  resizing: false,
-  startX: 0,
-  startY: 0,
-  originWidth: 0,
-  originHeight: 0,
-  pointerId: null as number | null,
-})
-
-const isMobilePlatform = computed(() => ['android', 'ios'].includes(currentPlatform.value))
-const isPhone = computed(() => isMobilePlatform.value && viewportWidth.value < 768)
-const isTablet = computed(() =>
-  isMobilePlatform.value
-    ? viewportWidth.value >= 768
-    : viewportWidth.value >= 768 && viewportWidth.value < 1100,
-)
-const modalMarginRatio = computed(() => (isPhone.value ? 0.035 : isTablet.value ? 0.04 : 0.05))
-const modalMargin = computed(() =>
-  Math.round(Math.min(viewportWidth.value, viewportHeight.value) * modalMarginRatio.value),
-)
-const availableWidth = computed(() => Math.max(0, viewportWidth.value - modalMargin.value * 2))
-const availableHeight = computed(() => Math.max(0, viewportHeight.value - modalMargin.value * 2))
-const minModalWidth = computed(() => availableWidth.value * (isPhone.value ? 0.88 : 0.15))
-const minModalHeight = computed(() => availableHeight.value * (isPhone.value ? 0.56 : 0.32))
-
-function fitSizeByAspect(maxWidth: number, maxHeight: number, heightPerWidth: number) {
-  if (maxWidth <= 0 || maxHeight <= 0 || heightPerWidth <= 0) {
-    return { width: 0, height: 0 }
-  }
-
-  let width = maxWidth
-  let height = width * heightPerWidth
-  if (height > maxHeight) {
-    height = maxHeight
-    width = height / heightPerWidth
-  }
-  return { width, height }
-}
-
-const defaultModalSize = computed(() => {
-  if (isPhone.value) {
-    // 手机：约 80% 窗口大小 (基于 availableWidth 计算)
-    const targetWidth = availableWidth.value * 0.85
-    const targetHeight = availableHeight.value * 0.85
-    return fitSizeByAspect(targetWidth, targetHeight, INITIAL_ASPECT_RATIO)
-  }
-
-  // 平板/电脑：固定大小，除非窗口缩放后更小
-  const targetWidth = Math.min(FIXED_MODAL_WIDTH, availableWidth.value)
-  const targetHeight = Math.min(FIXED_MODAL_HEIGHT, availableHeight.value)
-  return fitSizeByAspect(targetWidth, targetHeight, INITIAL_ASPECT_RATIO)
-})
-
-const defaultModalWidth = computed(() => defaultModalSize.value.width)
-const defaultModalHeight = computed(() => defaultModalSize.value.height)
-const canResize = computed(() => !isPhone.value && !isMaximized.value)
-
-const modalWidth = computed(() => {
-  if (isMaximized.value) {
-    return availableWidth.value
-  }
-  if (manualSize.value) {
-    return Math.min(Math.max(manualSize.value.width, minModalWidth.value), availableWidth.value)
-  }
-  return Math.min(Math.max(defaultModalWidth.value, 0), availableWidth.value)
-})
-
-const modalHeight = computed(() => {
-  if (isMaximized.value) {
-    return availableHeight.value
-  }
-  if (manualSize.value) {
-    return Math.min(Math.max(manualSize.value.height, minModalHeight.value), availableHeight.value)
-  }
-  return Math.min(Math.max(defaultModalHeight.value, 0), availableHeight.value)
-})
-
-const modalBodyHeight = computed(() => `${Math.max(0, modalHeight.value - TOOLBAR_HEIGHT)}px`)
-
-const modalStyle = computed(() => ({
-  top: `${modalPosition.value.y}px`,
-  left: `${modalPosition.value.x}px`,
-  margin: '0',
-  paddingBottom: '0',
-  position: 'fixed' as const,
-}))
-
-function clampPosition(x: number, y: number) {
-  const margin = modalMargin.value
-  const maxX = Math.max(margin, viewportWidth.value - modalWidth.value - margin)
-  const maxY = Math.max(margin, viewportHeight.value - modalHeight.value - margin)
-  const clampedX = Math.min(Math.max(margin, x), maxX)
-  const clampedY = Math.min(Math.max(margin, y), maxY)
-  return { x: clampedX, y: clampedY }
-}
-
-function centerModal() {
-  const centeredX = (viewportWidth.value - modalWidth.value) / 2
-  const centeredY = (viewportHeight.value - modalHeight.value) / 2
-  modalPosition.value = clampPosition(centeredX, centeredY)
-}
-
-function stopDragging(event?: PointerEvent) {
-  if (!dragState.value.dragging) return
-  if (
-    event &&
-    dragState.value.pointerId !== null &&
-    event.pointerId !== dragState.value.pointerId
-  ) {
-    return
-  }
-
-  dragState.value.dragging = false
-  dragState.value.pointerId = null
-  window.removeEventListener('pointermove', onDragPointerMove)
-  window.removeEventListener('pointerup', stopDragging)
-  window.removeEventListener('pointercancel', stopDragging)
-}
-
-function stopResizing(event?: PointerEvent) {
-  if (!resizeState.value.resizing) return
-  if (
-    event &&
-    resizeState.value.pointerId !== null &&
-    event.pointerId !== resizeState.value.pointerId
-  ) {
-    return
-  }
-  resizeState.value.resizing = false
-  resizeState.value.pointerId = null
-  window.removeEventListener('pointermove', onResizePointerMove)
-  window.removeEventListener('pointerup', stopResizing)
-  window.removeEventListener('pointercancel', stopResizing)
-}
-
-function onResizePointerMove(event: PointerEvent) {
-  if (!resizeState.value.resizing) return
-  if (resizeState.value.pointerId !== null && event.pointerId !== resizeState.value.pointerId) {
-    return
-  }
-
-  event.preventDefault()
-  const deltaX = event.clientX - resizeState.value.startX
-  const deltaY = event.clientY - resizeState.value.startY
-  const nextWidth = resizeState.value.originWidth + deltaX
-  const nextHeight = resizeState.value.originHeight + deltaY
-  const width = Math.min(Math.max(nextWidth, minModalWidth.value), availableWidth.value)
-  const height = Math.min(Math.max(nextHeight, minModalHeight.value), availableHeight.value)
-  manualSize.value = { width, height }
-  modalPosition.value = clampPosition(modalPosition.value.x, modalPosition.value.y)
-}
-
-function startResizing(event: PointerEvent) {
-  if (!canResize.value || dragState.value.dragging) return
-  if (event.pointerType === 'mouse' && event.button !== 0) return
-
-  event.preventDefault()
-  resizeState.value = {
-    resizing: true,
-    startX: event.clientX,
-    startY: event.clientY,
-    originWidth: modalWidth.value,
-    originHeight: modalHeight.value,
-    pointerId: event.pointerId,
-  }
-
-  window.addEventListener('pointermove', onResizePointerMove, { passive: false })
-  window.addEventListener('pointerup', stopResizing)
-  window.addEventListener('pointercancel', stopResizing)
-}
-
-function onDragPointerMove(event: PointerEvent) {
-  if (!dragState.value.dragging || isMaximized.value) return
-  if (dragState.value.pointerId !== null && event.pointerId !== dragState.value.pointerId) {
-    return
-  }
-
-  event.preventDefault()
-  const deltaX = event.clientX - dragState.value.startX
-  const deltaY = event.clientY - dragState.value.startY
-  modalPosition.value = clampPosition(
-    dragState.value.originX + deltaX,
-    dragState.value.originY + deltaY,
-  )
-}
-
-function startDragging(event: PointerEvent) {
-  if (isMaximized.value || resizeState.value.resizing) return
-  if (event.pointerType === 'mouse' && event.button !== 0) return
-
-  event.preventDefault()
-  dragState.value = {
-    dragging: true,
-    startX: event.clientX,
-    startY: event.clientY,
-    originX: modalPosition.value.x,
-    originY: modalPosition.value.y,
-    pointerId: event.pointerId,
-  }
-  window.addEventListener('pointermove', onDragPointerMove, { passive: false })
-  window.addEventListener('pointerup', stopDragging)
-  window.addEventListener('pointercancel', stopDragging)
-}
-
-function closeModal() {
-  exerciseVisible.value = false
-}
-
-function toggleMaximize() {
-  if (!isMaximized.value) {
-    lastNormalPosition.value = { ...modalPosition.value }
-    stopResizing()
-    isMaximized.value = true
-    modalPosition.value = { x: modalMargin.value, y: modalMargin.value }
-    return
-  }
-
-  isMaximized.value = false
-  if (lastNormalPosition.value) {
-    modalPosition.value = clampPosition(lastNormalPosition.value.x, lastNormalPosition.value.y)
-  } else {
-    centerModal()
-  }
-}
-
-function onWindowResize() {
-  viewportWidth.value = window.innerWidth
-  viewportHeight.value = window.innerHeight
-
-  if (manualSize.value) {
-    manualSize.value = {
-      width: Math.min(Math.max(manualSize.value.width, minModalWidth.value), availableWidth.value),
-      height: Math.min(
-        Math.max(manualSize.value.height, minModalHeight.value),
-        availableHeight.value,
-      ),
-    }
-  }
-
-  if (isMaximized.value) {
-    modalPosition.value = { x: modalMargin.value, y: modalMargin.value }
-    return
-  }
-  modalPosition.value = clampPosition(modalPosition.value.x, modalPosition.value.y)
-}
-
-function onWindowKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && exerciseVisible.value) {
-    closeModal()
-  }
-}
-
-watch(
-  () => exerciseVisible.value,
-  (visible) => {
-    if (visible) {
-      clearDebugLogs()
-      if (showDebugPanel.value) {
-        void logModalEvent('info', 'visible=true', {
-          hasHtml: Boolean(currentExerciseHtml.value),
-          htmlLength: currentExerciseHtml.value.length,
-          activeSrcPrefix: activeExerciseSrc.value.slice(0, 140),
-          hasEnginePath: Boolean(runtimePaths.value.engine),
-          hasDpPath: Boolean(runtimePaths.value.dp),
-          enginePathPrefix: runtimePaths.value.engine
-            ? runtimePaths.value.engine.slice(0, 140)
-            : '',
-          dpPathPrefix: runtimePaths.value.dp ? runtimePaths.value.dp.slice(0, 140) : '',
-          productCode: props.debugMeta.productCode || '',
-          pageLabel: props.debugMeta.pageLabel || '',
-          unitName: props.debugMeta.unitName || '',
-          sandboxDisabledForDebug: !iframeSandbox.value,
-          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-        })
-      }
-      isMaximized.value = false
-      stopDragging()
-      stopResizing()
-      manualSize.value = null
-      centerModal()
-      return
-    }
-    if (showDebugPanel.value) {
-      void logModalEvent('info', 'visible=false')
-    }
-    stopDragging()
-    stopResizing()
-  },
-)
-
-watch(
-  activeExerciseSrc,
-  (src) => {
-    if (!showDebugPanel.value) return
-    if (!src) return
-    void logModalEvent('info', 'active iframe src changed', {
-      sourceType: 'url',
-      srcPrefix: src.slice(0, 180),
-    })
-  },
-  { immediate: true },
-)
-
-onMounted(async () => {
-  currentPlatform.value = await getPlatform()
-  window.addEventListener('resize', onWindowResize)
-  window.addEventListener('keydown', onWindowKeydown)
-  window.addEventListener('message', handleWindowMessage)
-  window.addEventListener('error', handleWindowError)
-  window.addEventListener('unhandledrejection', handleWindowUnhandledRejection)
-})
-
-onBeforeUnmount(() => {
-  stopDragging()
-  stopResizing()
-  window.removeEventListener('resize', onWindowResize)
-  window.removeEventListener('keydown', onWindowKeydown)
-  window.removeEventListener('message', handleWindowMessage)
-  window.removeEventListener('error', handleWindowError)
-  window.removeEventListener('unhandledrejection', handleWindowUnhandledRejection)
-})
+const debugPanelHeight = computed(() => (showDebugPanel.value ? (isPhone.value ? 150 : 190) : 0))
 </script>
 
 <template>

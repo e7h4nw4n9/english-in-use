@@ -153,19 +153,25 @@ describe('ReaderExerciseModal', () => {
 
   it('should respond to hello message from iframe', async () => {
     const { wrapper } = mountExerciseModal()
-
-    const mockIframeSource = {
+    await nextTick()
+    const iframeElement = wrapper.find('iframe').element
+    const iframeWindow = {
       postMessage: vi.fn(),
     }
+    Object.defineProperty(iframeElement, 'contentWindow', {
+      configurable: true,
+      value: iframeWindow,
+    })
 
     window.dispatchEvent(
       new MessageEvent('message', {
         data: { type: 'hello', id: 'test-id' },
-        source: mockIframeSource as unknown as WindowProxy,
+        source: iframeWindow as unknown as WindowProxy,
+        origin: 'null',
       }),
     )
 
-    expect(mockIframeSource.postMessage).toHaveBeenCalledWith(
+    expect(iframeWindow.postMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'hello-ack',
         id: 'test-id',

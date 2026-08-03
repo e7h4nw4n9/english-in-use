@@ -8,6 +8,8 @@ pub mod status;
 pub use book::Book;
 pub use book_group::BookGroup;
 pub use book_metadata::{BookDefinition, BookJson};
-pub use config::{AppConfig, BookSource, DatabaseConnection, SystemConfig};
+pub use config::{
+    AppConfig, BookSource, CloudflareGatewayConfig, DatabaseConnection, SystemConfig,
+};
 pub use reading_progress::ReadingProgress;
 pub use status::{ConnectionStatus, ServiceStatus};

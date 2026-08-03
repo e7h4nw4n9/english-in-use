@@ -50,10 +50,9 @@ const commonStubs = {
 }
 
 describe('DatabaseSettings.vue', () => {
-  const d1Config = {
-    account_id: 'acc1',
-    database_id: 'db1',
-    api_token: 'tok1',
+  const gatewayConfig = {
+    base_url: 'https://gateway.example.com',
+    access_token: 'token',
   }
 
   it('renders SQLite settings when dbType is SQLite', () => {
@@ -61,7 +60,7 @@ describe('DatabaseSettings.vue', () => {
       props: {
         dbType: 'SQLite',
         sqlitePath: '/test/db.sqlite',
-        d1Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
@@ -72,20 +71,19 @@ describe('DatabaseSettings.vue', () => {
     expect(wrapper.text()).toContain('config.filePath')
   })
 
-  it('renders D1 settings when dbType is CloudflareD1', () => {
+  it('renders gateway settings when dbType is CloudflareGateway', () => {
     const wrapper = mount(DatabaseSettings, {
       props: {
-        dbType: 'CloudflareD1',
+        dbType: 'CloudflareGateway',
         sqlitePath: '',
-        d1Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
     })
 
-    expect(wrapper.text()).toContain('config.accountId')
-    expect(wrapper.text()).toContain('config.databaseId')
-    expect(wrapper.text()).toContain('config.apiToken')
+    expect(wrapper.text()).toContain('config.gatewayUrl')
+    expect(wrapper.text()).toContain('config.gatewayToken')
   })
 
   it('emits update:dbType when radio button is clicked', async () => {
@@ -93,19 +91,19 @@ describe('DatabaseSettings.vue', () => {
       props: {
         dbType: 'SQLite',
         sqlitePath: '',
-        d1Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
     })
 
-    const d1Button = wrapper
+    const gatewayButton = wrapper
       .findAll('.radio-button-stub')
-      .find((b) => b.text().includes('config.cloudD1'))
-    await d1Button?.trigger('click')
+      .find((b) => b.text().includes('config.cloudGateway'))
+    await gatewayButton?.trigger('click')
 
     expect(wrapper.emitted()).toHaveProperty('update:dbType')
-    expect(wrapper.emitted()['update:dbType'][0]).toEqual(['CloudflareD1'])
+    expect(wrapper.emitted()['update:dbType'][0]).toEqual(['CloudflareGateway'])
   })
 
   it('emits copy-path when copy icon is clicked', async () => {
@@ -113,7 +111,7 @@ describe('DatabaseSettings.vue', () => {
       props: {
         dbType: 'SQLite',
         sqlitePath: '/test/path',
-        d1Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
@@ -129,7 +127,7 @@ describe('DatabaseSettings.vue', () => {
       props: {
         dbType: 'SQLite',
         sqlitePath: '/test/path.db',
-        d1Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
@@ -145,7 +143,7 @@ describe('DatabaseSettings.vue', () => {
       props: {
         dbType: 'SQLite',
         sqlitePath: '/test/path.db',
-        d1Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
@@ -160,7 +158,7 @@ describe('DatabaseSettings.vue', () => {
       props: {
         dbType: 'SQLite',
         sqlitePath: '/test/path.db',
-        d1Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },
@@ -175,7 +173,7 @@ describe('DatabaseSettings.vue', () => {
       props: {
         dbType: 'SQLite',
         sqlitePath: '',
-        d1Config,
+        gatewayConfig,
         isTesting: false,
       },
       global: { stubs: commonStubs },

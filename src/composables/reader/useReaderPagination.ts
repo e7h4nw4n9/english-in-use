@@ -7,6 +7,10 @@ interface UseReaderPaginationOptions {
   spreadOffset: Ref<number>
 }
 
+/**
+ * 计算单页或跨页模式下的显示页和翻页能力。
+ * @param options - 页面标签、当前页、视图模式和跨页偏移引用。
+ */
 export function useReaderPagination({
   pageLabels,
   currentPageLabel,
