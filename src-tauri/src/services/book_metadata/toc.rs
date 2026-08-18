@@ -3,6 +3,23 @@
 use super::*;
 
 impl MetadataService {
+    /// 从目录资源标识中读取单元编号。
+    ///
+    /// # 参数
+    /// - `item`：原始目录节点。
+    fn parse_unit_number(item: &crate::models::book_metadata::TocItem) -> Option<u32> {
+        if item.name.trim_start().starts_with("Appendix ") {
+            return None;
+        }
+
+        item.resource
+            .as_deref()?
+            .strip_prefix("RE_")?
+            .parse::<u32>()
+            .ok()
+            .filter(|number| *number > 0)
+    }
+
     /// 将定义树和 Overlay 信息转换为阅读器目录树。
     ///
     /// # 参数
@@ -51,6 +68,7 @@ impl MetadataService {
                         .resource
                         .clone()
                         .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+                    unit_number: Self::parse_unit_number(item),
                     start_page: None,
                     end_page: None,
                     audio_files: None,

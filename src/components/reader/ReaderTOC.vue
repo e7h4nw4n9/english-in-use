@@ -66,13 +66,13 @@ async function handleItemClick(node: TocNode) {
 
     <!-- 目录侧边栏 -->
     <aside
-      class="toc-sidebar pointer-events-auto relative z-[102] flex h-full w-72 flex-col border-r border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+      class="toc-sidebar pointer-events-auto relative z-[102] flex h-full min-w-0 max-w-full flex-col overflow-x-hidden border-r border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
     >
       <!-- 极简搜索栏 -->
       <header
         class="flex h-10 items-center border-b border-slate-200 bg-slate-50/30 dark:border-slate-800 dark:bg-slate-800/20"
       >
-        <div class="group relative h-full flex-1">
+        <div class="group relative h-full min-w-0 flex-1">
           <a-input
             v-model:value="tocSearchText"
             :placeholder="t('reader.search')"
@@ -94,8 +94,11 @@ async function handleItemClick(node: TocNode) {
         </button>
       </header>
 
-      <div class="custom-scrollbar flex-1 overflow-y-auto" ref="containerRef">
-        <div class="py-1">
+      <div
+        ref="containerRef"
+        class="toc-scroll-container custom-scrollbar min-w-0 max-w-full flex-1 overflow-y-auto overflow-x-hidden"
+      >
+        <div class="min-w-0 max-w-full py-1">
           <!-- 目录内容 -->
           <template v-for="item in filteredToc" :key="item.key">
             <a-collapse
@@ -108,7 +111,7 @@ async function handleItemClick(node: TocNode) {
               <a-collapse-panel :key="item.key">
                 <template #header>
                   <span
-                    class="truncate text-[13px] font-bold text-slate-900 dark:text-slate-100"
+                    class="toc-title min-w-0 flex-1 whitespace-normal text-[13px] font-bold text-slate-900 dark:text-slate-100"
                     :title="item.title"
                   >
                     {{ item.title }}
@@ -116,12 +119,12 @@ async function handleItemClick(node: TocNode) {
                 </template>
 
                 <div
-                  class="toc-children-container ml-3 border-l border-slate-100 dark:border-slate-800"
+                  class="toc-children-container ml-3 min-w-0 max-w-full border-l border-slate-100 dark:border-slate-800"
                 >
                   <div
                     v-for="child in item.children"
                     :key="child.key"
-                    class="toc-item group relative flex cursor-pointer items-center justify-between px-3 py-2 pl-4 transition-colors"
+                    class="toc-item group relative flex min-w-0 max-w-full cursor-pointer items-start justify-between px-3 py-2 pl-4 transition-colors"
                     :class="[
                       currentPageLabel === child.startPage
                         ? 'is-active bg-slate-100 dark:bg-slate-800'
@@ -129,9 +132,15 @@ async function handleItemClick(node: TocNode) {
                     ]"
                     @click="handleItemClick(child)"
                   >
-                    <div class="flex flex-1 items-center gap-2 overflow-hidden">
+                    <div class="flex min-w-0 flex-1 items-start gap-2">
                       <span
-                        class="truncate text-[13px]"
+                        v-if="child.unitNumber"
+                        class="toc-unit-number w-14 shrink-0 font-mono text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+                      >
+                        Unit {{ child.unitNumber }}
+                      </span>
+                      <span
+                        class="toc-title min-w-0 flex-1 whitespace-normal text-[13px]"
                         :class="[
                           currentPageLabel === child.startPage
                             ? 'font-bold text-blue-600 dark:text-blue-400'
@@ -141,7 +150,7 @@ async function handleItemClick(node: TocNode) {
                         {{ child.title }}
                       </span>
                     </div>
-                    <div class="ml-2 flex shrink-0 items-center gap-2">
+                    <div class="ml-2 flex shrink-0 items-start gap-2">
                       <span
                         v-if="child.startPage"
                         class="font-mono text-[10px] text-slate-400"
@@ -160,7 +169,7 @@ async function handleItemClick(node: TocNode) {
 
             <div
               v-else
-              class="toc-item group relative flex cursor-pointer items-center justify-between px-3 py-2 transition-colors"
+              class="toc-item group relative flex min-w-0 max-w-full cursor-pointer items-start justify-between px-3 py-2 transition-colors"
               :class="[
                 currentPageLabel === item.startPage
                   ? 'is-active bg-slate-100 dark:bg-slate-800'
@@ -168,9 +177,15 @@ async function handleItemClick(node: TocNode) {
               ]"
               @click="handleItemClick(item)"
             >
-              <div class="flex flex-1 items-center gap-2 overflow-hidden">
+              <div class="flex min-w-0 flex-1 items-start gap-2">
                 <span
-                  class="truncate text-[13px]"
+                  v-if="item.unitNumber"
+                  class="toc-unit-number w-14 shrink-0 font-mono text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+                >
+                  Unit {{ item.unitNumber }}
+                </span>
+                <span
+                  class="toc-title min-w-0 flex-1 whitespace-normal text-[13px]"
                   :class="[
                     currentPageLabel === item.startPage
                       ? 'font-bold text-blue-600 dark:text-blue-400'
@@ -180,7 +195,7 @@ async function handleItemClick(node: TocNode) {
                   {{ item.title }}
                 </span>
               </div>
-              <div class="ml-2 flex shrink-0 items-center gap-2">
+              <div class="ml-2 flex shrink-0 items-start gap-2">
                 <span
                   v-if="item.startPage"
                   class="font-mono text-[10px] text-slate-400"
@@ -237,6 +252,15 @@ async function handleItemClick(node: TocNode) {
 </template>
 
 <style scoped>
+.toc-sidebar {
+  width: min(22rem, 100vw);
+}
+
+.toc-title {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -250,7 +274,27 @@ async function handleItemClick(node: TocNode) {
 
 :deep(.toc-parent-collapse .ant-collapse-header) {
   padding: 8px 12px !important;
-  align-items: center !important;
+  align-items: flex-start !important;
+  min-width: 0;
+  max-width: 100%;
+}
+
+:deep(.toc-parent-collapse),
+:deep(.toc-parent-collapse .ant-collapse-item),
+:deep(.toc-parent-collapse .ant-collapse-content),
+:deep(.toc-parent-collapse .ant-collapse-header-text) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+:deep(.toc-parent-collapse .ant-collapse-header-text) {
+  display: flex;
+  flex: 1 1 auto;
+}
+
+:deep(.toc-parent-collapse .ant-collapse-expand-icon) {
+  flex: 0 0 auto;
 }
 
 :deep(.toc-parent-collapse .ant-collapse-content-box) {

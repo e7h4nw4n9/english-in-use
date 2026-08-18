@@ -7,9 +7,11 @@ import {
   getCurrentDbVersion,
   executeMigrationUp,
   executeMigrationDown,
-} from '../../lib/api/database'
+} from '@/lib/api/database'
+import { useAppStore } from '@/stores/app'
 
 const { t } = useI18n()
+const appStore = useAppStore()
 
 interface Props {
   language: string
@@ -54,11 +56,14 @@ const loadMigrationInfo = async () => {
 }
 
 const handleUpgrade = async () => {
+  if (migrationLoading.value) return
   migrationLoading.value = true
   try {
-    await executeMigrationUp(selectedTargetVersion.value)
-    message.success(t('config.migrationSuccess'))
-    await loadMigrationInfo()
+    await appStore.runGlobalLoadingAction(async () => {
+      await executeMigrationUp(selectedTargetVersion.value)
+      message.success(t('config.migrationSuccess'))
+      await loadMigrationInfo()
+    }, t('config.upgradingDatabase'))
   } catch (error: any) {
     message.error(t('config.migrationError', { error: error.message || error }))
   } finally {
@@ -67,11 +72,14 @@ const handleUpgrade = async () => {
 }
 
 const handleDowngrade = async () => {
+  if (migrationLoading.value) return
   migrationLoading.value = true
   try {
-    await executeMigrationDown(selectedTargetVersion.value)
-    message.success(t('config.migrationSuccess'))
-    await loadMigrationInfo()
+    await appStore.runGlobalLoadingAction(async () => {
+      await executeMigrationDown(selectedTargetVersion.value)
+      message.success(t('config.migrationSuccess'))
+      await loadMigrationInfo()
+    }, t('config.downgradingDatabase'))
   } catch (error: any) {
     message.error(t('config.migrationError', { error: error.message || error }))
   } finally {

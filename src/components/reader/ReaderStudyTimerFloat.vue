@@ -86,16 +86,24 @@ function clampPosition(next: { x: number; y: number }, collapsed = isCollapsed.v
   }
 }
 
-async function initPosition() {
-  await nextTick()
-  const { width } = getPanelSize(false)
-  const next = clampPosition(
+/** 将计时器吸附到当前视口右侧，并限制纵向位置不超出屏幕。
+ * @param y - 希望保留的纵向位置。
+ * @param collapsed - 是否按折叠尺寸计算。
+ */
+function alignPositionToRight(y: number, collapsed = isCollapsed.value) {
+  const { width } = getPanelSize(collapsed)
+  return clampPosition(
     {
       x: window.innerWidth - width - VIEWPORT_MARGIN,
-      y: DEFAULT_TOP,
+      y,
     },
-    false,
+    collapsed,
   )
+}
+
+async function initPosition() {
+  await nextTick()
+  const next = alignPositionToRight(DEFAULT_TOP, false)
   position.value = next
   lastExpandedPosition.value = next
 }
@@ -179,13 +187,7 @@ async function syncPositionForCollapse(nextCollapsed: boolean) {
   if (nextCollapsed) {
     lastExpandedPosition.value = clampPosition(position.value, false)
     await nextTick()
-    position.value = clampPosition(
-      {
-        x: window.innerWidth - getPanelSize(true).width - VIEWPORT_MARGIN,
-        y: position.value.y,
-      },
-      true,
-    )
+    position.value = alignPositionToRight(position.value.y, true)
     return
   }
 
@@ -194,10 +196,13 @@ async function syncPositionForCollapse(nextCollapsed: boolean) {
 }
 
 function handleViewportResize() {
-  position.value = clampPosition(position.value)
-  if (!isCollapsed.value) {
-    lastExpandedPosition.value = clampPosition(lastExpandedPosition.value, false)
+  if (isCollapsed.value) {
+    position.value = alignPositionToRight(position.value.y, true)
+    return
   }
+
+  position.value = clampPosition(position.value)
+  lastExpandedPosition.value = clampPosition(lastExpandedPosition.value, false)
 }
 
 watch(isCollapsed, (nextCollapsed) => {
@@ -239,6 +244,7 @@ onBeforeUnmount(() => {
       v-if="isCollapsed"
       type="button"
       class="timer-collapsed-chip"
+      data-suppress-mobile-long-press
       :title="t('studyTimer.expand')"
       data-testid="timer-collapsed-chip"
       @click="expandPanel"
@@ -249,6 +255,7 @@ onBeforeUnmount(() => {
     <div
       v-else
       class="timer-expanded-panel"
+      data-suppress-mobile-long-press
       :class="{ 'is-dragging': isDragging }"
       data-testid="timer-expanded-row"
       @pointerdown="onDragStart"

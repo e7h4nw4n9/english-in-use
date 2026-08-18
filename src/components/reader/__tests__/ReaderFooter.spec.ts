@@ -7,6 +7,8 @@ import { useReaderStore } from '../../../stores/reader'
 import * as studyPlanApi from '../../../lib/api/studyPlan'
 import type { StudyPlanStatusResponse } from '../../../types'
 
+const modalConfirm = vi.hoisted(() => vi.fn())
+
 vi.mock('vue-i18n', async (importOriginal) => {
   const actual = await importOriginal<typeof import('vue-i18n')>()
   return {
@@ -18,8 +20,12 @@ vi.mock('vue-i18n', async (importOriginal) => {
 })
 
 vi.mock('ant-design-vue', () => ({
+  Modal: {
+    confirm: modalConfirm,
+  },
   message: {
     success: vi.fn(),
+    info: vi.fn(),
     error: vi.fn(),
   },
   theme: {
@@ -120,6 +126,7 @@ describe('ReaderFooter study plan sync', () => {
       book_group: 2,
       product_code: 'essgiuebk',
       title: 'Test Book',
+      short_title: null,
       author: 'Author',
       product_type: 'imgbook',
       cover: null,
@@ -301,5 +308,100 @@ describe('ReaderFooter study plan sync', () => {
 
     await wrapper.setProps({ timerStatus: 'idle' })
     expect(vm.timerPanelVisible).toBe(false)
+  })
+
+  it('keeps the existing schedule and shows info when an active plan is added again', async () => {
+    vi.mocked(studyPlanApi.getStudyPlanStatus).mockResolvedValue(createStatus())
+    vi.mocked(studyPlanApi.upsertStudyPlan).mockResolvedValue({
+      planUnitId: 501,
+      planStatus: 0,
+      nextReviewDate: '2026-08-11',
+      totalStages: 7,
+      completedStages: [],
+      outcome: 'alreadyActive',
+    })
+    const { message } = await import('ant-design-vue')
+    const appStore = useAppStore()
+    const loadingAction = vi.spyOn(appStore, 'runGlobalLoadingAction')
+    const wrapper = mountFooter()
+    const vm = wrapper.vm as unknown as {
+      toggleStudyPlan: () => Promise<void>
+      studyPlanStatus: StudyPlanStatusResponse | null
+    }
+
+    vi.advanceTimersByTime(120)
+    await flushPromises()
+    await vm.toggleStudyPlan()
+    await flushPromises()
+
+    expect(studyPlanApi.upsertStudyPlan).toHaveBeenCalledOnce()
+    expect(modalConfirm).not.toHaveBeenCalled()
+    expect(loadingAction.mock.calls[loadingAction.mock.calls.length - 1]?.[1]).toBe(
+      'studyPlan.adding',
+    )
+    expect(message.info).toHaveBeenCalledWith('studyPlan.alreadyActive')
+    expect(message.success).not.toHaveBeenCalledWith('studyPlan.added')
+    expect(vm.studyPlanStatus?.nextReviewDate).toBe('2026-08-11')
+  })
+
+  it('confirms before abandoning an active study plan', async () => {
+    vi.mocked(studyPlanApi.getStudyPlanStatus).mockResolvedValue(
+      createStatus({ inPlan: true, planStatus: 0, planUnitId: 601 }),
+    )
+    vi.mocked(studyPlanApi.abandonStudyPlan).mockResolvedValue({ success: true })
+    const appStore = useAppStore()
+    const loadingAction = vi.spyOn(appStore, 'runGlobalLoadingAction')
+    const wrapper = mountFooter()
+    const vm = wrapper.vm as unknown as {
+      toggleStudyPlan: () => Promise<void>
+    }
+
+    vi.advanceTimersByTime(120)
+    await flushPromises()
+    const togglePromise = vm.toggleStudyPlan()
+    await flushPromises()
+
+    expect(modalConfirm).toHaveBeenCalledOnce()
+    expect(studyPlanApi.abandonStudyPlan).not.toHaveBeenCalled()
+    expect(modalConfirm.mock.calls[0]?.[0]).toMatchObject({
+      title: 'studyPlan.cancelConfirmTitle',
+      content: 'studyPlan.cancelConfirmDescription',
+      okText: 'studyPlan.confirmCancel',
+      cancelText: 'common.cancel',
+      okButtonProps: { danger: true },
+    })
+
+    modalConfirm.mock.calls[0]?.[0].onOk()
+    await togglePromise
+    await flushPromises()
+
+    expect(studyPlanApi.abandonStudyPlan).toHaveBeenCalledOnce()
+    expect(loadingAction.mock.calls[loadingAction.mock.calls.length - 1]?.[1]).toBe(
+      'studyPlan.abandoning',
+    )
+  })
+
+  it('keeps the study plan when cancellation is dismissed', async () => {
+    vi.mocked(studyPlanApi.getStudyPlanStatus).mockResolvedValue(
+      createStatus({ inPlan: true, planStatus: 1, planUnitId: 701 }),
+    )
+    const appStore = useAppStore()
+    const loadingAction = vi.spyOn(appStore, 'runGlobalLoadingAction')
+    const wrapper = mountFooter()
+    const vm = wrapper.vm as unknown as {
+      toggleStudyPlan: () => Promise<void>
+    }
+
+    vi.advanceTimersByTime(120)
+    await flushPromises()
+    const togglePromise = vm.toggleStudyPlan()
+    await flushPromises()
+
+    expect(modalConfirm).toHaveBeenCalledOnce()
+    modalConfirm.mock.calls[0]?.[0].onCancel()
+    await togglePromise
+
+    expect(studyPlanApi.abandonStudyPlan).not.toHaveBeenCalled()
+    expect(loadingAction).not.toHaveBeenCalled()
   })
 })

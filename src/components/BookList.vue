@@ -32,14 +32,15 @@
               :key="book.id"
               type="button"
               class="book-item group"
-              :aria-label="book.title"
+              :aria-label="getBookDisplayTitle(book)"
               @click="openBook(book)"
             >
-              <div class="book-cover">
+              <div class="book-cover" data-suppress-mobile-long-press>
                 <template v-if="covers[book.id]">
                   <img
                     :src="covers[book.id]"
-                    :alt="book.title"
+                    :alt="getBookDisplayTitle(book)"
+                    draggable="false"
                     class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                   />
                 </template>
@@ -49,8 +50,8 @@
               </div>
 
               <div class="book-meta">
-                <a-tooltip :title="book.title" placement="bottom">
-                  <h3 class="book-title line-clamp-2">{{ book.title }}</h3>
+                <a-tooltip :title="getBookDisplayTitle(book)" placement="bottom">
+                  <h3 class="book-title line-clamp-2">{{ getBookDisplayTitle(book) }}</h3>
                 </a-tooltip>
               </div>
             </button>
@@ -66,9 +67,10 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { theme } from 'ant-design-vue'
 import { BookOutlined } from '@ant-design/icons-vue'
-import { getBooks, getBookCover, bytesToImageUrl } from '../lib/api'
-import { Book, BookGroup } from '../types'
-import { useAppStore } from '../stores/app'
+import { getBooks, getBookCover, bytesToImageUrl } from '@/lib/api'
+import { getBookDisplayTitle } from '@/lib/book'
+import { Book, BookGroup } from '@/types'
+import { useAppStore } from '@/stores/app'
 import LoadingBlock from './common/loading/LoadingBlock.vue'
 
 const { t } = useI18n()

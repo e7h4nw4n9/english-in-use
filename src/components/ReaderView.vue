@@ -224,17 +224,21 @@ async function persistTimerContext(
   assignedUnit: StudySessionUnitRef,
   closeReaderAfterSave: boolean,
 ) {
+  if (saveInProgress.value) return
+
   saveInProgress.value = true
   try {
-    await saveWithAssignedUnit(context, assignedUnit)
-    message.success(t('studyTimer.saved'))
+    await appStore.runGlobalLoadingAction(async () => {
+      await saveWithAssignedUnit(context, assignedUnit)
+      message.success(t('studyTimer.saved'))
 
-    saveTimerPromptVisible.value = false
-    resetPendingFlowState()
+      saveTimerPromptVisible.value = false
+      resetPendingFlowState()
 
-    if (closeReaderAfterSave) {
-      appStore.currentBook = null
-    }
+      if (closeReaderAfterSave) {
+        appStore.currentBook = null
+      }
+    }, t('studyTimer.saving'))
   } catch (error) {
     const errorText = error instanceof Error ? error.message : String(error)
     message.error(t('studyTimer.saveFailed', { error: errorText }))

@@ -1,4 +1,5 @@
-import type { Book, StudyTaskItem } from '../../types'
+import type { Book, StudyTaskItem } from '@/types'
+import { getBookDisplayTitle } from '@/lib/book'
 
 export interface GroupedBookTasks {
   bookCode: string
@@ -89,7 +90,7 @@ export function groupTasksBySeries(
     if (!seriesEntry) continue
 
     const bookCode = task.productCode || 'unknown'
-    const bookTitle = book?.title || t('studyPlan.unknownBook')
+    const bookTitle = book ? getBookDisplayTitle(book) : t('studyPlan.unknownBook')
 
     if (!seriesEntry.booksMap.has(bookCode)) {
       seriesEntry.booksMap.set(bookCode, {

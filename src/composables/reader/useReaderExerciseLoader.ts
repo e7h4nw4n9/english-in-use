@@ -5,13 +5,13 @@ import { getExerciseHtml } from '@/lib/api/books'
 import { getReadableCommandError } from '@/lib/error'
 import { extractExerciseRuntimePaths } from '@/lib/exercise/runtime'
 import type { Book, ExerciseDownloadProgressEvent, ExerciseInfo } from '@/types'
+import type { GlobalLoadingToken } from '@/stores/app'
 
 interface ExerciseAppStore {
-  globalLoading: boolean | Ref<boolean>
-  startGlobalLoading: (message?: string) => void
-  setGlobalLoadingProgress: (progress: number | null) => void
-  setGlobalLoadingMessage: (message: string) => void
-  stopGlobalLoading: () => void
+  startGlobalLoading: (message?: string) => GlobalLoadingToken
+  setGlobalLoadingProgress: (token: GlobalLoadingToken, progress: number | null) => void
+  setGlobalLoadingMessage: (token: GlobalLoadingToken, message: string) => void
+  stopGlobalLoading: (token: GlobalLoadingToken) => void
 }
 
 interface UseReaderExerciseLoaderOptions {
@@ -39,10 +39,7 @@ export function useReaderExerciseLoader({
   currentExerciseResourceId,
   t,
 }: UseReaderExerciseLoaderOptions) {
-  const isGlobalLoading = () =>
-    typeof appStore.globalLoading === 'boolean'
-      ? appStore.globalLoading
-      : appStore.globalLoading.value
+  let openingExercise = false
 
   const logExerciseEvent = async (level: 'info' | 'error', message: string, payload?: unknown) => {
     const payloadText =
@@ -75,14 +72,15 @@ export function useReaderExerciseLoader({
   }
 
   async function openExercise(exercise: ExerciseInfo) {
-    if (!currentBook.value || isGlobalLoading()) {
+    if (!currentBook.value || openingExercise) {
       void logExerciseEvent('info', 'open skipped', {
         hasBook: Boolean(currentBook.value),
-        globalLoading: isGlobalLoading(),
+        openingExercise,
         resourceId: exercise.resource_id,
       })
       return
     }
+    openingExercise = true
 
     void logExerciseEvent('info', 'open start', {
       productCode: currentBook.value.product_code,
@@ -90,9 +88,9 @@ export function useReaderExerciseLoader({
       title: exercise.name,
     })
 
-    appStore.startGlobalLoading(t('reader.loadingExercise'))
-    appStore.setGlobalLoadingProgress(0)
-    appStore.setGlobalLoadingMessage(`${t('reader.loadingExerciseDeps')} (0/0)`)
+    const loadingToken = appStore.startGlobalLoading(t('reader.loadingExercise'))
+    appStore.setGlobalLoadingProgress(loadingToken, 0)
+    appStore.setGlobalLoadingMessage(loadingToken, `${t('reader.loadingExerciseDeps')} (0/0)`)
     let unlistenDownloadProgress: UnlistenFn | null = null
 
     try {
@@ -114,12 +112,13 @@ export function useReaderExerciseLoader({
             done: payload.done,
           })
 
-          appStore.setGlobalLoadingProgress(payload.percent)
+          appStore.setGlobalLoadingProgress(loadingToken, payload.percent)
           const stageText =
             payload.stage === 'deps'
               ? t('reader.loadingExerciseDeps')
               : t('reader.loadingExercisePackage')
           appStore.setGlobalLoadingMessage(
+            loadingToken,
             `${stageText} (${payload.completedFiles}/${payload.totalFiles})`,
           )
         },
@@ -168,7 +167,8 @@ export function useReaderExerciseLoader({
         unlistenDownloadProgress()
         unlistenDownloadProgress = null
       }
-      appStore.stopGlobalLoading()
+      appStore.stopGlobalLoading(loadingToken)
+      openingExercise = false
       void logExerciseEvent('info', 'open finished', {
         resourceId: exercise.resource_id,
         visible: exerciseVisible.value,

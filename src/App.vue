@@ -103,6 +103,8 @@ const shouldShowHeader = computed(() => {
 })
 
 const buildStamp = __DEBUG_FEATURES__ ? __BUILD_STAMP__ : undefined
+const mobileLongPressSuppressedSelector = '[data-suppress-mobile-long-press]'
+let lastPointerType: string | null = null
 
 watch(
   config,
@@ -171,7 +173,36 @@ function activateHomeTab(tab: HomeTab) {
   homeTab.value = tab
 }
 
+/** 记录最近一次指针输入类型，供上下文菜单事件判定来源。
+ * @param event - 浏览器指针按下事件。
+ */
+function recordPointerType(event: PointerEvent) {
+  lastPointerType = event.pointerType || null
+}
+
+/** 判断上下文菜单是否由移动触控操作触发。
+ * @param event - 浏览器上下文菜单事件。
+ */
+function isMobileTouchContextMenu(event: MouseEvent): boolean {
+  if (typeof PointerEvent !== 'undefined' && event instanceof PointerEvent) {
+    if (event.pointerType) return event.pointerType === 'touch'
+  }
+  return lastPointerType === 'touch'
+}
+
+/** 阻止移动端非必要元素通过长按打开系统菜单。
+ * @param event - 浏览器上下文菜单事件。
+ */
+function preventUnnecessaryMobileLongPress(event: MouseEvent) {
+  const target = event.target
+  if (!(target instanceof Element) || !target.closest(mobileLongPressSuppressedSelector)) return
+  if (!isMobileTouchContextMenu(event)) return
+  event.preventDefault()
+}
+
 onMounted(async () => {
+  document.addEventListener('pointerdown', recordPointerType, true)
+  document.addEventListener('contextmenu', preventUnnecessaryMobileLongPress)
   unlistenProgress = await listen<AppInitProgress>('init-progress', (event) => {
     loadingMessage.value = t(event.payload.message)
   })
@@ -184,6 +215,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  document.removeEventListener('pointerdown', recordPointerType, true)
+  document.removeEventListener('contextmenu', preventUnnecessaryMobileLongPress)
   if (unlistenOpenSettings) unlistenOpenSettings()
   if (unlistenProgress) unlistenProgress()
 })
@@ -563,5 +596,18 @@ html {
 html.dark {
   background-color: #0f172a;
   color: #f8fafc;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  [data-suppress-mobile-long-press],
+  [data-suppress-mobile-long-press] * {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+  }
+
+  [data-suppress-mobile-long-press] img {
+    -webkit-user-drag: none !important;
+  }
 }
 </style>

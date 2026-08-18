@@ -1,11 +1,18 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import type { AppConfig, ConnectionStatus, Book } from '../types'
 import { loadConfig, checkConnectionStatus, initializeDatabase } from '../lib/api'
 import { info, error, debug } from '@tauri-apps/plugin-log'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { notification } from 'ant-design-vue'
 import i18n from '../i18n'
+
+export type GlobalLoadingToken = number
+
+interface GlobalLoadingEntry {
+  message: string
+  progress: number | null
+}
 
 /** 应用配置、连接状态和全局加载状态存储。 */
 export const useAppStore = defineStore('app', () => {
@@ -20,7 +27,8 @@ export const useAppStore = defineStore('app', () => {
   const globalLoadingMessage = ref('')
   const globalLoadingProgress = ref<number | null>(null)
   const currentBook = ref<Book | null>(null)
-  let globalLoadingCount = 0
+  const globalLoadingEntries = new Map<GlobalLoadingToken, GlobalLoadingEntry>()
+  let nextGlobalLoadingToken = 0
 
   let unlistenStatus: UnlistenFn | null = null
 
@@ -137,31 +145,83 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  function startGlobalLoading(message?: string) {
-    globalLoadingCount += 1
+  /** 注册一项需要全局遮罩展示的异步操作。
+   * @param message - 操作对应的加载提示。
+   */
+  function startGlobalLoading(message?: string): GlobalLoadingToken {
+    const token = ++nextGlobalLoadingToken
+    const entry = {
+      message: message || i18n.global.t('app.loading'),
+      progress: null,
+    }
+    globalLoadingEntries.set(token, entry)
     globalLoading.value = true
-    globalLoadingMessage.value = message || i18n.global.t('app.loading')
-    globalLoadingProgress.value = null
+    globalLoadingMessage.value = entry.message
+    globalLoadingProgress.value = entry.progress
+    return token
   }
 
-  function setGlobalLoadingMessage(message: string) {
+  /** 更新指定操作的全局加载提示。
+   * @param token - 开始加载时返回的操作令牌。
+   * @param message - 新的加载提示。
+   */
+  function setGlobalLoadingMessage(token: GlobalLoadingToken, message: string) {
+    const entry = globalLoadingEntries.get(token)
+    if (!entry) return
+    entry.message = message
+    if (token !== nextActiveGlobalLoadingToken()) return
     globalLoadingMessage.value = message
   }
 
-  function setGlobalLoadingProgress(progress: number | null) {
-    if (progress === null || Number.isNaN(progress)) {
-      globalLoadingProgress.value = null
-      return
-    }
-    globalLoadingProgress.value = Math.max(0, Math.min(100, progress))
+  /** 更新指定操作的全局加载进度。
+   * @param token - 开始加载时返回的操作令牌。
+   * @param progress - 新进度，传入 null 表示不展示进度。
+   */
+  function setGlobalLoadingProgress(token: GlobalLoadingToken, progress: number | null) {
+    const entry = globalLoadingEntries.get(token)
+    if (!entry) return
+    entry.progress =
+      progress === null || Number.isNaN(progress) ? null : Math.max(0, Math.min(100, progress))
+    if (token !== nextActiveGlobalLoadingToken()) return
+    globalLoadingProgress.value = entry.progress
   }
 
-  function stopGlobalLoading() {
-    globalLoadingCount = Math.max(0, globalLoadingCount - 1)
-    if (globalLoadingCount === 0) {
+  /** 返回最后注册且仍在运行的全局加载令牌。 */
+  function nextActiveGlobalLoadingToken(): GlobalLoadingToken | null {
+    const tokens = Array.from(globalLoadingEntries.keys())
+    return tokens.length > 0 ? tokens[tokens.length - 1] : null
+  }
+
+  /** 结束指定操作的全局加载展示。
+   * @param token - 开始加载时返回的操作令牌。
+   */
+  function stopGlobalLoading(token: GlobalLoadingToken) {
+    if (!globalLoadingEntries.delete(token)) return
+    const activeToken = nextActiveGlobalLoadingToken()
+    if (activeToken === null) {
       globalLoading.value = false
       globalLoadingMessage.value = ''
       globalLoadingProgress.value = null
+      return
+    }
+
+    const activeEntry = globalLoadingEntries.get(activeToken)!
+    globalLoadingMessage.value = activeEntry.message
+    globalLoadingProgress.value = activeEntry.progress
+  }
+
+  /** 在全局加载遮罩下执行一次异步操作。
+   * @param action - 需要执行的异步操作。
+   * @param message - 与当前操作对应的全局加载提示。
+   */
+  async function runGlobalLoadingAction<T>(action: () => Promise<T>, message: string): Promise<T> {
+    const token = startGlobalLoading(message)
+    try {
+      // 等待遮罩渲染后再发起操作，避免长任务开始后界面仍未反馈。
+      await nextTick()
+      return await action()
+    } finally {
+      stopGlobalLoading(token)
     }
   }
 
@@ -182,5 +242,6 @@ export const useAppStore = defineStore('app', () => {
     setGlobalLoadingMessage,
     setGlobalLoadingProgress,
     stopGlobalLoading,
+    runGlobalLoadingAction,
   }
 })

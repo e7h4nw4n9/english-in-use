@@ -48,6 +48,7 @@ describe('BookList.vue', () => {
       book_group: BookGroup.Vocabulary,
       product_code: 'V1',
       title: 'Vocab 1',
+      short_title: 'Vocab',
       author: 'Author 1',
       product_type: 'Type 1',
       cover: 'cover1.jpg',
@@ -58,6 +59,7 @@ describe('BookList.vue', () => {
       book_group: BookGroup.Grammar,
       product_code: 'G1',
       title: 'Grammar 1',
+      short_title: null,
       author: 'Author 2',
       product_type: 'Type 2',
       cover: 'cover2.jpg',
@@ -118,8 +120,12 @@ describe('BookList.vue', () => {
 
     expect(wrapper.find('.panel-header').text()).toContain('app.bookGroups.vocabulary')
     expect(wrapper.text()).toContain('app.bookGroups.grammar')
-    expect(wrapper.text()).toContain('Vocab 1')
+    expect(wrapper.text()).toContain('Vocab')
+    expect(wrapper.text()).not.toContain('Vocab 1')
     expect(wrapper.text()).toContain('Grammar 1')
+    expect(wrapper.find('.book-cover img').attributes('draggable')).toBe('false')
+    expect(wrapper.find('.book-item').attributes('aria-label')).toBe('Vocab')
+    expect(wrapper.find('.book-cover img').attributes('alt')).toBe('Vocab')
   })
 
   it('calls revokeObjectURL on unmount', async () => {
@@ -140,6 +146,7 @@ describe('BookList.vue', () => {
         id: 2,
         book_group: BookGroup.Vocabulary,
         title: 'B',
+        short_title: null,
         sort_num: 2,
         cover: null,
         product_code: 'P2',
@@ -148,6 +155,7 @@ describe('BookList.vue', () => {
         id: 1,
         book_group: BookGroup.Vocabulary,
         title: 'A',
+        short_title: null,
         sort_num: 1,
         cover: null,
         product_code: 'P1',

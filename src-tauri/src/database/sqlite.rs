@@ -253,6 +253,24 @@ impl Database for SqliteDatabase {
         })
     }
 
+    fn query_write_batch(
+        &self,
+        statements: Vec<SqlStatement>,
+    ) -> DatabaseFuture<'_, Vec<Vec<Value>>> {
+        Box::pin(async move {
+            let mut transaction = self.pool.begin().await?;
+            let mut results = Vec::with_capacity(statements.len());
+            for statement in statements {
+                let rows = Self::bind_query(sqlx::query(&statement.sql), &statement.params)
+                    .fetch_all(&mut *transaction)
+                    .await?;
+                results.push(Self::rows_to_json(rows));
+            }
+            transaction.commit().await?;
+            Ok(results)
+        })
+    }
+
     fn get_version(&self) -> DatabaseFuture<'_, String> {
         Box::pin(async move {
             let table_count: i64 = sqlx::query_scalar(

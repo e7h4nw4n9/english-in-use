@@ -1,0 +1,1 @@
+ALTER TABLE books ADD COLUMN short_title NVARCHAR(100);

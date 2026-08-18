@@ -296,6 +296,7 @@ function getOverlayStyle(overlay: any) {
     <div
       ref="scrollContainerRef"
       class="reader-scroll-container pinch-zoom-surface custom-scrollbar flex-1 overflow-auto"
+      data-suppress-mobile-long-press
       @wheel="handleWheel"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"

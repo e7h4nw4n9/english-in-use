@@ -82,4 +82,58 @@ describe('App Store', () => {
     expect(store.config).toEqual(mockConfig)
     expect(store.isLoading).toBe(false)
   })
+
+  it('runs concurrent actions without dropping either operation', async () => {
+    const store = useAppStore()
+    let release!: () => void
+    const pending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const firstAction = vi.fn(() => pending)
+    const secondAction = vi.fn(async () => {})
+
+    const firstRun = store.runGlobalLoadingAction(firstAction, '处理中')
+    const secondRun = store.runGlobalLoadingAction(secondAction, '另一操作处理中')
+
+    expect(store.globalLoading).toBe(true)
+    expect(store.globalLoadingMessage).toBe('另一操作处理中')
+    await expect(secondRun).resolves.toBeUndefined()
+    expect(secondAction).toHaveBeenCalledOnce()
+    expect(store.globalLoading).toBe(true)
+    expect(store.globalLoadingMessage).toBe('处理中')
+
+    release()
+    await expect(firstRun).resolves.toBeUndefined()
+    expect(firstAction).toHaveBeenCalledOnce()
+    expect(store.globalLoading).toBe(false)
+  })
+
+  it('keeps the newest active loading state when operations finish out of order', () => {
+    const store = useAppStore()
+    const firstToken = store.startGlobalLoading('第一项')
+    const secondToken = store.startGlobalLoading('第二项')
+
+    store.setGlobalLoadingProgress(firstToken, 30)
+    store.setGlobalLoadingProgress(secondToken, 60)
+    store.stopGlobalLoading(firstToken)
+
+    expect(store.globalLoading).toBe(true)
+    expect(store.globalLoadingMessage).toBe('第二项')
+    expect(store.globalLoadingProgress).toBe(60)
+
+    store.stopGlobalLoading(secondToken)
+    expect(store.globalLoading).toBe(false)
+  })
+
+  it('always clears global loading when an action fails', async () => {
+    const store = useAppStore()
+    const failure = new Error('database failed')
+
+    await expect(
+      store.runGlobalLoadingAction(async () => {
+        throw failure
+      }, '失败操作处理中'),
+    ).rejects.toBe(failure)
+    expect(store.globalLoading).toBe(false)
+  })
 })

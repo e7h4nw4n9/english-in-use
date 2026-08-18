@@ -41,6 +41,7 @@ export function useStudyPlanPage() {
   const summaryByDate = ref<Record<string, StudyTaskSummaryDay>>({})
   const loadingSummary = ref(false)
   const completingTaskId = ref<number | null>(null)
+  const openingTask = ref(false)
 
   const tasksByDateCache = ref<Record<string, StudyTaskItem[]>>({})
   const loadingDateTasks = ref<Record<string, boolean>>({})
@@ -285,13 +286,15 @@ export function useStudyPlanPage() {
 
     completingTaskId.value = task.taskId
     try {
-      await completeStudyTask(task.taskId)
-      const datesToRefresh = new Set([task.scheduledDate, selectedDate.value])
-      await Promise.all([
-        refreshSummary(),
-        ...Array.from(datesToRefresh, (date) => ensureDateTasks(date, true)),
-      ])
-      message.success(t('studyPlan.completed'))
+      await appStore.runGlobalLoadingAction(async () => {
+        await completeStudyTask(task.taskId)
+        const datesToRefresh = new Set([task.scheduledDate, selectedDate.value])
+        await Promise.all([
+          refreshSummary(),
+          ...Array.from(datesToRefresh, (date) => ensureDateTasks(date, true)),
+        ])
+        message.success(t('studyPlan.completed'))
+      }, t('studyPlan.completingTask'))
     } catch (error) {
       const errorText = error instanceof Error ? error.message : String(error)
       message.error(t('studyPlan.actionFailed', { error: errorText }))
@@ -304,21 +307,29 @@ export function useStudyPlanPage() {
    * @param task - 目标学习任务。
    */
   async function jumpToStudy(task: StudyTaskItem) {
+    if (openingTask.value) return
     const book = booksByCode.value[task.productCode]
     if (!book) {
       message.error(t('studyPlan.bookNotFound'))
       return
     }
 
+    openingTask.value = true
     try {
-      await updateReadingProgress(task.productCode, task.resourceId || null, null, 1, 0, 0)
-    } catch {
-      // 即使进度写入失败，也继续保持页面跳转可用。
-    }
+      await appStore.runGlobalLoadingAction(async () => {
+        try {
+          await updateReadingProgress(task.productCode, task.resourceId || null, null, 1, 0, 0)
+        } catch {
+          // 即使进度写入失败，也继续保持页面跳转可用。
+        }
 
-    readerStore.pendingStudyResourceId = task.resourceId || null
-    readerStore.currentUnitName = task.unitName
-    appStore.currentBook = book
+        readerStore.pendingStudyResourceId = task.resourceId || null
+        readerStore.currentUnitName = task.unitName
+        appStore.currentBook = book
+      }, t('studyPlan.openingTask'))
+    } finally {
+      openingTask.value = false
+    }
   }
 
   watch(

@@ -28,17 +28,17 @@ vi.mock('@ant-design/icons-vue', async (importOriginal) => {
 const mockMetadata: BookMetadata = {
   toc: [
     {
-      title: 'Introductory Chapter',
+      title: 'Introductory Chapter with Fixed expressions and figurative language',
       key: 'ch1',
       startPage: '1',
       endPage: '10',
       children: [
-        { title: 'Section A', key: 's1.1', startPage: '1', endPage: '5' },
-        { title: 'Section B', key: 's1.2', startPage: '6', endPage: '10' },
+        { title: 'Section A', key: 's1.1', unitNumber: 1, startPage: '1', endPage: '5' },
+        { title: 'Section B', key: 's1.2', unitNumber: 2, startPage: '6', endPage: '10' },
       ],
     },
     {
-      title: 'Second Chapter',
+      title: 'Second Chapter with an intentionally long ordinary directory title',
       key: 'ch2',
       startPage: '11',
       endPage: '20',
@@ -82,6 +82,70 @@ describe('ReaderTOC', () => {
     expect(wrapper.text()).toContain('Introductory Chapter')
     expect(wrapper.text()).toContain('Second Chapter')
     expect(wrapper.text()).toContain('Section A')
+  })
+
+  it('wraps group and ordinary titles without horizontal scrolling', () => {
+    const wrapper = mount(ReaderTOC, {
+      props: {
+        metadata: mockMetadata,
+      },
+      global: {
+        stubs: {
+          'a-input': true,
+          'a-collapse': {
+            template: '<div class="a-collapse-stub"><slot /></div>',
+          },
+          'a-collapse-panel': {
+            template:
+              '<div class="a-collapse-panel-stub"><div class="panel-header"><slot name="header" /></div><slot /></div>',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.find('.toc-sidebar').classes()).toContain('overflow-x-hidden')
+    expect(wrapper.find('.toc-scroll-container').classes()).toContain('overflow-x-hidden')
+
+    const groupTitle = wrapper.find('.panel-header .toc-title')
+    expect(groupTitle.text()).toContain('Fixed expressions and figurative language')
+    expect(groupTitle.classes()).toContain('whitespace-normal')
+    expect(groupTitle.classes()).not.toContain('truncate')
+
+    const ordinaryTitle = wrapper
+      .findAll('.toc-item .toc-title')
+      .find((title) => title.text().includes('intentionally long ordinary directory title'))
+    expect(ordinaryTitle?.classes()).toContain('whitespace-normal')
+    expect(ordinaryTitle?.classes()).not.toContain('truncate')
+  })
+
+  it('shows metadata unit numbers only on numbered nodes', () => {
+    const wrapper = mount(ReaderTOC, {
+      props: {
+        metadata: mockMetadata,
+      },
+      global: {
+        stubs: {
+          'a-input': true,
+          'a-collapse': {
+            template: '<div class="a-collapse-stub"><slot /></div>',
+          },
+          'a-collapse-panel': {
+            template:
+              '<div class="a-collapse-panel-stub"><div class="panel-header"><slot name="header" /></div><slot /></div>',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.findAll('.toc-unit-number').map((number) => number.text())).toEqual([
+      'Unit 1',
+      'Unit 2',
+    ])
+    expect(wrapper.find('.panel-header').text()).not.toContain('Unit')
+    const unnumberedItem = wrapper
+      .findAll('.toc-item')
+      .find((item) => item.text().includes('Second Chapter'))
+    expect(unnumberedItem?.find('.toc-unit-number').exists()).toBe(false)
   })
 
   it('parent nodes do not show page numbers', () => {
@@ -196,6 +260,33 @@ describe('ReaderTOC', () => {
 
     expect(wrapper.text()).toContain('Second Chapter')
     expect(wrapper.text()).not.toContain('Introductory Chapter')
+  })
+
+  it('keeps metadata unit numbers unchanged after filtering', async () => {
+    const wrapper = mount(ReaderTOC, {
+      props: {
+        metadata: mockMetadata,
+      },
+      global: {
+        stubs: {
+          'a-input': {
+            template:
+              '<input :value="value" @input="$emit(\'update:value\', $event.target.value)" />',
+            props: ['value'],
+          },
+          'a-collapse': {
+            template: '<div class="a-collapse-stub"><slot /></div>',
+          },
+          'a-collapse-panel': {
+            template: '<div class="a-collapse-panel-stub"><slot /></div>',
+          },
+        },
+      },
+    })
+
+    await wrapper.find('input').setValue('Section B')
+
+    expect(wrapper.findAll('.toc-unit-number').map((number) => number.text())).toEqual(['Unit 2'])
   })
 
   it('toggles sidebar collapse state', async () => {

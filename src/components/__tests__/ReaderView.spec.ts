@@ -113,6 +113,7 @@ describe('ReaderView', () => {
       book_group: 2,
       product_code: 'essgiuebk',
       title: 'Test Book',
+      short_title: null,
       author: 'Author',
       product_type: 'imgbook',
       cover: 'cover.jpg',

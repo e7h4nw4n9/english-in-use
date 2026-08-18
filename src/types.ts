@@ -89,6 +89,7 @@ export interface Book {
   book_group: BookGroup
   product_code: string
   title: string
+  short_title: string | null
   author: string | null
   product_type: string
   cover: string | null
@@ -98,6 +99,7 @@ export interface Book {
 export interface TocNode {
   title: string
   key: string
+  unitNumber?: number
   startPage?: string
   endPage?: string
   audioFiles?: OverlayAudio[]
@@ -164,12 +166,20 @@ export interface ReadingProgress {
 
 export type StudyViewMode = 'day' | 'week' | 'month'
 
+export type StudyPlanUpsertOutcome =
+  | 'created'
+  | 'reactivated'
+  | 'restarted'
+  | 'alreadyActive'
+  | 'alreadyMastered'
+
 export interface StudyPlanUpsertResponse {
   planUnitId: number
   planStatus: 0 | 1 | 2
   nextReviewDate: string | null
   totalStages: number
   completedStages: number[]
+  outcome: StudyPlanUpsertOutcome
 }
 
 export interface StudyPlanStatusResponse {

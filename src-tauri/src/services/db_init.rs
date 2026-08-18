@@ -341,6 +341,12 @@ mod tests {
         ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<Value>>> + Send + '_>> {
             Box::pin(async { Ok(vec![]) })
         }
+        fn query_write_batch(
+            &self,
+            _statements: Vec<crate::database::SqlStatement>,
+        ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<Vec<Value>>>> + Send + '_>> {
+            Box::pin(async { Ok(vec![]) })
+        }
         fn get_version(&self) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + '_>> {
             let calls = Arc::clone(&self.get_version_calls);
             let version = self.version.clone();

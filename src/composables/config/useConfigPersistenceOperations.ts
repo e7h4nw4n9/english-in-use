@@ -14,6 +14,7 @@ import type { AppConfig } from '../../types'
 import type { ConfigFileAccess } from './useConfigFileAccess'
 import type { ConfigPageContext } from './configPageContext'
 import type { ConfigPathOperations } from './useConfigPathOperations'
+import type { GlobalLoadingToken } from '@/stores/app'
 
 /**
  * 编排配置保存、导入导出、连接检查和数据库初始化。
@@ -65,10 +66,14 @@ export function useConfigPersistenceOperations(
 
   async function checkCloudConnections(
     config: AppConfig,
+    loadingToken: GlobalLoadingToken,
   ): Promise<{ isD1Connected: boolean; hasWarnings: boolean }> {
     appendOperationDiagnostic('开始检查云连接')
-    appStore.setGlobalLoadingMessage(t('config.checkingConnections' as any) || '正在检查云连接...')
-    appStore.setGlobalLoadingProgress(45)
+    appStore.setGlobalLoadingMessage(
+      loadingToken,
+      t('config.checkingConnections' as any) || '正在检查云连接...',
+    )
+    appStore.setGlobalLoadingProgress(loadingToken, 45)
     const usesGateway =
       config.book_source?.type === 'CloudflareGateway' ||
       config.database?.type === 'CloudflareGateway'
@@ -79,8 +84,8 @@ export function useConfigPersistenceOperations(
     const connectionTimeoutMs = 20_000
 
     if (usesGateway && config.cloudflare_gateway) {
-      appStore.setGlobalLoadingMessage('正在检查 Cloudflare 网关...')
-      appStore.setGlobalLoadingProgress(55)
+      appStore.setGlobalLoadingMessage(loadingToken, '正在检查 Cloudflare 网关...')
+      appStore.setGlobalLoadingProgress(loadingToken, 55)
       appendOperationDiagnostic('开始检查 Cloudflare 网关')
       info('开始检查 Cloudflare 网关')
       try {
@@ -123,6 +128,7 @@ export function useConfigPersistenceOperations(
   async function initializeDatabaseIfNeeded(
     config: AppConfig,
     isD1Connected: boolean,
+    loadingToken: GlobalLoadingToken,
   ): Promise<boolean> {
     const databaseType = config.database?.type
     if (!databaseType) {
@@ -137,9 +143,10 @@ export function useConfigPersistenceOperations(
 
     try {
       appStore.setGlobalLoadingMessage(
+        loadingToken,
         t('config.initializingDatabase' as any) || '正在初始化数据库...',
       )
-      appStore.setGlobalLoadingProgress(80)
+      appStore.setGlobalLoadingProgress(loadingToken, 80)
       appendOperationDiagnostic(`开始初始化数据库: ${databaseType}`)
       await initializeDatabase()
       appendOperationDiagnostic(`数据库初始化完成: ${databaseType}`)
@@ -182,19 +189,24 @@ export function useConfigPersistenceOperations(
   }
 
   async function handleSave() {
+    if (isSaving.value || isImporting.value || isTesting.value) return
+
     isSaving.value = true
     resetOperationDiagnostics('保存配置')
     info('用户触发了保存配置操作')
+    let loadingToken: GlobalLoadingToken | null = null
     try {
-      appStore.startGlobalLoading(t('config.savingConfig' as any) || '正在保存配置...')
-      appStore.setGlobalLoadingProgress(10)
+      loadingToken = appStore.startGlobalLoading(
+        t('config.savingConfig' as any) || '正在保存配置...',
+      )
+      appStore.setGlobalLoadingProgress(loadingToken, 10)
 
       const config = buildConfigFromForm()
 
       const appleAuthorized = await ensureAppleMobileLocalAuthorizationIfNeeded(config)
       if (!appleAuthorized) return
 
-      const localSourceValid = await validateLocalBookSourceIfNeeded(config)
+      const localSourceValid = await validateLocalBookSourceIfNeeded(config, loadingToken)
       if (!localSourceValid) return
 
       const sqlitePathValid = await validateSqlitePathIfNeeded(config)
@@ -203,13 +215,13 @@ export function useConfigPersistenceOperations(
       appendOperationDiagnostic('开始写入配置文件')
       await saveConfig(config)
       gatewayConfigurationRequired.value = false
-      appStore.setGlobalLoadingProgress(35)
+      appStore.setGlobalLoadingProgress(loadingToken, 35)
       appendOperationDiagnostic('配置文件写入完成')
       info('配置保存成功')
 
-      const { isD1Connected, hasWarnings } = await checkCloudConnections(config)
-      const databaseReady = await initializeDatabaseIfNeeded(config, isD1Connected)
-      appStore.setGlobalLoadingProgress(95)
+      const { isD1Connected, hasWarnings } = await checkCloudConnections(config, loadingToken)
+      const databaseReady = await initializeDatabaseIfNeeded(config, isD1Connected, loadingToken)
+      appStore.setGlobalLoadingProgress(loadingToken, 95)
 
       locale.value = language.value
       setTheme(themeMode.value as any)
@@ -237,8 +249,9 @@ export function useConfigPersistenceOperations(
       error(`保存配置失败: ${err}`)
       antMessage.error(t('config.saveError', { error: err }))
     } finally {
-      appStore.setGlobalLoadingProgress(null)
-      appStore.stopGlobalLoading()
+      if (loadingToken !== null) {
+        appStore.stopGlobalLoading(loadingToken)
+      }
       isSaving.value = false
     }
   }
@@ -291,10 +304,12 @@ export function useConfigPersistenceOperations(
 
   /** 执行配置导入、路径授权、保存、连接检查和数据库初始化。 */
   async function handleImport() {
+    if (isSaving.value || isImporting.value || isTesting.value) return
+
     isImporting.value = true
     resetOperationDiagnostics('导入配置')
     info('用户触发了导入配置操作')
-    let globalLoadingStarted = false
+    let loadingToken: GlobalLoadingToken | null = null
     try {
       appendOperationDiagnostic('等待用户选择配置文件')
       const selected = await open({
@@ -308,16 +323,17 @@ export function useConfigPersistenceOperations(
       })
 
       if (selected && typeof selected === 'string') {
-        appStore.startGlobalLoading(t('config.importingConfig' as any) || '正在导入配置...')
-        appStore.setGlobalLoadingProgress(10)
-        globalLoadingStarted = true
+        loadingToken = appStore.startGlobalLoading(
+          t('config.importingConfig' as any) || '正在导入配置...',
+        )
+        appStore.setGlobalLoadingProgress(loadingToken, 10)
         appendOperationDiagnostic(`已选择配置文件: ${selected}`)
         debug(`选择导入的文件: ${selected}`)
         appendOperationDiagnostic('开始读取导入配置')
         const config: AppConfig = await withTimeout(importConfig(selected), 15_000, '读取配置文件')
         config.system.enable_debug_tools = config.system.enable_debug_tools ?? false
         config.system.auto_start_study_timer = config.system.auto_start_study_timer ?? false
-        appStore.setGlobalLoadingProgress(25)
+        appStore.setGlobalLoadingProgress(loadingToken, 25)
         appendOperationDiagnostic('导入配置读取完成')
 
         const selectsGateway =
@@ -341,7 +357,7 @@ export function useConfigPersistenceOperations(
         const appleAuthorized = await ensureAppleMobileLocalAuthorizationIfNeeded(config)
         if (!appleAuthorized) return
 
-        const localSourceValid = await validateLocalBookSourceIfNeeded(config)
+        const localSourceValid = await validateLocalBookSourceIfNeeded(config, loadingToken)
         if (!localSourceValid) return
         const sqlitePathPrepared = await ensureSqlitePathForImportIfNeeded(config)
         if (!sqlitePathPrepared) return
@@ -351,13 +367,13 @@ export function useConfigPersistenceOperations(
         // 立即覆盖应用配置文件，后续连接失败只作为警告。
         appendOperationDiagnostic('开始写入应用配置')
         await saveConfig(config)
-        appStore.setGlobalLoadingProgress(40)
+        appStore.setGlobalLoadingProgress(loadingToken, 40)
         appendOperationDiagnostic('应用配置写入完成')
         info('配置文件导入并保存成功')
 
-        const { isD1Connected, hasWarnings } = await checkCloudConnections(config)
-        const databaseReady = await initializeDatabaseIfNeeded(config, isD1Connected)
-        appStore.setGlobalLoadingProgress(95)
+        const { isD1Connected, hasWarnings } = await checkCloudConnections(config, loadingToken)
+        const databaseReady = await initializeDatabaseIfNeeded(config, isD1Connected, loadingToken)
+        appStore.setGlobalLoadingProgress(loadingToken, 95)
 
         // 使用导入结果更新表单。
         updateFormFromConfig(config)
@@ -394,65 +410,79 @@ export function useConfigPersistenceOperations(
       error(`导入配置失败: ${err}`)
       antMessage.error(t('config.importError', { error: err }))
     } finally {
-      appStore.setGlobalLoadingProgress(null)
-      if (globalLoadingStarted) {
-        appStore.stopGlobalLoading()
+      if (loadingToken !== null) {
+        appStore.stopGlobalLoading(loadingToken)
       }
       isImporting.value = false
     }
   }
 
   async function testConnection() {
+    if (isTesting.value || isSaving.value || isImporting.value) return
+
     isTesting.value = true
     info(`正在测试连接, 当前标签页: ${currentTab.value}`)
     try {
-      if (currentTab.value === 'books') {
-        const source = getCurrentBookSource()
-        if (!source || source.type !== 'CloudflareGateway') {
-          warn('尝试测试非网关类型的图书源连接')
-          return
-        }
-        const status = await testCloudflareGateway({ ...gatewayConfig })
-        if (status.r2.status !== 'Connected') {
-          throw new Error(status.r2.status === 'Disconnected' ? status.r2.message : 'R2 绑定不可用')
-        }
-        info('Cloudflare 网关连接测试成功 (前端反馈)')
-        antMessage.success(t('config.testSuccess'))
-      } else if (currentTab.value === 'database') {
-        const connection = getCurrentDatabase()
-        if (!connection) {
-          warn('尝试测试未配置的数据库连接')
-          return
-        }
-        if (connection.type === 'SQLite') {
-          let rawPath = String(connection.details.path || '').trim()
-          const safePath = await enforceSqliteCloudPathPolicy(rawPath, '连接测试')
-          if (safePath === null) {
-            appendOperationDiagnostic('SQLite 连接测试阻止：命中云盘目录且回退失败')
+      /** 按当前标签页配置执行一次连接测试。 */
+      const performTest = async () => {
+        if (currentTab.value === 'books') {
+          const source = getCurrentBookSource()
+          if (!source || source.type !== 'CloudflareGateway') {
+            warn('尝试测试非网关类型的图书源连接')
             return
           }
-          rawPath = safePath.trim()
-          if (!rawPath || !isAbsolutePath(rawPath)) {
-            antMessage.error(
-              t('config.sqlitePathAbsoluteRequired' as any) || 'SQLite 数据库路径必须是绝对路径',
-            )
-            return
-          }
-          connection.details.path = await resolveSqlitePathForUsage(rawPath)
-          sqlitePath.value = connection.details.path
-        }
-        if (connection.type === 'CloudflareGateway') {
           const status = await testCloudflareGateway({ ...gatewayConfig })
-          if (status.database.status !== 'Connected') {
+          if (status.r2.status !== 'Connected') {
             throw new Error(
-              status.database.status === 'Disconnected' ? status.database.message : 'D1 绑定不可用',
+              status.r2.status === 'Disconnected' ? status.r2.message : 'R2 绑定不可用',
             )
           }
-        } else {
-          await testDatabaseConnection(connection)
+          info('Cloudflare 网关连接测试成功 (前端反馈)')
+          antMessage.success(t('config.testSuccess'))
+        } else if (currentTab.value === 'database') {
+          const connection = getCurrentDatabase()
+          if (!connection) {
+            warn('尝试测试未配置的数据库连接')
+            return
+          }
+          if (connection.type === 'SQLite') {
+            let rawPath = String(connection.details.path || '').trim()
+            const safePath = await enforceSqliteCloudPathPolicy(rawPath, '连接测试')
+            if (safePath === null) {
+              appendOperationDiagnostic('SQLite 连接测试阻止：命中云盘目录且回退失败')
+              return
+            }
+            rawPath = safePath.trim()
+            if (!rawPath || !isAbsolutePath(rawPath)) {
+              antMessage.error(
+                t('config.sqlitePathAbsoluteRequired' as any) || 'SQLite 数据库路径必须是绝对路径',
+              )
+              return
+            }
+            connection.details.path = await resolveSqlitePathForUsage(rawPath)
+            sqlitePath.value = connection.details.path
+          }
+          if (connection.type === 'CloudflareGateway') {
+            const status = await testCloudflareGateway({ ...gatewayConfig })
+            if (status.database.status !== 'Connected') {
+              throw new Error(
+                status.database.status === 'Disconnected'
+                  ? status.database.message
+                  : 'D1 绑定不可用',
+              )
+            }
+          } else {
+            await testDatabaseConnection(connection)
+          }
+          info('数据库连接测试成功 (前端反馈)')
+          antMessage.success(t('config.testSuccess'))
         }
-        info('数据库连接测试成功 (前端反馈)')
-        antMessage.success(t('config.testSuccess'))
+      }
+
+      if (currentTab.value === 'database') {
+        await appStore.runGlobalLoadingAction(performTest, t('config.testingDatabase' as any))
+      } else {
+        await performTest()
       }
     } catch (err) {
       error(`连接测试失败: ${err}`)

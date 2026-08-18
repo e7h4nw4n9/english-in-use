@@ -2,6 +2,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import SystemSettings from '../SystemSettings.vue'
 
+const runGlobalLoadingAction = vi.hoisted(() =>
+  vi.fn(async (action: () => Promise<void>, _message: string) => {
+    await action()
+    return true
+  }),
+)
+
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key: string) => key,
@@ -10,6 +17,12 @@ vi.mock('vue-i18n', () => ({
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
+}))
+
+vi.mock('../../../stores/app', () => ({
+  useAppStore: () => ({
+    runGlobalLoadingAction,
+  }),
 }))
 
 vi.mock('../../lib/api/database', () => ({
@@ -142,5 +155,33 @@ describe('SystemSettings.vue', () => {
     await switchInputs[0].setValue(true)
     expect(wrapper.emitted()).toHaveProperty('update:enableDebugTools')
     expect(wrapper.emitted()['update:enableDebugTools'][0]).toEqual([true])
+  })
+
+  it('uses operation-specific loading messages for database migrations', async () => {
+    runGlobalLoadingAction.mockClear()
+    const wrapper = mount(SystemSettings, {
+      props: {
+        language: 'en',
+        themeMode: 'system',
+        logLevel: 'info',
+        enableDebugTools: true,
+        autoStartStudyTimer: false,
+        debugFeaturesAvailable: true,
+        enableAutoCheck: true,
+        checkIntervalMins: 5,
+        isCloudConfigured: true,
+      },
+      global: { stubs: commonStubs },
+    })
+    const vm = wrapper.vm as unknown as {
+      handleUpgrade: () => Promise<void>
+      handleDowngrade: () => Promise<void>
+    }
+
+    await vm.handleUpgrade()
+    await vm.handleDowngrade()
+
+    expect(runGlobalLoadingAction.mock.calls[0]?.[1]).toBe('config.upgradingDatabase')
+    expect(runGlobalLoadingAction.mock.calls[1]?.[1]).toBe('config.downgradingDatabase')
   })
 })

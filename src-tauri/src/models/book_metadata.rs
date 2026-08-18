@@ -160,6 +160,8 @@ pub struct ExerciseInfo {
 pub struct TocNode {
     pub title: String,
     pub key: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit_number: Option<u32>,
     pub start_page: Option<String>,
     pub end_page: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

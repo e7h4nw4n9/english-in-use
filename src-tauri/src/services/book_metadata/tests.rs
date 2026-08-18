@@ -114,8 +114,49 @@ fn test_parse_toc() {
     let children = toc[0].children.as_ref().unwrap();
     assert_eq!(children.len(), 1);
     assert_eq!(children[0].title, "Unit 1");
+    assert_eq!(children[0].unit_number, Some(1));
     assert_eq!(children[0].start_page, Some("12".to_string()));
     assert_eq!(children[0].end_page, Some("13".to_string()));
+}
+
+#[test]
+fn test_parse_toc_unit_number_comes_from_resource_metadata() {
+    let data = serde_json::json!({
+        "meta": { "title": "Test", "code": "test" },
+        "items": {
+            "default": [
+                {
+                    "name": "Later unit",
+                    "item-type": "resource",
+                    "resource": "RE_00101"
+                },
+                {
+                    "name": "Earlier unit",
+                    "item-type": "resource",
+                    "resource": "RE_0001"
+                },
+                {
+                    "name": "Appendix 1 Reference",
+                    "item-type": "resource",
+                    "resource": "RE_00102"
+                },
+                {
+                    "name": "Invalid resource",
+                    "item-type": "resource",
+                    "resource": "RESOURCE_3"
+                }
+            ]
+        },
+        "resources": { "generic": {} }
+    });
+
+    let definition: BookDefinition = serde_json::from_value(data).unwrap();
+    let toc = MetadataService::parse_toc(&definition, None);
+
+    assert_eq!(toc[0].unit_number, Some(101));
+    assert_eq!(toc[1].unit_number, Some(1));
+    assert_eq!(toc[2].unit_number, None);
+    assert_eq!(toc[3].unit_number, None);
 }
 
 #[test]

@@ -92,6 +92,22 @@ impl Database for D1Database {
         })
     }
 
+    fn query_write_batch(
+        &self,
+        statements: Vec<SqlStatement>,
+    ) -> DatabaseFuture<'_, Vec<Vec<Value>>> {
+        Box::pin(async move {
+            Ok(self
+                .client
+                .batch(BatchMode::Write, &statements)
+                .await
+                .map_err(anyhow::Error::msg)?
+                .into_iter()
+                .map(|result| result.results)
+                .collect())
+        })
+    }
+
     fn get_version(&self) -> DatabaseFuture<'_, String> {
         Box::pin(async move {
             let table_rows = self

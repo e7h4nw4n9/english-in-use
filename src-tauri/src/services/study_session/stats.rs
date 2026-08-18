@@ -47,9 +47,11 @@ pub async fn get_study_stats_on_date(
         SqlStatement::new(
             format!(
                 "SELECT s.book_id AS book_id, b.product_code AS product_code, \
-                        b.title AS book_title, CAST(SUM(s.duration) AS TEXT) AS duration \
+                        b.short_title AS short_title, b.title AS title, \
+                        CAST(SUM(s.duration) AS TEXT) AS duration \
                  FROM study_sessions s JOIN books b ON s.book_id = b.id {} \
-                 GROUP BY s.book_id, b.product_code, b.title ORDER BY duration DESC, b.title ASC",
+                 GROUP BY s.book_id, b.product_code, b.short_title, b.title \
+                 ORDER BY duration DESC",
                 where_sql
             ),
             vec![],
@@ -74,7 +76,7 @@ pub async fn get_study_stats_on_date(
         SqlStatement::new(
             format!(
                 "SELECT s.id AS session_id, s.book_id AS book_id, b.book_group AS book_group, \
-                        b.product_code AS product_code, b.title AS book_title, \
+                        b.product_code AS product_code, b.short_title AS short_title, b.title AS title, \
                         s.resource_id AS resource_id, s.unit_name AS unit_name, \
                         s.entry_resource_id AS entry_resource_id, s.entry_unit_name AS entry_unit_name, \
                         s.visited_units_json AS visited_units_json, s.start_at AS start_at, \
@@ -114,17 +116,23 @@ pub async fn get_study_stats_on_date(
         .collect::<Vec<_>>();
 
     let book_rows = result_sets.next().unwrap_or_default();
-    let book_breakdown = book_rows
+    let mut book_breakdown = book_rows
         .iter()
         .filter_map(|row| {
             Some(StudyStatsBookBreakdownItem {
                 book_id: json_i64(row, "book_id")?,
                 product_code: json_string(row, "product_code")?,
-                book_title: json_string(row, "book_title")?,
+                book_title: book_display_title(row)?,
                 duration: json_i64(row, "duration")?,
             })
         })
         .collect::<Vec<_>>();
+    book_breakdown.sort_by(|left, right| {
+        right
+            .duration
+            .cmp(&left.duration)
+            .then_with(|| left.book_title.cmp(&right.book_title))
+    });
 
     let series_rows = result_sets.next().unwrap_or_default();
     let series_breakdown = series_rows
@@ -191,7 +199,8 @@ pub async fn get_study_sessions_by_date(
     let where_sql = format!("WHERE {}", clauses.join(" AND "));
 
     let sql = format!(
-        "SELECT s.id AS session_id, s.book_id AS book_id, b.book_group AS book_group, b.product_code AS product_code, b.title AS book_title, \
+        "SELECT s.id AS session_id, s.book_id AS book_id, b.book_group AS book_group, b.product_code AS product_code, \
+                b.short_title AS short_title, b.title AS title, \
                 s.resource_id AS resource_id, s.unit_name AS unit_name, s.entry_resource_id AS entry_resource_id, s.entry_unit_name AS entry_unit_name, \
                 s.visited_units_json AS visited_units_json, s.start_at AS start_at, s.end_at AS end_at, s.duration AS duration \
          FROM study_sessions s \
@@ -245,8 +254,8 @@ mod request_count_tests {
             Box::pin(async {
                 Ok(vec![
                     vec![serde_json::json!({
-                        "range_start": "2026-07-28",
-                        "range_end": "2026-08-03"
+                        "range_start": "2026-08-03",
+                        "range_end": "2026-08-09"
                     })],
                     vec![],
                     vec![],
@@ -255,6 +264,13 @@ mod request_count_tests {
                     vec![],
                 ])
             })
+        }
+
+        fn query_write_batch(
+            &self,
+            _statements: Vec<SqlStatement>,
+        ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<Vec<Value>>>> + Send + '_>> {
+            Box::pin(async { anyhow::bail!("unexpected write batch") })
         }
 
         fn get_version(&self) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + '_>> {

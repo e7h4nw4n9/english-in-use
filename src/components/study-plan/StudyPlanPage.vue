@@ -54,12 +54,22 @@ const {
           </button>
         </div>
 
-        <div class="period-nav">
-          <a-button shape="circle" aria-label="Previous period" @click="goPrev">
+        <div class="period-nav" :class="{ 'is-month-view': viewMode === 'month' }">
+          <a-button
+            shape="circle"
+            class="period-arrow-btn"
+            aria-label="Previous period"
+            @click="goPrev"
+          >
             <template #icon><LeftOutlined /></template>
           </a-button>
           <div class="period-label">{{ periodLabel }}</div>
-          <a-button shape="circle" aria-label="Next period" @click="goNext">
+          <a-button
+            shape="circle"
+            class="period-arrow-btn"
+            aria-label="Next period"
+            @click="goNext"
+          >
             <template #icon><RightOutlined /></template>
           </a-button>
           <a-button type="default" class="today-btn" @click="goToday">
@@ -109,7 +119,7 @@ const {
                     <span class="stat-label">{{ t('studyPlan.done') }}</span>
                     <span class="stat-value">{{ summaryOf(date)?.completed || 0 }}</span>
                   </div>
-                  <div class="stat-item overdue">
+                  <div v-if="(summaryOf(date)?.overdue ?? 0) > 0" class="stat-item overdue">
                     <span class="stat-label">{{ t('studyPlan.overdue') }}</span>
                     <span class="stat-value">{{ summaryOf(date)?.overdue || 0 }}</span>
                   </div>
@@ -144,7 +154,7 @@ const {
                     <span class="stat-label">{{ t('studyPlan.done') }}</span>
                     <span class="stat-value">{{ summaryOf(date)?.completed || 0 }}</span>
                   </div>
-                  <div class="stat-item overdue">
+                  <div v-if="(summaryOf(date)?.overdue ?? 0) > 0" class="stat-item overdue">
                     <span class="stat-label">{{ t('studyPlan.overdue') }}</span>
                     <span class="stat-value">{{ summaryOf(date)?.overdue || 0 }}</span>
                   </div>
@@ -279,6 +289,35 @@ const {
   max-width: 100%;
   align-items: center;
   gap: 12px;
+}
+
+.period-nav.is-month-view {
+  flex-wrap: nowrap;
+}
+
+.period-nav.is-month-view .period-label {
+  flex: 0 1 auto;
+  order: 0;
+  white-space: nowrap;
+}
+
+.period-arrow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.period-arrow-btn :deep(.anticon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.period-arrow-btn :deep(svg) {
+  display: block;
 }
 
 .period-label {

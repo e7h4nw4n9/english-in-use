@@ -95,6 +95,11 @@ pub trait Database: Send + Sync {
             Ok(results)
         })
     }
+    /// 在原子写批次中执行多条语句并分别返回结果集。
+    fn query_write_batch(
+        &self,
+        statements: Vec<SqlStatement>,
+    ) -> DatabaseFuture<'_, Vec<Vec<Value>>>;
     /// 读取数据库中记录的应用迁移版本。
     fn get_version(&self) -> DatabaseFuture<'_, String>;
 }
@@ -531,5 +536,45 @@ mod tests {
             .await
             .unwrap();
         assert!(sequence.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_book_short_title_migration_preserves_books_and_supports_rollback() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap().to_string();
+        let db = SqliteDatabase::new(&path).await.unwrap();
+        migrate_up(&db, Some("0.6.0")).await.unwrap();
+
+        migrate_up(&db, None).await.unwrap();
+
+        let books = db
+            .query("SELECT product_code, short_title FROM books ORDER BY id".to_string())
+            .await
+            .unwrap();
+        assert_eq!(books.len(), 3);
+        assert!(books.iter().all(|book| book["short_title"].is_null()));
+
+        db.execute(
+            "UPDATE books SET short_title = '简称' WHERE product_code = 'essgiuebk'".to_string(),
+        )
+        .await
+        .unwrap();
+        let updated = db
+            .query("SELECT short_title FROM books WHERE product_code = 'essgiuebk'".to_string())
+            .await
+            .unwrap();
+        assert_eq!(updated[0]["short_title"], "简称");
+
+        migrate_down(&db, Some("0.6.0")).await.unwrap();
+        let columns = db
+            .query("PRAGMA table_info(books)".to_string())
+            .await
+            .unwrap();
+        assert!(!columns.iter().any(|column| column["name"] == "short_title"));
+        let books = db
+            .query("SELECT product_code FROM books ORDER BY id".to_string())
+            .await
+            .unwrap();
+        assert_eq!(books.len(), 3);
     }
 }

@@ -1,6 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import ReaderStudyTimerFloat from '../ReaderStudyTimerFloat.vue'
+
+const originalInnerWidth = window.innerWidth
+
+afterEach(() => {
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    value: originalInnerWidth,
+  })
+})
 
 vi.mock('vue-i18n', async (importOriginal) => {
   const actual = await importOriginal<typeof import('vue-i18n')>()
@@ -96,5 +105,43 @@ describe('ReaderStudyTimerFloat', () => {
 
     await wrapper.get('[data-testid="timer-collapsed-chip"]').trigger('click')
     expect(wrapper.find('[data-testid="timer-expanded-row"]').exists()).toBe(true)
+  })
+
+  it('keeps the collapsed timer attached to the right edge after viewport rotation', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    const wrapper = mountTimer({ timerStatus: 'running' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="timer-collapse-button"]').trigger('click')
+    await flushPromises()
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1366 })
+    window.dispatchEvent(new Event('orientationchange'))
+    await flushPromises()
+    expect((wrapper.get('.study-timer-float').element as HTMLElement).style.left).toBe('1246px')
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 768 })
+    window.dispatchEvent(new Event('resize'))
+    await flushPromises()
+    expect((wrapper.get('.study-timer-float').element as HTMLElement).style.left).toBe('648px')
+
+    wrapper.unmount()
+  })
+
+  it('preserves the expanded timer position when the viewport grows', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    const wrapper = mountTimer({ timerStatus: 'running' })
+    await flushPromises()
+    const vm = wrapper.vm as unknown as {
+      position: { x: number; y: number }
+    }
+    vm.position = { x: 120, y: 84 }
+    await wrapper.vm.$nextTick()
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1366 })
+    window.dispatchEvent(new Event('orientationchange'))
+    await flushPromises()
+
+    expect((wrapper.get('.study-timer-float').element as HTMLElement).style.left).toBe('120px')
   })
 })

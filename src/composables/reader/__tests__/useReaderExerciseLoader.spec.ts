@@ -34,14 +34,15 @@ function createAppStore() {
       globalLoading.value = true
       globalLoadingMessage.value = message || ''
       globalLoadingProgress.value = null
+      return 1
     },
-    setGlobalLoadingProgress: (progress: number | null) => {
+    setGlobalLoadingProgress: (_token: number, progress: number | null) => {
       globalLoadingProgress.value = progress
     },
-    setGlobalLoadingMessage: (message: string) => {
+    setGlobalLoadingMessage: (_token: number, message: string) => {
       globalLoadingMessage.value = message
     },
-    stopGlobalLoading: () => {
+    stopGlobalLoading: (_token: number) => {
       globalLoading.value = false
       globalLoadingMessage.value = ''
       globalLoadingProgress.value = null
@@ -68,6 +69,7 @@ describe('useReaderExerciseLoader', () => {
       book_group: 1,
       product_code: 'essgiuebk',
       title: 'Book',
+      short_title: null,
       author: null,
       product_type: 'imgbook',
       cover: null,
@@ -125,6 +127,7 @@ describe('useReaderExerciseLoader', () => {
       book_group: 1,
       product_code: 'essgiuebk',
       title: 'Book',
+      short_title: null,
       author: null,
       product_type: 'imgbook',
       cover: null,
@@ -173,7 +176,7 @@ describe('useReaderExerciseLoader', () => {
     expect(appStore.globalLoading.value).toBe(false)
   })
 
-  it('skips loading when no book selected or global loading is active', async () => {
+  it('skips loading when no book is selected and prevents duplicate exercise requests', async () => {
     const appStore = createAppStore()
     vi.mocked(listen).mockResolvedValue(vi.fn())
     vi.mocked(getExerciseHtml).mockResolvedValue({
@@ -207,14 +210,23 @@ describe('useReaderExerciseLoader', () => {
       book_group: 1,
       product_code: 'essgiuebk',
       title: 'Book',
+      short_title: null,
       author: null,
       product_type: 'imgbook',
       cover: null,
       sort_num: 1,
     }
-    appStore.globalLoading.value = true
+    let resolveHtml!: (result: { html: string; url: string }) => void
+    vi.mocked(getExerciseHtml).mockReturnValue(
+      new Promise((resolve) => {
+        resolveHtml = resolve
+      }),
+    )
 
+    const firstOpen = openExercise({ name: 'Busy', resource_id: 'RE_Y' })
     await openExercise({ name: 'Busy', resource_id: 'RE_Y' })
-    expect(getExerciseHtml).not.toHaveBeenCalled()
+    expect(getExerciseHtml).toHaveBeenCalledOnce()
+    resolveHtml({ html: '<html>ok</html>', url: 'eiuasset://localhost/ok.html' })
+    await firstOpen
   })
 })

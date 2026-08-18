@@ -79,10 +79,30 @@ const commonStubs = {
   ReaderView: { template: '<div class="reader-view-stub" />' },
 }
 
+/** 设置测试环境的粗指针媒体查询结果。
+ * @param matches - 是否模拟移动触控设备。
+ */
+function setMobilePointerMode(matches: boolean) {
+  vi.mocked(window.matchMedia).mockImplementation(
+    (query) =>
+      ({
+        matches,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }) as MediaQueryList,
+  )
+}
+
 describe('App Flow Integration', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    setMobilePointerMode(false)
   })
 
   it('shows ConfigPage when app initializes with invalid config', async () => {
@@ -312,5 +332,66 @@ describe('App Flow Integration', () => {
     expect(api.loadConfig).toHaveBeenCalledTimes(2)
     expect(wrapper.find('.book-list-stub').exists()).toBe(true)
     expect(wrapper.find('.config-page-stub').exists()).toBe(false)
+  })
+
+  it('only blocks touch context menus inside explicitly suppressed controls', async () => {
+    setMobilePointerMode(true)
+    ;(api.loadConfig as any).mockResolvedValue({
+      system: { language: 'en', theme: 'system', enable_auto_check: false },
+      book_source: { type: 'Local', details: { path: '/books' } },
+      database: { type: 'SQLite', details: { path: '/db' } },
+    })
+
+    const wrapper = mount(App, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          ...commonStubs,
+          BookList: {
+            template: `
+              <div class="book-list-stub">
+                <div class="plain-target">Plain</div>
+                <input class="input-target" />
+                <span class="suppressed-target" data-suppress-mobile-long-press>Suppressed</span>
+              </div>
+            `,
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const touchPointerEvent = new Event('pointerdown', { bubbles: true })
+    Object.defineProperty(touchPointerEvent, 'pointerType', { value: 'touch' })
+    wrapper.find('.suppressed-target').element.dispatchEvent(touchPointerEvent)
+
+    const plainEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    wrapper.find('.plain-target').element.dispatchEvent(plainEvent)
+    expect(plainEvent.defaultPrevented).toBe(false)
+
+    const suppressedEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    wrapper.find('.suppressed-target').element.dispatchEvent(suppressedEvent)
+    expect(suppressedEvent.defaultPrevented).toBe(true)
+
+    const inputEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    wrapper.find('.input-target').element.dispatchEvent(inputEvent)
+    expect(inputEvent.defaultPrevented).toBe(false)
+
+    const mousePointerEvent = new Event('pointerdown', { bubbles: true })
+    Object.defineProperty(mousePointerEvent, 'pointerType', { value: 'mouse' })
+    wrapper.find('.suppressed-target').element.dispatchEvent(mousePointerEvent)
+    const desktopEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    wrapper.find('.suppressed-target').element.dispatchEvent(desktopEvent)
+    expect(desktopEvent.defaultPrevented).toBe(false)
+
+    wrapper.unmount()
+    setMobilePointerMode(true)
+    const detachedTarget = document.createElement('div')
+    const detachedEvent = new Event('contextmenu', { bubbles: true, cancelable: true })
+    document.body.appendChild(detachedTarget)
+    detachedTarget.dispatchEvent(detachedEvent)
+    detachedTarget.remove()
+    expect(detachedEvent.defaultPrevented).toBe(false)
   })
 })

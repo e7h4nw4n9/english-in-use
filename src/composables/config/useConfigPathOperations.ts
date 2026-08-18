@@ -7,6 +7,7 @@ import {
   validateLocalBookSource,
 } from '../../lib/api'
 import type { AppConfig } from '../../types'
+import type { GlobalLoadingToken } from '@/stores/app'
 import type { ConfigPageContext } from './configPageContext'
 
 /**
@@ -328,7 +329,10 @@ export function useConfigPathOperations(context: ConfigPageContext) {
   /** 校验本地图书源目录及其必要结构。
    * @param config - 待保存或导入的配置。
    */
-  async function validateLocalBookSourceIfNeeded(config: AppConfig): Promise<boolean> {
+  async function validateLocalBookSourceIfNeeded(
+    config: AppConfig,
+    loadingToken: GlobalLoadingToken,
+  ): Promise<boolean> {
     if (config.book_source?.type !== 'Local') {
       return true
     }
@@ -339,8 +343,8 @@ export function useConfigPathOperations(context: ConfigPageContext) {
       return true
     }
 
-    appStore.setGlobalLoadingMessage('正在校验本地图书目录...')
-    appStore.setGlobalLoadingProgress(30)
+    appStore.setGlobalLoadingMessage(loadingToken, '正在校验本地图书目录...')
+    appStore.setGlobalLoadingProgress(loadingToken, 30)
     appendOperationDiagnostic(`开始校验本地图书目录: ${localPath}`)
 
     const validation = await withTimeout(

@@ -51,6 +51,14 @@ pub(super) fn json_completed_stages(row: &Value) -> Vec<i32> {
         .unwrap_or_default()
 }
 
+/// 解析计划已有的全部复习阶段列表。
+pub(super) fn json_all_stages(row: &Value) -> Vec<i32> {
+    row.get("all_stages_json")
+        .and_then(Value::as_str)
+        .and_then(|value| serde_json::from_str::<Vec<i32>>(value).ok())
+        .unwrap_or_default()
+}
+
 /// 使用一次聚合查询读取图书、计划及其任务状态。
 pub(super) async fn query_plan_status_row(
     db: &dyn Database,
@@ -65,6 +73,10 @@ pub(super) async fn query_plan_status_row(
                         SELECT review_stage FROM study_tasks \
                         WHERE plan_unit_id = u.id AND task_status = 1 ORDER BY review_stage\
                     )), '[]') AS completed_stages_json, \
+                    COALESCE((SELECT json_group_array(review_stage) FROM (\
+                        SELECT review_stage FROM study_tasks \
+                        WHERE plan_unit_id = u.id ORDER BY review_stage\
+                    )), '[]') AS all_stages_json, \
                     (SELECT scheduled_date FROM study_tasks \
                      WHERE plan_unit_id = u.id AND task_status = 0 \
                      ORDER BY scheduled_date, review_stage LIMIT 1) AS next_review_date, \

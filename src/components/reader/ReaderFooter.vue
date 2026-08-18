@@ -17,7 +17,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons-vue'
-import { message, theme } from 'ant-design-vue'
+import { message, Modal, theme } from 'ant-design-vue'
 import { useI18n } from 'vue-i18n'
 import type {
   OverlayAudio,
@@ -208,32 +208,58 @@ function applyUpsertResult(result: StudyPlanUpsertResponse) {
   }
 }
 
+/** 确认是否取消当前单元的学习计划。 */
+function confirmCancelStudyPlan(): Promise<boolean> {
+  return new Promise((resolve) => {
+    Modal.confirm({
+      title: t('studyPlan.cancelConfirmTitle'),
+      content: t('studyPlan.cancelConfirmDescription'),
+      okText: t('studyPlan.confirmCancel'),
+      cancelText: t('common.cancel'),
+      okButtonProps: { danger: true },
+      onOk: () => resolve(true),
+      onCancel: () => resolve(false),
+    })
+  })
+}
+
 async function toggleStudyPlan() {
   if (!currentBook.value || !props.currentStudyPlanResourceId || studyPlanBusy.value) return
 
+  const book = currentBook.value
+  const resourceId = props.currentStudyPlanResourceId
+  const unitName = props.currentStudyPlanUnitName || book.title
+  const isCancelingPlan = isStudyPlanActive.value
+  const loadingMessage = isCancelingPlan ? t('studyPlan.abandoning') : t('studyPlan.adding')
   studyPlanBusy.value = true
   try {
-    if (!isStudyPlanActive.value) {
-      const upsertResult = await upsertStudyPlan(
-        currentBook.value.product_code,
-        props.currentStudyPlanResourceId,
-        props.currentStudyPlanUnitName || currentBook.value.title,
-      )
-      applyUpsertResult(upsertResult)
-      message.success(t('studyPlan.added'))
-    } else {
-      await abandonStudyPlan(currentBook.value.product_code, props.currentStudyPlanResourceId)
-      studyPlanStatus.value = {
-        inPlan: true,
-        planStatus: 2,
-        planUnitId: studyPlanStatus.value?.planUnitId ?? null,
-        completedStages: studyPlanStatus.value?.completedStages ?? [],
-        nextReviewDate: null,
-        overdueCount: studyPlanStatus.value?.overdueCount ?? 0,
+    if (isCancelingPlan && !(await confirmCancelStudyPlan())) return
+
+    await appStore.runGlobalLoadingAction(async () => {
+      if (!isCancelingPlan) {
+        const upsertResult = await upsertStudyPlan(book.product_code, resourceId, unitName)
+        applyUpsertResult(upsertResult)
+        if (upsertResult.outcome === 'alreadyActive') {
+          message.info(t('studyPlan.alreadyActive'))
+        } else if (upsertResult.outcome === 'alreadyMastered') {
+          message.info(t('studyPlan.alreadyMastered'))
+        } else {
+          message.success(t('studyPlan.added'))
+        }
+      } else {
+        await abandonStudyPlan(book.product_code, resourceId)
+        studyPlanStatus.value = {
+          inPlan: true,
+          planStatus: 2,
+          planUnitId: studyPlanStatus.value?.planUnitId ?? null,
+          completedStages: studyPlanStatus.value?.completedStages ?? [],
+          nextReviewDate: null,
+          overdueCount: studyPlanStatus.value?.overdueCount ?? 0,
+        }
+        message.success(t('studyPlan.abandoned'))
       }
-      message.success(t('studyPlan.abandoned'))
-    }
-    queueRefreshStudyPlanStatus(240, false)
+      queueRefreshStudyPlanStatus(240, false)
+    }, loadingMessage)
   } catch (error) {
     const errorText = error instanceof Error ? error.message : String(error)
     message.error(t('studyPlan.actionFailed', { error: errorText }))

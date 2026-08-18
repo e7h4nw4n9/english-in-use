@@ -4,10 +4,14 @@ import ConfigPage from '../ConfigPage.vue'
 import * as api from '../../lib/api'
 import * as dialog from '@tauri-apps/plugin-dialog'
 
-const startGlobalLoading = vi.fn()
+const startGlobalLoading = vi.fn(() => 1)
 const setGlobalLoadingMessage = vi.fn()
 const setGlobalLoadingProgress = vi.fn()
 const stopGlobalLoading = vi.fn()
+const runGlobalLoadingAction = vi.fn(async (action: () => Promise<void>, _message: string) => {
+  await action()
+  return true
+})
 
 // Mock matchMedia globally
 vi.stubGlobal(
@@ -38,10 +42,12 @@ vi.mock('../composables/useTheme', () => ({
 
 vi.mock('../../stores/app', () => ({
   useAppStore: () => ({
+    globalLoading: false,
     startGlobalLoading,
     setGlobalLoadingMessage,
     setGlobalLoadingProgress,
     stopGlobalLoading,
+    runGlobalLoadingAction,
   }),
 }))
 
@@ -178,9 +184,9 @@ describe('ConfigPage.vue Core Logic', () => {
 
     expect(api.saveConfig).toHaveBeenCalled()
     expect(startGlobalLoading).toHaveBeenCalledWith('config.savingConfig')
-    expect(setGlobalLoadingMessage).toHaveBeenCalledWith('config.checkingConnections')
+    expect(setGlobalLoadingMessage).toHaveBeenCalledWith(1, 'config.checkingConnections')
     expect(api.initializeDatabase).toHaveBeenCalled()
-    expect(stopGlobalLoading).toHaveBeenCalled()
+    expect(stopGlobalLoading).toHaveBeenCalledWith(1)
     expect(wrapper.emitted('config-saved')).toBeTruthy()
     const backEvents = wrapper.emitted('back')
     expect(backEvents).toBeTruthy()
@@ -233,9 +239,9 @@ describe('ConfigPage.vue Core Logic', () => {
     expect(api.importConfig).toHaveBeenCalledWith('/path/to/import.toml')
     expect(api.saveConfig).toHaveBeenCalledWith(mockConfig)
     expect(startGlobalLoading).toHaveBeenCalledWith('config.importingConfig')
-    expect(setGlobalLoadingMessage).toHaveBeenCalledWith('config.checkingConnections')
+    expect(setGlobalLoadingMessage).toHaveBeenCalledWith(1, 'config.checkingConnections')
     expect(api.initializeDatabase).toHaveBeenCalled()
-    expect(stopGlobalLoading).toHaveBeenCalled()
+    expect(stopGlobalLoading).toHaveBeenCalledWith(1)
     expect(wrapper.emitted('config-imported')).toBeTruthy()
     expect(wrapper.emitted('config-saved')).toBeTruthy()
   })
@@ -378,7 +384,7 @@ describe('ConfigPage.vue Core Logic', () => {
 
     expect(api.saveConfig).toHaveBeenCalled()
     expect(api.testCloudflareGateway).toHaveBeenCalled()
-    expect(setGlobalLoadingMessage).toHaveBeenCalledWith('config.initializingDatabase')
+    expect(setGlobalLoadingMessage).toHaveBeenCalledWith(1, 'config.initializingDatabase')
     expect(api.initializeDatabase).toHaveBeenCalled()
   })
 

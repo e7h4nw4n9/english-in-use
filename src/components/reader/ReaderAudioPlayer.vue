@@ -228,6 +228,7 @@ onBeforeUnmount(() => {
       <div
         v-if="!isCollapsed"
         class="drag-handle flex cursor-move items-center justify-between px-4 py-2.5"
+        data-suppress-mobile-long-press
         @pointerdown="onDragStart"
       >
         <div class="mr-2 flex flex-1 items-center gap-2 overflow-hidden">

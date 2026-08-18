@@ -42,6 +42,15 @@ pub(super) fn json_string(row: &Value, key: &str) -> Option<String> {
     row.get(key).and_then(|v| v.as_str()).map(str::to_string)
 }
 
+/// 根据简称优先规则返回数据库行中的书籍展示名称。
+///
+/// # 参数
+/// - `row`：包含 short_title 和 title 的数据库行。
+pub(super) fn book_display_title(row: &Value) -> Option<String> {
+    crate::models::book::normalize_short_title(row.get("short_title").and_then(Value::as_str))
+        .or_else(|| json_string(row, "title"))
+}
+
 /// 校验必填文本并返回去除首尾空白后的值。
 ///
 /// # 参数
@@ -78,10 +87,15 @@ pub(super) fn period_range_expr(
 ) -> Result<(String, String), String> {
     crate::services::study_plan::validate_local_date_for_payload(local_date)?;
     match period_type {
-        "week" => Ok((
-            format!("date('{local_date}', '-6 day')"),
-            format!("date('{local_date}')"),
-        )),
+        "week" => {
+            // SQLite 的星期日为 0，将其转换为星期一为 0 的偏移量。
+            let monday_offset =
+                format!("((CAST(strftime('%w', '{local_date}') AS INTEGER) + 6) % 7)");
+            Ok((
+                format!("date('{local_date}', '-' || {monday_offset} || ' day')"),
+                format!("date('{local_date}', '+' || (6 - {monday_offset}) || ' day')"),
+            ))
+        }
         "month" => Ok((
             format!("date('{local_date}', 'start of month')"),
             format!("date('{local_date}', 'start of month', '+1 month', '-1 day')"),
@@ -122,7 +136,7 @@ pub(super) fn row_to_session(row: &Value) -> Option<StudySessionListItem> {
         book_id: json_i64(row, "book_id")?,
         book_group: json_i32(row, "book_group")?,
         product_code: json_string(row, "product_code")?,
-        book_title: json_string(row, "book_title")?,
+        book_title: book_display_title(row)?,
         resource_id: json_string(row, "resource_id")?,
         unit_name: json_string(row, "unit_name")?,
         entry_resource_id: json_string(row, "entry_resource_id")?,

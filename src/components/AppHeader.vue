@@ -33,6 +33,7 @@ defineProps<{
 const isFullscreen = ref(false)
 const isMacOS = ref(false)
 const connectionModalVisible = ref(false)
+const recheckingConnections = ref(false)
 
 function startDrag() {
   getCurrentWindow().startDragging()
@@ -87,6 +88,19 @@ const overallStatusColor = computed(() => {
   return token.value.colorTextDisabled
 })
 
+/** 在全局加载遮罩下重新检查连接状态。 */
+async function recheckConnections() {
+  if (recheckingConnections.value) return
+  recheckingConnections.value = true
+  try {
+    await appStore.runGlobalLoadingAction(async () => {
+      await appStore.updateConnectionStatus()
+    }, t('footer.rechecking'))
+  } finally {
+    recheckingConnections.value = false
+  }
+}
+
 onMounted(async () => {
   isFullscreen.value = await getCurrentWindow().isFullscreen()
   isMacOS.value = navigator.userAgent.includes('Mac')
@@ -117,7 +131,9 @@ onMounted(async () => {
 
       <!-- 右侧连接状态和调试操作 -->
       <div class="no-drag z-10 flex min-w-[80px] items-center justify-end gap-1">
-        <span v-if="buildStamp" class="build-stamp"> Build {{ buildStamp }} </span>
+        <span v-if="buildStamp" class="build-stamp" data-allow-mobile-long-press>
+          Build {{ buildStamp }}
+        </span>
 
         <!-- 连接状态入口 -->
         <a-tooltip placement="bottomRight" :mouse-enter-delay="0.5">
@@ -270,7 +286,7 @@ onMounted(async () => {
         </div>
 
         <div class="mt-4 flex justify-end border-t border-gray-100 pt-4 dark:border-white/10">
-          <a-button type="primary" :loading="isTesting" @click="appStore.updateConnectionStatus">
+          <a-button type="primary" :loading="isTesting" @click="recheckConnections">
             <template #icon><SyncOutlined /></template>
             {{ t('footer.recheck') }}
           </a-button>

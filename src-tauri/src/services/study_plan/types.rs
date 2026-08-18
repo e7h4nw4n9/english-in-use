@@ -5,6 +5,16 @@ use serde::Serialize;
 pub(super) const REVIEW_DAY_OFFSETS: [i32; 7] = [1, 2, 4, 7, 15, 30, 60];
 pub(super) const TOTAL_STAGES: i32 = 7;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StudyPlanUpsertOutcome {
+    Created,
+    Reactivated,
+    Restarted,
+    AlreadyActive,
+    AlreadyMastered,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StudyPlanUpsertResponse {
@@ -13,6 +23,7 @@ pub struct StudyPlanUpsertResponse {
     pub next_review_date: Option<String>,
     pub total_stages: i32,
     pub completed_stages: Vec<i32>,
+    pub outcome: StudyPlanUpsertOutcome,
 }
 
 #[derive(Debug, Clone, Serialize)]

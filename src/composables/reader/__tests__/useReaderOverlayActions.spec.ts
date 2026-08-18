@@ -9,6 +9,7 @@ function createBook(): Book {
     book_group: 1,
     product_code: 'essgiuebk',
     title: 'Test Book',
+    short_title: null,
     author: null,
     product_type: 'imgbook',
     cover: null,

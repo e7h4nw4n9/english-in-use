@@ -116,7 +116,6 @@ function onMarkTaskDone(task: StudyTaskItem) {
                     <BookOutlined class="book-header-icon" />
                     <span class="book-title">{{ book.bookTitle }}</span>
                   </div>
-                  <span class="book-code-tag">{{ book.bookCode }}</span>
                 </div>
               </template>
 
@@ -319,21 +318,6 @@ function onMarkTaskDone(task: StudyTaskItem) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.book-code-tag {
-  font-family: 'Plus Jakarta Sans', monospace;
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  max-width: 45%;
-  color: v-bind('token.colorTextTertiary');
-  background: color-mix(in srgb, v-bind('token.colorFillSecondary') 30%, transparent);
-  padding: 1px 6px;
-  border-radius: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* 任务卡片样式。 */
