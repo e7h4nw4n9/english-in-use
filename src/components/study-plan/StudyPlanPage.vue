@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
 import DailyTaskPanel from './DailyTaskPanel.vue'
+import ShiftStudyPlanModal from './ShiftStudyPlanModal.vue'
 import { useStudyPlanPage } from '../../composables/study-plan/useStudyPlanPage'
 
 const {
@@ -19,6 +20,7 @@ const {
   monthCellDates,
   weekDates,
   selectedDate,
+  todayDate,
   getDateCellStyle,
   getDateDayNumber,
   isTodayDate,
@@ -29,8 +31,13 @@ const {
   groupedTasksByDate,
   isDateTasksLoading,
   completingTaskId,
+  shiftingPlanUnitId,
   jumpToStudy,
   markTaskDone,
+  openShiftPlan,
+  submitShiftPlan,
+  shiftModalOpen,
+  shiftTask,
   drawerOpen,
   selectedDateLabel,
 } = useStudyPlanPage()
@@ -178,8 +185,10 @@ const {
           :loading="isDateTasksLoading(selectedDate)"
           :show-actions="isTodayDate(selectedDate)"
           :completing-task-id="completingTaskId"
+          :shifting-plan-unit-id="shiftingPlanUnitId"
           @jump-to-study="jumpToStudy"
           @mark-task-done="markTaskDone"
+          @adjust-plan="openShiftPlan"
         />
       </div>
 
@@ -195,10 +204,20 @@ const {
           :loading="isDateTasksLoading(selectedDate)"
           :show-actions="isTodayDate(selectedDate)"
           :completing-task-id="completingTaskId"
+          :shifting-plan-unit-id="shiftingPlanUnitId"
           @jump-to-study="jumpToStudy"
           @mark-task-done="markTaskDone"
+          @adjust-plan="openShiftPlan"
         />
       </a-drawer>
+
+      <ShiftStudyPlanModal
+        v-model:open="shiftModalOpen"
+        :task="shiftTask"
+        :loading="shiftingPlanUnitId !== null"
+        :today="todayDate"
+        @confirm="submitShiftPlan"
+      />
     </div>
   </section>
 </template>

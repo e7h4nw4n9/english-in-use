@@ -173,6 +173,92 @@ pub async fn get_tasks_by_date_on_date(
         .collect())
 }
 
+/// 整体平移第 1 阶段尚未完成的学习计划。
+///
+/// # 参数
+/// - `db`：目标数据库实现。
+/// - `plan_unit_id`：学习计划数据库标识。
+/// - `offset_days`：平移天数，负数表示提前，正数表示延期。
+/// - `local_date`：客户端本地日期，格式为 YYYY-MM-DD。
+pub async fn shift_study_plan_on_date(
+    db: &dyn Database,
+    plan_unit_id: i64,
+    offset_days: i32,
+    local_date: &str,
+) -> Result<ShiftStudyPlanResponse, String> {
+    validate_local_date(local_date)?;
+    if offset_days == 0 {
+        return Err("INVALID_SHIFT_DAYS".to_string());
+    }
+
+    let modifier = format!("{offset_days:+} day");
+    let rows = db
+        .query_statement(SqlStatement::new(
+            "SELECT u.plan_status AS plan_status, t.task_status AS task_status, \
+                    date(t.scheduled_date, ?) AS target_date \
+             FROM study_plan_units u \
+             LEFT JOIN study_tasks t ON t.plan_unit_id = u.id AND t.review_stage = 1 \
+             WHERE u.id = ? LIMIT 1",
+            vec![
+                SqlValue::Text(modifier.clone()),
+                SqlValue::Integer(plan_unit_id),
+            ],
+        ))
+        .await
+        .map_err(|e| e.to_string())?;
+    let row = rows.first().ok_or("PLAN_NOT_FOUND")?;
+    if json_i32(row, "plan_status") != Some(0) {
+        return Err("PLAN_NOT_ACTIVE".to_string());
+    }
+    if json_i32(row, "task_status") != Some(0) {
+        return Err("FIRST_STAGE_COMPLETED".to_string());
+    }
+    let target_date = json_string(row, "target_date").ok_or("INVALID_SHIFT_DAYS")?;
+    if target_date.as_str() < local_date {
+        return Err("FIRST_STAGE_BEFORE_TODAY".to_string());
+    }
+
+    let result_sets = db
+        .query_write_batch(vec![
+            SqlStatement::new(
+                "UPDATE study_tasks SET scheduled_date = date(scheduled_date, ?), \
+                        updated_at = CURRENT_TIMESTAMP \
+                 WHERE plan_unit_id = ? AND task_status = 0 \
+                   AND EXISTS (SELECT 1 FROM study_plan_units u \
+                               WHERE u.id = ? AND u.plan_status = 0) \
+                   AND EXISTS (SELECT 1 FROM study_tasks first_task \
+                               WHERE first_task.plan_unit_id = ? \
+                                 AND first_task.review_stage = 1 \
+                                 AND first_task.task_status = 0) \
+                 RETURNING review_stage, scheduled_date",
+                vec![
+                    SqlValue::Text(modifier),
+                    SqlValue::Integer(plan_unit_id),
+                    SqlValue::Integer(plan_unit_id),
+                    SqlValue::Integer(plan_unit_id),
+                ],
+            ),
+            SqlStatement::new(
+                "UPDATE study_plan_units SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                vec![SqlValue::Integer(plan_unit_id)],
+            ),
+        ])
+        .await
+        .map_err(|e| e.to_string())?;
+    let shifted_rows = result_sets.first().ok_or("PLAN_STATE_CHANGED")?;
+    if shifted_rows.is_empty() {
+        return Err("PLAN_STATE_CHANGED".to_string());
+    }
+
+    Ok(ShiftStudyPlanResponse {
+        success: true,
+        plan_unit_id,
+        offset_days,
+        first_stage_date: target_date,
+        affected_tasks: i64::try_from(shifted_rows.len()).unwrap_or(i64::MAX),
+    })
+}
+
 /// 完成指定任务并创建下一复习阶段或结束计划。
 ///
 /// # 参数

@@ -553,3 +553,71 @@ async fn get_tasks_by_date_for_non_today_excludes_overdue_tasks() {
     assert_eq!(tasks[1].review_stage, 3);
     assert!(!tasks[1].is_overdue);
 }
+
+#[tokio::test]
+async fn shifts_all_pending_tasks_and_keeps_completed_task_date() {
+    let db = create_db().await;
+    let plan = upsert_study_plan_on_date(&db, "studytestbook", "RE_4001", "Unit 4", TEST_DATE)
+        .await
+        .unwrap();
+
+    db.execute(format!(
+        "UPDATE study_tasks SET task_status = 1, completed_at = CURRENT_TIMESTAMP \
+         WHERE plan_unit_id = {} AND review_stage = 2",
+        plan.plan_unit_id
+    ))
+    .await
+    .unwrap();
+
+    let result = shift_study_plan_on_date(&db, plan.plan_unit_id, 2, TEST_DATE)
+        .await
+        .unwrap();
+    assert_eq!(result.first_stage_date, "2026-08-06");
+    assert_eq!(result.affected_tasks, 6);
+
+    let rows = db
+        .query(format!(
+            "SELECT review_stage, scheduled_date FROM study_tasks \
+             WHERE plan_unit_id = {} ORDER BY review_stage",
+            plan.plan_unit_id
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        json_string(&rows[0], "scheduled_date").as_deref(),
+        Some("2026-08-06")
+    );
+    assert_eq!(
+        json_string(&rows[1], "scheduled_date").as_deref(),
+        Some("2026-08-05")
+    );
+    assert_eq!(
+        json_string(&rows[2], "scheduled_date").as_deref(),
+        Some("2026-08-09")
+    );
+}
+
+#[tokio::test]
+async fn rejects_shift_before_today_or_after_first_stage_completion() {
+    let db = create_db().await;
+    let plan = upsert_study_plan_on_date(&db, "studytestbook", "RE_4002", "Unit 4.2", TEST_DATE)
+        .await
+        .unwrap();
+
+    let early_error = shift_study_plan_on_date(&db, plan.plan_unit_id, -2, TEST_DATE)
+        .await
+        .unwrap_err();
+    assert_eq!(early_error, "FIRST_STAGE_BEFORE_TODAY");
+
+    db.execute(format!(
+        "UPDATE study_tasks SET task_status = 1, completed_at = CURRENT_TIMESTAMP \
+         WHERE plan_unit_id = {} AND review_stage = 1",
+        plan.plan_unit_id
+    ))
+    .await
+    .unwrap();
+    let completed_error = shift_study_plan_on_date(&db, plan.plan_unit_id, 1, TEST_DATE)
+        .await
+        .unwrap_err();
+    assert_eq!(completed_error, "FIRST_STAGE_COMPLETED");
+}

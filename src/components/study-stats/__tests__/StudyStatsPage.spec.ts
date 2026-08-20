@@ -10,8 +10,10 @@ vi.mock('../../../lib/api', () => ({
 }))
 
 vi.mock('../../../lib/api/studyTimer', () => ({
+  deleteStudySession: vi.fn(),
   getStudySessionsByDate: vi.fn(),
   getStudyStats: vi.fn(),
+  updateStudySession: vi.fn(),
 }))
 
 vi.mock('../../../stores/app', () => ({
@@ -166,5 +168,51 @@ describe('StudyStatsPage', () => {
     const arrows = wrapper.findAll('.ant-select-arrow .anticon-down')
     expect(arrows).toHaveLength(2)
     expect(wrapper.find('.filter-select-chevron').exists()).toBe(false)
+  })
+
+  it('最近记录提供修改和删除入口', async () => {
+    vi.mocked(getStudyStats).mockResolvedValueOnce({
+      periodType: 'week',
+      rangeStart: '2026-08-05',
+      rangeEnd: '2026-08-11',
+      trend: [],
+      bookBreakdown: [],
+      seriesBreakdown: [],
+      recentSessions: [
+        {
+          id: 7,
+          bookId: 1,
+          bookGroup: 1,
+          productCode: 'book-1',
+          bookTitle: '简称',
+          resourceId: 'RE_1',
+          unitName: 'Unit 1',
+          entryResourceId: 'RE_1',
+          entryUnitName: 'Unit 1',
+          visitedUnits: [],
+          startAt: '2026-08-10T10:00:00Z',
+          endAt: '2026-08-10T10:01:00Z',
+          duration: 60,
+        },
+      ],
+      page: 1,
+      pageSize: 10,
+      totalRecent: 1,
+    })
+    const wrapper = mount(StudyStatsPage, {
+      global: {
+        stubs: {
+          'a-spin': passthroughStub,
+          'a-select': passthroughStub,
+          'a-select-option': passthroughStub,
+          'a-button': { template: '<button><slot /></button>' },
+          'a-modal': passthroughStub,
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.findAll('.recent-card .row-actions button')).toHaveLength(2)
+    expect(wrapper.findAll('.recent-card .row-actions .operation-button')).toHaveLength(2)
   })
 })

@@ -198,10 +198,13 @@ pub fn run() {
             commands::study_plan::get_study_plan_status,
             commands::study_plan::get_study_tasks_summary,
             commands::study_plan::get_tasks_by_date,
+            commands::study_plan::shift_study_plan,
             commands::study_plan::complete_study_task,
             commands::study_session::save_study_session,
             commands::study_session::get_study_stats,
             commands::study_session::get_study_sessions_by_date,
+            commands::study_session::update_study_session,
+            commands::study_session::delete_study_session,
             check_connection_status
         ])
         .run(context)

@@ -1,3 +1,25 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 目标操作按钮使用弹性布局，消除 Ant Design 图标的行内基线偏移。 */
+.operation-button.ant-btn.ant-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.operation-button.ant-btn.ant-btn > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.operation-button.ant-btn.ant-btn .anticon {
+  line-height: 1;
+  vertical-align: 0;
+}
+
+.operation-button.ant-btn.ant-btn .anticon > svg {
+  display: block;
+}

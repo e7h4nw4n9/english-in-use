@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { message, theme } from 'ant-design-vue'
+import { message, Modal, theme } from 'ant-design-vue'
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type {
   Book,
@@ -9,13 +10,20 @@ import type {
   StudyStatsPeriodType,
   StudyStatsResponse,
   StudyStatsTrendItem,
+  UpdateStudySessionPayload,
 } from '@/types'
 import { getBooks } from '@/lib/api'
-import { getStudySessionsByDate, getStudyStats } from '@/lib/api/studyTimer'
+import {
+  deleteStudySession,
+  getStudySessionsByDate,
+  getStudyStats,
+  updateStudySession,
+} from '@/lib/api/studyTimer'
 import { formatIsoToLocalMinute, generateDateRange, generateMonthRange } from '@/lib/datetime'
 import { useAppStore } from '@/stores/app'
 import StudyStatsDetailModal from './StudyStatsDetailModal.vue'
 import StudyStatsToolbar from './StudyStatsToolbar.vue'
+import StudySessionEditModal from './StudySessionEditModal.vue'
 import StudyTrendCard from './StudyTrendCard.vue'
 
 const { t } = useI18n()
@@ -37,6 +45,9 @@ const detailModalVisible = ref(false)
 const detailLoading = ref(false)
 const detailDate = ref('')
 const detailSessions = ref<StudySessionListItem[]>([])
+const editModalVisible = ref(false)
+const editingSession = ref<StudySessionListItem | null>(null)
+const mutatingSessionId = ref<number | null>(null)
 let statsRequestVersion = 0
 
 const trendData = computed<StudyStatsTrendItem[]>(() => {
@@ -132,6 +143,11 @@ async function refreshStats() {
       pageSize.value,
     )
     if (requestVersion === statsRequestVersion) {
+      const responseTotalPages = Math.max(1, Math.ceil(response.totalRecent / pageSize.value))
+      if (page.value > responseTotalPages) {
+        page.value = responseTotalPages
+        return
+      }
       stats.value = response
     }
   } catch (error) {
@@ -143,6 +159,69 @@ async function refreshStats() {
       loading.value = false
     }
   }
+}
+
+/** 重新加载当前打开的日期详情。 */
+async function refreshDateDetails() {
+  if (!detailModalVisible.value || !detailDate.value) return
+  detailSessions.value = await getStudySessionsByDate(detailDate.value, buildFilters())
+}
+
+/** 打开学习记录编辑弹窗。
+ * @param session - 需要修改的学习会话。
+ */
+function showEditSession(session: StudySessionListItem) {
+  editingSession.value = session
+  editModalVisible.value = true
+}
+
+/** 保存学习记录修改并刷新所有聚合数据。
+ * @param payload - 新时长和归属单元。
+ */
+async function saveSessionEdit(payload: UpdateStudySessionPayload) {
+  if (mutatingSessionId.value !== null) return
+  mutatingSessionId.value = payload.sessionId
+  try {
+    await updateStudySession(payload)
+    editModalVisible.value = false
+    editingSession.value = null
+    await Promise.all([refreshStats(), refreshDateDetails()])
+    message.success(t('studyStats.updateSuccess'))
+  } catch (error) {
+    message.error(t('studyStats.actionFailed', { error: String(error) }))
+  } finally {
+    mutatingSessionId.value = null
+  }
+}
+
+/** 二次确认后永久删除学习记录。
+ * @param session - 需要删除的学习会话。
+ */
+function confirmDeleteSession(session: StudySessionListItem) {
+  Modal.confirm({
+    title: t('studyStats.deleteConfirmTitle'),
+    content: t('studyStats.deleteConfirmDescription', {
+      book: session.bookTitle,
+      unit: session.unitName,
+    }),
+    okText: t('studyStats.delete'),
+    okType: 'danger',
+    cancelText: t('common.cancel'),
+    async onOk() {
+      if (mutatingSessionId.value !== null) return
+      mutatingSessionId.value = session.id
+      try {
+        await deleteStudySession(session.id)
+        await Promise.all([refreshStats(), refreshDateDetails()])
+        message.success(t('studyStats.deleteSuccess'))
+      } catch (error) {
+        message.error(t('studyStats.actionFailed', { error: String(error) }))
+        throw error
+      } finally {
+        mutatingSessionId.value = null
+      }
+    },
+  })
 }
 
 /** 加载并展示趋势日期对应的会话明细。
@@ -279,6 +358,7 @@ onMounted(async () => {
                     <th>{{ t('studyStats.unit') }}</th>
                     <th>{{ t('studyStats.duration') }}</th>
                     <th>{{ t('studyStats.timeRange') }}</th>
+                    <th>{{ t('studyStats.actions') }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -287,6 +367,30 @@ onMounted(async () => {
                     <td>{{ session.unitName }}</td>
                     <td>{{ formatFullSeconds(session.duration) }}</td>
                     <td>{{ formatIsoToLocalMinute(session.startAt) }}</td>
+                    <td>
+                      <div class="row-actions">
+                        <a-button
+                          type="text"
+                          size="small"
+                          class="operation-button"
+                          @click="showEditSession(session)"
+                        >
+                          <template #icon><EditOutlined /></template>
+                          {{ t('studyStats.edit') }}
+                        </a-button>
+                        <a-button
+                          type="text"
+                          danger
+                          size="small"
+                          class="operation-button"
+                          :loading="mutatingSessionId === session.id"
+                          @click="confirmDeleteSession(session)"
+                        >
+                          <template #icon><DeleteOutlined /></template>
+                          {{ t('studyStats.delete') }}
+                        </a-button>
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -313,6 +417,16 @@ onMounted(async () => {
       :loading="detailLoading"
       :date="detailDate"
       :sessions="detailSessions"
+      :mutating-session-id="mutatingSessionId"
+      @edit="showEditSession"
+      @delete="confirmDeleteSession"
+    />
+
+    <StudySessionEditModal
+      v-model:open="editModalVisible"
+      :session="editingSession"
+      :loading="mutatingSessionId !== null"
+      @confirm="saveSessionEdit"
     />
   </section>
 </template>
@@ -438,6 +552,11 @@ onMounted(async () => {
 
 .recent-table tbody tr:hover {
   background: color-mix(in srgb, v-bind('token.colorFillAlter') 30%, transparent);
+}
+
+.row-actions {
+  display: flex;
+  white-space: nowrap;
 }
 
 .recent-pagination {

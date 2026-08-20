@@ -7,7 +7,7 @@ vi.mock('vue-i18n', () => ({
 }))
 
 describe('DailyTaskPanel', () => {
-  it('显示书籍名称但不显示产品码', () => {
+  it('显示书籍名称但不显示产品码', async () => {
     const wrapper = mount(DailyTaskPanel, {
       props: {
         groupedTasks: [
@@ -54,5 +54,10 @@ describe('DailyTaskPanel', () => {
     expect(wrapper.text()).toContain('书籍简称')
     expect(wrapper.text()).not.toContain('internal-product-code')
     expect(wrapper.find('.book-code-tag').exists()).toBe(false)
+    expect(wrapper.text()).toContain('studyPlan.adjustPlan')
+    expect(wrapper.findAll('.task-card-actions .operation-button')).toHaveLength(1)
+
+    await wrapper.find('.task-card-actions button').trigger('click')
+    expect(wrapper.emitted('adjustPlan')).toHaveLength(1)
   })
 })

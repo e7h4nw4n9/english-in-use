@@ -6,6 +6,8 @@ import type {
   StudyStatsPeriodType,
   StudyStatsResponse,
   StudySessionListItem,
+  StudySessionActionResponse,
+  UpdateStudySessionPayload,
 } from '../../types'
 import { formatLocalDate } from '../datetime'
 
@@ -51,4 +53,22 @@ export async function getStudySessionsByDate(
   filters?: StudyStatsFilters,
 ): Promise<StudySessionListItem[]> {
   return await invoke('get_study_sessions_by_date', { date, filters })
+}
+
+/**
+ * 修改学习会话的时长和归属单元。
+ * @param payload - 会话标识、新时长和目标单元。
+ */
+export async function updateStudySession(
+  payload: UpdateStudySessionPayload,
+): Promise<StudySessionActionResponse> {
+  return await invoke('update_study_session', { payload })
+}
+
+/**
+ * 永久删除一条学习会话。
+ * @param sessionId - 学习会话标识。
+ */
+export async function deleteStudySession(sessionId: number): Promise<StudySessionActionResponse> {
+  return await invoke('delete_study_session', { sessionId })
 }

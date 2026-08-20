@@ -7,6 +7,7 @@ import type {
   StudyTaskItem,
   StudyTaskSummaryResponse,
   StudyViewMode,
+  ShiftStudyPlanResponse,
 } from '../../types'
 import { formatLocalDate } from '../datetime'
 
@@ -82,6 +83,22 @@ export async function getStudyTasksSummary(
  */
 export async function getStudyTasksByDate(date: string): Promise<StudyTaskItem[]> {
   return await invoke('get_tasks_by_date', { date, localDate: formatLocalDate() })
+}
+
+/**
+ * 整体平移第 1 阶段尚未完成的学习计划。
+ * @param planUnitId - 学习计划标识。
+ * @param offsetDays - 平移天数，负数表示提前，正数表示延期。
+ */
+export async function shiftStudyPlan(
+  planUnitId: number,
+  offsetDays: number,
+): Promise<ShiftStudyPlanResponse> {
+  return await invoke('shift_study_plan', {
+    planUnitId,
+    offsetDays,
+    localDate: formatLocalDate(),
+  })
 }
 
 /**

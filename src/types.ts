@@ -230,6 +230,14 @@ export interface CompleteStudyTaskResponse {
   completedStages: number[]
 }
 
+export interface ShiftStudyPlanResponse {
+  success: boolean
+  planUnitId: number
+  offsetDays: number
+  firstStageDate: string
+  affectedTasks: number
+}
+
 export type StudyStatsPeriodType = 'week' | 'month' | 'year'
 
 export interface StudySessionUnitRef {
@@ -254,6 +262,17 @@ export interface SaveStudySessionPayload {
 export interface SaveStudySessionResponse {
   id: number
   success: boolean
+}
+
+export interface UpdateStudySessionPayload {
+  sessionId: number
+  duration: number
+  assignedResourceId: string
+}
+
+export interface StudySessionActionResponse {
+  success: boolean
+  sessionId: number
 }
 
 export interface StudyStatsFilters {

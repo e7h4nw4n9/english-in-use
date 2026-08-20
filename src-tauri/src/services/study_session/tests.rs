@@ -183,3 +183,105 @@ async fn week_stats_use_monday_to_sunday_and_exclude_adjacent_weeks() {
         );
     }
 }
+
+#[tokio::test]
+async fn updates_session_duration_unit_and_local_date_then_deletes_it() {
+    let db = setup_test_db().await;
+    let saved = save_study_session(
+        &db,
+        SaveStudySessionPayload {
+            product_code: "timerbooka".to_string(),
+            entry_resource_id: "RE_A".to_string(),
+            entry_unit_name: "Unit A".to_string(),
+            assigned_resource_id: "RE_A".to_string(),
+            assigned_unit_name: "Unit A".to_string(),
+            visited_units: vec![
+                StudySessionUnitRef {
+                    resource_id: "RE_A".to_string(),
+                    unit_name: "Unit A".to_string(),
+                },
+                StudySessionUnitRef {
+                    resource_id: "RE_B".to_string(),
+                    unit_name: "Unit B".to_string(),
+                },
+            ],
+            start_at: "2026-08-10T15:00:00Z".to_string(),
+            end_at: "2026-08-10T15:10:00Z".to_string(),
+            duration: 600,
+            local_date: "2026-08-10".to_string(),
+            timezone_offset_minutes: 480,
+        },
+    )
+    .await
+    .unwrap();
+
+    update_study_session(
+        &db,
+        UpdateStudySessionPayload {
+            session_id: saved.id,
+            duration: 7200,
+            assigned_resource_id: "RE_B".to_string(),
+        },
+    )
+    .await
+    .unwrap();
+
+    let rows = db
+        .query(format!(
+            "SELECT resource_id, unit_name, duration, end_at, local_date \
+             FROM study_sessions WHERE id = {}",
+            saved.id
+        ))
+        .await
+        .unwrap();
+    let row = rows.first().unwrap();
+    assert_eq!(row.get("resource_id").and_then(Value::as_str), Some("RE_B"));
+    assert_eq!(row.get("unit_name").and_then(Value::as_str), Some("Unit B"));
+    assert_eq!(row.get("duration").and_then(Value::as_i64), Some(7200));
+    assert_eq!(
+        row.get("local_date").and_then(Value::as_str),
+        Some("2026-08-11")
+    );
+
+    delete_study_session(&db, saved.id).await.unwrap();
+    let stats = get_study_stats_on_date(&db, "week", None, Some(1), Some(20), "2026-08-11")
+        .await
+        .unwrap();
+    assert_eq!(stats.total_recent, 0);
+    assert!(stats.trend.is_empty());
+}
+
+#[tokio::test]
+async fn rejects_session_assignment_outside_visited_units() {
+    let db = setup_test_db().await;
+    let saved = save_study_session(
+        &db,
+        SaveStudySessionPayload {
+            product_code: "timerbooka".to_string(),
+            entry_resource_id: "RE_A".to_string(),
+            entry_unit_name: "Unit A".to_string(),
+            assigned_resource_id: "RE_A".to_string(),
+            assigned_unit_name: "Unit A".to_string(),
+            visited_units: vec![],
+            start_at: "2026-08-10T10:00:00Z".to_string(),
+            end_at: "2026-08-10T10:10:00Z".to_string(),
+            duration: 600,
+            local_date: "2026-08-10".to_string(),
+            timezone_offset_minutes: 0,
+        },
+    )
+    .await
+    .unwrap();
+
+    let error = update_study_session(
+        &db,
+        UpdateStudySessionPayload {
+            session_id: saved.id,
+            duration: 60,
+            assigned_resource_id: "RE_UNKNOWN".to_string(),
+        },
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error, "INVALID_ASSIGNED_UNIT");
+}

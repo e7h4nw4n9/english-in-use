@@ -111,6 +111,30 @@ pub async fn get_tasks_by_date(
 }
 
 #[tauri::command]
+/// 整体平移第 1 阶段尚未完成的学习计划。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
+/// - `plan_unit_id`：学习计划数据库标识。
+/// - `offset_days`：平移天数，负数表示提前，正数表示延期。
+/// - `local_date`：客户端本地日期，格式为 YYYY-MM-DD。
+pub async fn shift_study_plan(
+    state: State<'_, crate::database::DbState>,
+    plan_unit_id: i64,
+    offset_days: i32,
+    local_date: String,
+) -> Result<crate::services::study_plan::ShiftStudyPlanResponse, String> {
+    let db = state.get().await?;
+    crate::services::study_plan::shift_study_plan_on_date(
+        db.as_ref(),
+        plan_unit_id,
+        offset_days,
+        &local_date,
+    )
+    .await
+}
+
+#[tauri::command]
 /// 完成学习任务并推进对应计划状态。
 ///
 /// # 参数

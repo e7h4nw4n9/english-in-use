@@ -8,6 +8,7 @@ import {
   BookOutlined,
   FolderOutlined,
   RightOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons-vue'
 import type { StudyTaskItem } from '../../types'
 import type { GroupedSeriesTasks } from './taskGroups'
@@ -17,11 +18,13 @@ const props = defineProps<{
   loading: boolean
   showActions: boolean
   completingTaskId: number | null
+  shiftingPlanUnitId?: number | null
 }>()
 
 const emit = defineEmits<{
   (e: 'jumpToStudy', task: StudyTaskItem): void
   (e: 'markTaskDone', task: StudyTaskItem): void
+  (e: 'adjustPlan', task: StudyTaskItem): void
 }>()
 
 const { t } = useI18n()
@@ -55,6 +58,10 @@ function onJumpToStudy(task: StudyTaskItem) {
 
 function onMarkTaskDone(task: StudyTaskItem) {
   emit('markTaskDone', task)
+}
+
+function onAdjustPlan(task: StudyTaskItem) {
+  emit('adjustPlan', task)
 }
 </script>
 
@@ -146,26 +153,43 @@ function onMarkTaskDone(task: StudyTaskItem) {
                       </div>
                     </div>
 
-                    <div v-if="props.showActions" class="task-card-actions">
+                    <div
+                      v-if="props.showActions || (task.reviewStage === 1 && task.taskStatus === 0)"
+                      class="task-card-actions"
+                    >
                       <a-button
+                        v-if="props.showActions"
                         type="text"
-                        class="action-btn study-btn"
+                        class="action-btn study-btn operation-button"
                         @click="onJumpToStudy(task)"
                       >
                         <template #icon><ExportOutlined /></template>
                         {{ t('studyPlan.goStudy') }}
                       </a-button>
                       <a-button
+                        v-if="props.showActions"
                         type="primary"
                         size="small"
                         shape="round"
-                        class="action-btn done-btn"
+                        class="action-btn done-btn operation-button"
                         :disabled="task.taskStatus === 1"
                         :loading="props.completingTaskId === task.taskId"
                         @click="onMarkTaskDone(task)"
                       >
                         <template #icon><CheckOutlined /></template>
                         {{ t('studyPlan.complete') }}
+                      </a-button>
+                      <a-button
+                        v-if="task.reviewStage === 1 && task.taskStatus === 0"
+                        type="default"
+                        size="small"
+                        shape="round"
+                        class="action-btn operation-button"
+                        :loading="props.shiftingPlanUnitId === task.planUnitId"
+                        @click="onAdjustPlan(task)"
+                      >
+                        <template #icon><CalendarOutlined /></template>
+                        {{ t('studyPlan.adjustPlan') }}
                       </a-button>
                     </div>
                   </div>

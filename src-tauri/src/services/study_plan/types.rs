@@ -45,6 +45,16 @@ pub struct StudyPlanActionResponse {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ShiftStudyPlanResponse {
+    pub success: bool,
+    pub plan_unit_id: i64,
+    pub offset_days: i32,
+    pub first_stage_date: String,
+    pub affected_tasks: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StudyTaskSummaryDay {
     pub date: String,
     pub total: i64,

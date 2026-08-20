@@ -4,6 +4,7 @@ import {
   getStudyPlanStatus,
   getStudyTasksByDate,
   getStudyTasksSummary,
+  shiftStudyPlan,
   upsertStudyPlan,
 } from '../studyPlan'
 
@@ -52,6 +53,16 @@ describe('study plan API local date', () => {
     })
     expect(invoke).toHaveBeenNthCalledWith(2, 'get_tasks_by_date', {
       date: '2026-08-10',
+      localDate: '2026-08-10',
+    })
+  })
+
+  it('passes the current local date to plan shift', async () => {
+    await shiftStudyPlan(42, -2)
+
+    expect(invoke).toHaveBeenCalledWith('shift_study_plan', {
+      planUnitId: 42,
+      offsetDays: -2,
       localDate: '2026-08-10',
     })
   })

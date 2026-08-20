@@ -33,6 +33,21 @@ pub struct SaveStudySessionResponse {
     pub success: bool,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateStudySessionPayload {
+    pub session_id: i64,
+    pub duration: i64,
+    pub assigned_resource_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StudySessionActionResponse {
+    pub success: bool,
+    pub session_id: i64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct StudyStatsFilters {

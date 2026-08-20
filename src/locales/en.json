@@ -200,7 +200,17 @@
     "noTasksForDate": "No tasks for this date",
     "weekTaskList": "Weekly Task Lists",
     "unknownSeries": "Uncategorized Series",
-    "unknownBook": "Unmatched Book"
+    "unknownBook": "Unmatched Book",
+    "adjustPlan": "Adjust Plan",
+    "shiftTitle": "Adjust Study Plan",
+    "shiftDirection": "Direction",
+    "advance": "Advance",
+    "delay": "Delay",
+    "shiftDays": "Days",
+    "shiftConfirm": "Apply",
+    "shiftBeforeToday": "Stage 1 cannot be scheduled before today",
+    "shifting": "Adjusting study plan...",
+    "shiftSuccess": "Study plan adjusted"
   },
   "studyTimer": {
     "title": "Study Timer",
@@ -250,6 +260,20 @@
     "loadingDetails": "Loading study session details...",
     "loadFailed": "Failed to load stats: {error}",
     "page": "Page",
-    "resetFilters": "Reset Filters"
+    "resetFilters": "Reset Filters",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "editTitle": "Edit Study Session",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "seconds": "Seconds",
+    "startTime": "Start time",
+    "newEndTime": "New end time",
+    "updateSuccess": "Study session updated",
+    "deleteSuccess": "Study session deleted",
+    "deleteConfirmTitle": "Permanently Delete Session",
+    "deleteConfirmDescription": "Delete the {unit} study session from {book}? This cannot be undone.",
+    "actionFailed": "Action failed: {error}"
   }
 }

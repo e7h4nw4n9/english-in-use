@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { theme } from 'ant-design-vue'
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { formatIsoToLocalMinute } from '@/lib/datetime'
 import type { StudySessionListItem } from '@/types'
@@ -10,10 +11,13 @@ const props = defineProps<{
   loading: boolean
   date: string
   sessions: StudySessionListItem[]
+  mutatingSessionId?: number | null
 }>()
 
 const emit = defineEmits<{
   (event: 'update:open', value: boolean): void
+  (event: 'edit', session: StudySessionListItem): void
+  (event: 'delete', session: StudySessionListItem): void
 }>()
 
 const { t } = useI18n()
@@ -55,6 +59,7 @@ function formatFullSeconds(duration: number): string {
                 <th>{{ t('studyStats.unit') }}</th>
                 <th>{{ t('studyStats.duration') }}</th>
                 <th>{{ t('studyStats.timeRange') }}</th>
+                <th>{{ t('studyStats.actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -63,6 +68,30 @@ function formatFullSeconds(duration: number): string {
                 <td>{{ session.unitName }}</td>
                 <td>{{ formatFullSeconds(session.duration) }}</td>
                 <td>{{ formatIsoToLocalMinute(session.startAt).split(' ')[1] }}</td>
+                <td>
+                  <div class="row-actions">
+                    <a-button
+                      type="text"
+                      size="small"
+                      class="operation-button"
+                      @click="emit('edit', session)"
+                    >
+                      <template #icon><EditOutlined /></template>
+                      {{ t('studyStats.edit') }}
+                    </a-button>
+                    <a-button
+                      type="text"
+                      danger
+                      size="small"
+                      class="operation-button"
+                      :loading="mutatingSessionId === session.id"
+                      @click="emit('delete', session)"
+                    >
+                      <template #icon><DeleteOutlined /></template>
+                      {{ t('studyStats.delete') }}
+                    </a-button>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -124,5 +153,10 @@ function formatFullSeconds(duration: number): string {
   font-size: 12px;
   color: v-bind('token.colorTextSecondary');
   font-weight: 700;
+}
+
+.row-actions {
+  display: flex;
+  white-space: nowrap;
 }
 </style>

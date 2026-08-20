@@ -200,7 +200,17 @@
     "noTasksForDate": "当日暂无任务",
     "weekTaskList": "本周每日任务",
     "unknownSeries": "未分类系列",
-    "unknownBook": "未匹配书籍"
+    "unknownBook": "未匹配书籍",
+    "adjustPlan": "调整计划",
+    "shiftTitle": "调整学习计划",
+    "shiftDirection": "调整方向",
+    "advance": "提前",
+    "delay": "延期",
+    "shiftDays": "调整天数",
+    "shiftConfirm": "确认调整",
+    "shiftBeforeToday": "调整后的第 1 阶段不能早于今天",
+    "shifting": "正在调整学习计划...",
+    "shiftSuccess": "学习计划已调整"
   },
   "studyTimer": {
     "title": "学习计时",
@@ -250,6 +260,20 @@
     "loadingDetails": "正在加载学习记录详情...",
     "loadFailed": "统计加载失败: {error}",
     "page": "页码",
-    "resetFilters": "重置筛选"
+    "resetFilters": "重置筛选",
+    "actions": "操作",
+    "edit": "修改",
+    "delete": "删除",
+    "editTitle": "修改学习记录",
+    "hours": "小时",
+    "minutes": "分钟",
+    "seconds": "秒",
+    "startTime": "开始时间",
+    "newEndTime": "新的结束时间",
+    "updateSuccess": "学习记录已修改",
+    "deleteSuccess": "学习记录已删除",
+    "deleteConfirmTitle": "永久删除学习记录",
+    "deleteConfirmDescription": "确定删除《{book}》的“{unit}”学习记录吗？删除后无法恢复。",
+    "actionFailed": "操作失败: {error}"
   }
 }

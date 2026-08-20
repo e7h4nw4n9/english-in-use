@@ -59,3 +59,31 @@ pub async fn get_study_sessions_by_date(
     let db = state.get().await?;
     crate::services::study_session::get_study_sessions_by_date(db.as_ref(), &date, filters).await
 }
+
+#[tauri::command]
+/// 修改学习会话的时长和归属单元。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
+/// - `payload`：会话标识、新时长和目标归属单元。
+pub async fn update_study_session(
+    state: State<'_, crate::database::DbState>,
+    payload: crate::services::study_session::UpdateStudySessionPayload,
+) -> Result<crate::services::study_session::StudySessionActionResponse, String> {
+    let db = state.get().await?;
+    crate::services::study_session::update_study_session(db.as_ref(), payload).await
+}
+
+#[tauri::command]
+/// 永久删除一条学习会话。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
+/// - `session_id`：学习会话数据库标识。
+pub async fn delete_study_session(
+    state: State<'_, crate::database::DbState>,
+    session_id: i64,
+) -> Result<crate::services::study_session::StudySessionActionResponse, String> {
+    let db = state.get().await?;
+    crate::services::study_session::delete_study_session(db.as_ref(), session_id).await
+}

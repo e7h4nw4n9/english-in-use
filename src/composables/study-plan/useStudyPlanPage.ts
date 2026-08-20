@@ -9,6 +9,7 @@ import {
   completeStudyTask,
   getStudyTasksByDate,
   getStudyTasksSummary,
+  shiftStudyPlan,
 } from '../../lib/api/studyPlan'
 import { groupTasksBySeries, type GroupedSeriesTasks } from '../../components/study-plan/taskGroups'
 import {
@@ -42,6 +43,9 @@ export function useStudyPlanPage() {
   const loadingSummary = ref(false)
   const completingTaskId = ref<number | null>(null)
   const openingTask = ref(false)
+  const shiftingPlanUnitId = ref<number | null>(null)
+  const shiftModalOpen = ref(false)
+  const shiftTask = ref<StudyTaskItem | null>(null)
 
   const tasksByDateCache = ref<Record<string, StudyTaskItem[]>>({})
   const loadingDateTasks = ref<Record<string, boolean>>({})
@@ -303,6 +307,40 @@ export function useStudyPlanPage() {
     }
   }
 
+  /** 打开符合条件的计划调整弹窗。
+   * @param task - 第 1 阶段待办任务。
+   */
+  function openShiftPlan(task: StudyTaskItem) {
+    if (task.reviewStage !== 1 || task.taskStatus !== 0) return
+    shiftTask.value = task
+    shiftModalOpen.value = true
+  }
+
+  /** 提交计划整体平移并刷新日历缓存。
+   * @param task - 第 1 阶段待办任务。
+   * @param offsetDays - 平移天数。
+   */
+  async function submitShiftPlan(task: StudyTaskItem, offsetDays: number) {
+    if (shiftingPlanUnitId.value !== null) return
+    shiftingPlanUnitId.value = task.planUnitId
+    try {
+      await appStore.runGlobalLoadingAction(async () => {
+        await shiftStudyPlan(task.planUnitId, offsetDays)
+        tasksByDateCache.value = {}
+        dateTaskRequestVersions.clear()
+        await Promise.all([refreshSummary(), ensureDateTasks(selectedDate.value, true)])
+        shiftModalOpen.value = false
+        shiftTask.value = null
+        message.success(t('studyPlan.shiftSuccess'))
+      }, t('studyPlan.shifting'))
+    } catch (error) {
+      const errorText = error instanceof Error ? error.message : String(error)
+      message.error(t('studyPlan.actionFailed', { error: errorText }))
+    } finally {
+      shiftingPlanUnitId.value = null
+    }
+  }
+
   /** 将任务目标写入阅读器状态并跳转到对应图书。
    * @param task - 目标学习任务。
    */
@@ -395,8 +433,13 @@ export function useStudyPlanPage() {
     groupedTasksByDate,
     isDateTasksLoading,
     completingTaskId,
+    shiftingPlanUnitId,
     jumpToStudy,
     markTaskDone,
+    openShiftPlan,
+    submitShiftPlan,
+    shiftModalOpen,
+    shiftTask,
     drawerOpen,
     selectedDateLabel,
   }
