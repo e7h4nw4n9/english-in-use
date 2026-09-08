@@ -127,7 +127,8 @@ pub fn get_config_path_from_context(context: &tauri::Context) -> PathBuf {
 pub fn load_initial(context: &tauri::Context) -> AppConfig {
     let path = get_config_path_from_context(context);
     AppConfig::load_from_path(&path)
-        .and_then(|config| {
+        .and_then(|mut config| {
+            config.normalize_dictionary_config();
             config.validate_common_for_load()?;
             Ok(config)
         })
@@ -155,7 +156,8 @@ pub fn get_config_path(app: &AppHandle) -> PathBuf {
 pub fn load(app: &AppHandle) -> AppConfig {
     let path = get_config_path(app);
     AppConfig::load_from_path(&path)
-        .and_then(|config| {
+        .and_then(|mut config| {
+            config.normalize_dictionary_config();
             config.validate_common_for_load()?;
             Ok(config)
         })

@@ -110,6 +110,30 @@ impl Default for SystemConfig {
     }
 }
 
+const DEFAULT_DICTIONARY_SEARCH_RESULT_LIMIT: u8 = 5;
+const MAX_DICTIONARY_SEARCH_RESULT_LIMIT: u8 = 15;
+
+fn default_dictionary_search_result_limit() -> u8 {
+    DEFAULT_DICTIONARY_SEARCH_RESULT_LIMIT
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct DictionaryConfig {
+    #[serde(default)]
+    pub save_query_results_offline: bool,
+    #[serde(default = "default_dictionary_search_result_limit")]
+    pub search_result_limit: u8,
+}
+
+impl Default for DictionaryConfig {
+    fn default() -> Self {
+        Self {
+            save_query_results_offline: false,
+            search_result_limit: DEFAULT_DICTIONARY_SEARCH_RESULT_LIMIT,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct AppConfig {
     #[serde(skip, default = "uuid::Uuid::new_v4")]
@@ -122,6 +146,8 @@ pub struct AppConfig {
     pub cloudflare_gateway: Option<CloudflareGatewayConfig>,
     #[serde(default)]
     pub gateway_configuration_required: bool,
+    #[serde(default)]
+    pub dictionary: DictionaryConfig,
 }
 
 impl PartialEq for AppConfig {
@@ -131,6 +157,7 @@ impl PartialEq for AppConfig {
             && self.database == other.database
             && self.cloudflare_gateway == other.cloudflare_gateway
             && self.gateway_configuration_required == other.gateway_configuration_required
+            && self.dictionary == other.dictionary
     }
 }
 
@@ -138,6 +165,14 @@ impl AppConfig {
     /// 创建默认配置。
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// 将可恢复的词典配置值限制在接口支持范围内。
+    pub fn normalize_dictionary_config(&mut self) {
+        if !(1..=MAX_DICTIONARY_SEARCH_RESULT_LIMIT).contains(&self.dictionary.search_result_limit)
+        {
+            self.dictionary.search_result_limit = DEFAULT_DICTIONARY_SEARCH_RESULT_LIMIT;
+        }
     }
 
     /// 校验所有配置来源都必须满足的基础约束。
@@ -222,6 +257,8 @@ mod tests {
         assert_eq!(config.system.log_level, "info");
         assert!(!config.system.enable_debug_tools);
         assert!(!config.system.auto_start_study_timer);
+        assert!(!config.dictionary.save_query_results_offline);
+        assert_eq!(config.dictionary.search_result_limit, 5);
     }
 
     #[test]
@@ -262,6 +299,17 @@ mod tests {
         assert!(!config.system.enable_debug_tools);
         assert_eq!(config.system.check_interval_mins, 5);
         assert!(!config.system.auto_start_study_timer);
+        assert_eq!(config.dictionary.search_result_limit, 5);
+    }
+
+    #[test]
+    fn test_normalize_invalid_dictionary_search_result_limit() {
+        let mut config = AppConfig::new();
+        config.dictionary.search_result_limit = 0;
+
+        config.normalize_dictionary_config();
+
+        assert_eq!(config.dictionary.search_result_limit, 5);
     }
 
     #[test]

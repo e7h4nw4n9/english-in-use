@@ -53,6 +53,10 @@ export function createConfigPageContext(
   )
   const enableAutoCheck = ref(initialConfig?.system?.enable_auto_check ?? true)
   const checkIntervalMins = ref(initialConfig?.system?.check_interval_mins || 5)
+  const saveDictionaryResultsOffline = ref(
+    initialConfig?.dictionary?.save_query_results_offline ?? false,
+  )
+  const dictionarySearchResultLimit = ref(initialConfig?.dictionary?.search_result_limit ?? 5)
 
   // 图书来源配置。
   const sourceType = ref<BookSourceType>(initialConfig?.book_source?.type || 'Local')
@@ -147,6 +151,8 @@ export function createConfigPageContext(
       enableAutoCheck.value = config.system.enable_auto_check
       checkIntervalMins.value = config.system.check_interval_mins
     }
+    saveDictionaryResultsOffline.value = config.dictionary?.save_query_results_offline ?? false
+    dictionarySearchResultLimit.value = config.dictionary?.search_result_limit ?? 5
 
     // 更新图书来源配置。
     if (config.book_source) {
@@ -234,6 +240,10 @@ export function createConfigPageContext(
           }
         : null,
       gateway_configuration_required: false,
+      dictionary: {
+        save_query_results_offline: saveDictionaryResultsOffline.value,
+        search_result_limit: dictionarySearchResultLimit.value,
+      },
     }
   }
 
@@ -286,6 +296,8 @@ export function createConfigPageContext(
     isCloudConfigured,
     enableAutoCheck,
     checkIntervalMins,
+    saveDictionaryResultsOffline,
+    dictionarySearchResultLimit,
     sourceType,
     localBookPath,
     gatewayConfig,

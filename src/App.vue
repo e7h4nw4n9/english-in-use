@@ -9,6 +9,7 @@ import { useTheme } from './composables/useTheme'
 import { theme } from 'ant-design-vue'
 import {
   BookOutlined,
+  ReadOutlined,
   CalendarOutlined,
   BarChartOutlined,
   SettingOutlined,
@@ -26,8 +27,11 @@ const StudyPlanPage = defineAsyncComponent(
 const StudyStatsPage = defineAsyncComponent(
   () => import('./components/study-stats/StudyStatsPage.vue'),
 )
+const DictionaryPage = defineAsyncComponent(
+  () => import('./components/dictionary/DictionaryPage.vue'),
+)
 
-type HomeTab = 'books' | 'studyPlan' | 'studyStats' | 'settings'
+type HomeTab = 'books' | 'dictionary' | 'studyPlan' | 'studyStats' | 'settings'
 
 const { t, locale } = useI18n()
 const { isDark, setTheme } = useTheme()
@@ -272,6 +276,17 @@ onUnmounted(() => {
               <button
                 type="button"
                 class="home-tab-btn"
+                :class="{ active: homeTab === 'dictionary' }"
+                :aria-selected="homeTab === 'dictionary'"
+                :tabindex="homeTab === 'dictionary' ? 0 : -1"
+                @click="activateHomeTab('dictionary')"
+              >
+                <ReadOutlined class="home-tab-icon" />
+                {{ t('app.homeTabs.dictionary') }}
+              </button>
+              <button
+                type="button"
+                class="home-tab-btn"
                 :class="{ active: homeTab === 'studyPlan' }"
                 :aria-selected="homeTab === 'studyPlan'"
                 :tabindex="homeTab === 'studyPlan' ? 0 : -1"
@@ -306,6 +321,7 @@ onUnmounted(() => {
 
             <div class="home-content-surface">
               <BookList v-if="homeTab === 'books'" />
+              <DictionaryPage v-else-if="homeTab === 'dictionary'" />
               <StudyPlanPage v-else-if="homeTab === 'studyPlan'" />
               <StudyStatsPage v-else-if="homeTab === 'studyStats'" />
               <ConfigPage
@@ -378,7 +394,7 @@ onUnmounted(() => {
   gap: 4px;
   width: auto;
   min-width: 280px;
-  max-width: min(92vw, 520px);
+  max-width: min(94vw, 640px);
   padding: 6px;
   border: 1px solid color-mix(in srgb, #ffffff 25%, transparent);
   border-radius: 999px;

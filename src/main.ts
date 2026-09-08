@@ -1,11 +1,14 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import {
+  Alert,
   Button,
+  Card,
   Collapse,
   ConfigProvider,
   Divider,
   Drawer,
+  Empty,
   Form,
   Input,
   InputNumber,
@@ -18,6 +21,7 @@ import {
   Spin,
   Switch,
   Tag,
+  Tabs,
   Tooltip,
 } from 'ant-design-vue'
 import 'ant-design-vue/dist/reset.css'
@@ -30,11 +34,14 @@ const pinia = createPinia()
 
 app.use(pinia)
 for (const component of [
+  Alert,
   Button,
+  Card,
   Collapse,
   ConfigProvider,
   Divider,
   Drawer,
+  Empty,
   Form,
   Input,
   InputNumber,
@@ -47,6 +54,7 @@ for (const component of [
   Spin,
   Switch,
   Tag,
+  Tabs,
   Tooltip,
 ]) {
   app.use(component)

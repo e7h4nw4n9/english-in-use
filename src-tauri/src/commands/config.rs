@@ -117,6 +117,7 @@ pub fn save_config(
     mut config: AppConfig,
 ) -> Result<(), String> {
     info!("正在保存配置文件...");
+    config.normalize_dictionary_config();
     if let Some(gateway) = &mut config.cloudflare_gateway {
         *gateway = gateway.normalized()?;
     }
@@ -199,10 +200,11 @@ pub fn import_config(path: String) -> Result<AppConfig, String> {
     if path_buf.is_dir() {
         return Err(format!("配置文件路径不能是目录: {}", path_buf.display()));
     }
-    let config = AppConfig::load_from_path(&path_buf).map_err(|e| {
+    let mut config = AppConfig::load_from_path(&path_buf).map_err(|e| {
         error!("导入配置文件失败: {}", e);
         e
     })?;
+    config.normalize_dictionary_config();
     config.validate_import()?;
     Ok(config)
 }

@@ -205,6 +205,19 @@ pub fn run() {
             commands::study_session::get_study_sessions_by_date,
             commands::study_session::update_study_session,
             commands::study_session::delete_study_session,
+            commands::dictionary::dictionary_auth_status,
+            commands::dictionary::dictionary_send_verify_code,
+            commands::dictionary::dictionary_login,
+            commands::dictionary::dictionary_logout,
+            commands::dictionary::dictionary_random_graph,
+            commands::dictionary::dictionary_daily_tip,
+            commands::dictionary::dictionary_graph_image,
+            commands::dictionary::dictionary_search,
+            commands::dictionary::dictionary_word_detail,
+            commands::dictionary::dictionary_audio,
+            commands::wordbook::list_wordbook_entries,
+            commands::wordbook::add_wordbook_entry,
+            commands::wordbook::remove_wordbook_entry,
             check_connection_status
         ])
         .run(context)

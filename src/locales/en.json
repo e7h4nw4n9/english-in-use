@@ -100,6 +100,7 @@
     "bookListSeries": "{count} series",
     "homeTabs": {
       "books": "Books",
+      "dictionary": "Dictionary",
       "studyPlan": "Study Plan",
       "studyStats": "Study Stats",
       "settings": "Settings"

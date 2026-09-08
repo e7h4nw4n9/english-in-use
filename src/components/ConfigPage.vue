@@ -4,6 +4,7 @@ import {
   SettingOutlined,
   BookOutlined,
   DatabaseOutlined,
+  ReadOutlined,
   HomeOutlined,
   DownloadOutlined,
   UploadOutlined,
@@ -11,6 +12,7 @@ import {
 import SystemSettings from './config/SystemSettings.vue'
 import BookSourceSettings from './config/BookSourceSettings.vue'
 import DatabaseSettings from './config/DatabaseSettings.vue'
+import DictionarySettings from './config/DictionarySettings.vue'
 import { useConfigPage } from '../composables/config/useConfigPage'
 
 const props = withDefaults(defineProps<{ initialConfig?: AppConfig; allowBack?: boolean }>(), {
@@ -37,6 +39,8 @@ const {
   isCloudConfigured,
   enableAutoCheck,
   checkIntervalMins,
+  saveDictionaryResultsOffline,
+  dictionarySearchResultLimit,
   sourceType,
   localBookPath,
   gatewayConfig,
@@ -133,6 +137,10 @@ const {
           <template #icon><DatabaseOutlined /></template>
           <span>{{ t('config.categoryDatabase') }}</span>
         </a-menu-item>
+        <a-menu-item key="dictionary">
+          <template #icon><ReadOutlined /></template>
+          <span>词典</span>
+        </a-menu-item>
       </a-menu>
     </div>
 
@@ -195,6 +203,12 @@ const {
           @restore-default-sqlite-path="restoreDefaultSqlitePath"
           @copy-path="copyToClipboard"
           @test-connection="testConnection"
+        />
+
+        <DictionarySettings
+          v-else-if="currentTab === 'dictionary'"
+          v-model:saveResultsOffline="saveDictionaryResultsOffline"
+          v-model:searchResultLimit="dictionarySearchResultLimit"
         />
       </div>
     </div>

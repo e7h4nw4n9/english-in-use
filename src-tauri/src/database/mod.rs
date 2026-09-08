@@ -210,7 +210,6 @@ async fn migrate_up_from_version_with_list(
         None
     };
 
-    let mut statements = Vec::new();
     for migration in migrations {
         let migration_version = Version::parse(&normalize_version(migration.version))?;
 
@@ -222,17 +221,16 @@ async fn migrate_up_from_version_with_list(
             }
 
             info!("正在应用升级迁移至版本 {}...", migration.version);
-            statements.extend(
-                split_migration_statements(migration.up).map(|sql| SqlStatement::new(sql, vec![])),
-            );
+            let mut statements: Vec<SqlStatement> = split_migration_statements(migration.up)
+                .map(|sql| SqlStatement::new(sql, vec![]))
+                .collect();
             statements.push(SqlStatement::new(
                 "UPDATE _app_meta SET version = ?",
                 vec![SqlValue::Text(migration.version.to_string())],
             ));
+            // 每个版本单独原子提交，避免完整迁移超过远程网关的批量上限。
+            db.execute_batch(statements).await?;
         }
-    }
-    if !statements.is_empty() {
-        db.execute_batch(statements).await?;
     }
     Ok(())
 }
@@ -278,7 +276,6 @@ pub async fn migrate_down_with_list(
     };
 
     // 迁移按版本升序排列，降级时必须逆序执行。
-    let mut statements = Vec::new();
     for migration in migrations.iter().rev() {
         let migration_version = Version::parse(&normalize_version(migration.version))?;
 
@@ -294,20 +291,19 @@ pub async fn migrate_down_with_list(
                     break;
                 }
             }
-            if !migration.down.is_empty() {
-                statements.extend(
-                    split_migration_statements(migration.down)
-                        .map(|sql| SqlStatement::new(sql, vec![])),
-                );
-            }
+            let mut statements: Vec<SqlStatement> = if !migration.down.is_empty() {
+                split_migration_statements(migration.down)
+                    .map(|sql| SqlStatement::new(sql, vec![]))
+                    .collect()
+            } else {
+                Vec::new()
+            };
             statements.push(SqlStatement::new(
                 "UPDATE _app_meta SET version = ?",
                 vec![SqlValue::Text(prev_v)],
             ));
+            db.execute_batch(statements).await?;
         }
-    }
-    if !statements.is_empty() {
-        db.execute_batch(statements).await?;
     }
     Ok(())
 }
@@ -460,6 +456,9 @@ mod tests {
         db.query("SELECT * FROM books".to_string())
             .await
             .expect("Table books should exist");
+        db.query("SELECT * FROM wordbook_entries".to_string())
+            .await
+            .expect("Table wordbook_entries should exist");
         let query_plan = db
             .query(
                 "EXPLAIN QUERY PLAN SELECT * FROM study_sessions WHERE book_id = 1 AND local_date = '2026-08-03'"
@@ -487,15 +486,14 @@ mod tests {
 
     #[test]
     fn test_fresh_migrations_fit_gateway_batch_limit() {
-        let statement_count: usize = migrations::MIGRATIONS
-            .iter()
-            .map(|migration| split_migration_statements(migration.up).count() + 1)
-            .sum();
-
-        assert!(
-            statement_count <= 32,
-            "完整迁移包含 {statement_count} 条语句，超过网关单批 32 条限制"
-        );
+        for migration in migrations::MIGRATIONS {
+            let statement_count = split_migration_statements(migration.up).count() + 1;
+            assert!(
+                statement_count <= 32,
+                "迁移 {} 包含 {statement_count} 条语句，超过网关单批 32 条限制",
+                migration.version
+            );
+        }
     }
 
     #[tokio::test]

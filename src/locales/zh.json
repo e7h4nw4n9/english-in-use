@@ -100,6 +100,7 @@
     "bookListSeries": "{count} 个系列",
     "homeTabs": {
       "books": "书籍",
+      "dictionary": "词典",
       "studyPlan": "学习计划",
       "studyStats": "学习统计",
       "settings": "设置"

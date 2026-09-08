@@ -50,6 +50,10 @@ export interface AppConfig {
   database: DatabaseConnection | null
   cloudflare_gateway?: CloudflareGatewayConfig | null
   gateway_configuration_required?: boolean
+  dictionary?: {
+    save_query_results_offline: boolean
+    search_result_limit: number
+  }
 }
 
 export type ServiceStatusType =
