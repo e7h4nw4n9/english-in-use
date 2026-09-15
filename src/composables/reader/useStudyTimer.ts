@@ -9,9 +9,23 @@ export interface StudyTimerStopContext {
   productCode: string
   entryUnit: StudySessionUnitRef
   visitedUnits: StudySessionUnitRef[]
+  unitDurations: Record<string, number>
   startAt: string
   endAt: string
   duration: number
+}
+
+/** 获取当前会话中实际使用时间最长的单元；时长相同时保留最早访问的单元。
+ * @param context - 停止时捕获的会话快照。
+ */
+export function resolveLongestUsedUnit(context: StudyTimerStopContext): StudySessionUnitRef {
+  const units = context.visitedUnits.length ? context.visitedUnits : [context.entryUnit]
+  return units.reduce((selected, unit) =>
+    (context.unitDurations[unit.resourceId] ?? 0) >
+    (context.unitDurations[selected.resourceId] ?? 0)
+      ? unit
+      : selected,
+  )
 }
 
 interface UseStudyTimerOptions {
@@ -67,6 +81,8 @@ export function useStudyTimer({
   const autoStartConsumed = ref(false)
 
   let nowTicker: ReturnType<typeof setInterval> | null = null
+  const unitElapsedMs = new Map<string, number>()
+  let trackedUnitSinceMs: number | null = null
 
   const isRunning = computed(() => status.value === 'running')
   const hasActiveSession = computed(() => status.value !== 'idle')
@@ -118,6 +134,17 @@ export function useStudyTimer({
     trackedUnit.value = unit
   }
 
+  /** 将当前运行区间累计到正在阅读的单元。
+   * @param untilMs - 本次累计的截止时间。
+   */
+  function accrueTrackedUnit(untilMs: number) {
+    const unit = trackedUnit.value
+    if (!unit || trackedUnitSinceMs === null) return
+    const elapsed = Math.max(0, untilMs - trackedUnitSinceMs)
+    unitElapsedMs.set(unit.resourceId, (unitElapsedMs.get(unit.resourceId) ?? 0) + elapsed)
+    trackedUnitSinceMs = untilMs
+  }
+
   /** 从阅读器入口单元开始一次新的计时会话。 */
   function start(): boolean {
     if (status.value !== 'idle') return false
@@ -132,6 +159,7 @@ export function useStudyTimer({
     sessionStartMs.value = startMs
     runningSinceMs.value = startMs
     elapsedFrozenMs.value = 0
+    unitElapsedMs.clear()
     entryUnit.value = unit
     trackedUnit.value = currentUnit || unit
     visitedUnits.value = [unit]
@@ -140,6 +168,7 @@ export function useStudyTimer({
     }
     autoPausedByBackground.value = false
     status.value = 'running'
+    trackedUnitSinceMs = startMs
     autoStartConsumed.value = true
     updateNow()
     return true
@@ -151,6 +180,8 @@ export function useStudyTimer({
 
     const pauseAt = Date.now()
     elapsedFrozenMs.value += Math.max(0, pauseAt - runningSinceMs.value)
+    accrueTrackedUnit(pauseAt)
+    trackedUnitSinceMs = null
     runningSinceMs.value = null
     status.value = 'paused'
     updateNow()
@@ -160,7 +191,9 @@ export function useStudyTimer({
   /** 从暂停状态继续累计当前会话时间。 */
   function resume(): boolean {
     if (status.value !== 'paused') return false
-    runningSinceMs.value = Date.now()
+    const resumeAt = Date.now()
+    runningSinceMs.value = resumeAt
+    trackedUnitSinceMs = resumeAt
     status.value = 'running'
     autoPausedByBackground.value = false
     updateNow()
@@ -178,6 +211,8 @@ export function useStudyTimer({
     entryUnit.value = null
     trackedUnit.value = null
     visitedUnits.value = []
+    unitElapsedMs.clear()
+    trackedUnitSinceMs = null
     autoPausedByBackground.value = false
     if (!keepAutoStartConsumed) {
       autoStartConsumed.value = false
@@ -211,10 +246,22 @@ export function useStudyTimer({
     const duration = Math.floor(totalMs / 1000)
     if (duration <= 0) return null
 
+    const durations = new Map(unitElapsedMs)
+    if (status.value === 'running' && trackedUnit.value && trackedUnitSinceMs !== null) {
+      const resourceId = trackedUnit.value.resourceId
+      durations.set(
+        resourceId,
+        (durations.get(resourceId) ?? 0) + Math.max(0, endAtMs - trackedUnitSinceMs),
+      )
+    }
+
     return {
       productCode: code,
       entryUnit: entry,
       visitedUnits: visitedUnits.value.length ? [...visitedUnits.value] : [entry],
+      unitDurations: Object.fromEntries(
+        [...durations].map(([resourceId, elapsed]) => [resourceId, Math.floor(elapsed / 1000)]),
+      ),
       startAt: new Date(startAtMs).toISOString(),
       endAt: new Date(endAtMs).toISOString(),
       duration,
@@ -277,6 +324,12 @@ export function useStudyTimer({
         readerEntryUnit.value = unit
       }
       if (hasActiveSession.value) {
+        const switchedResource = trackedUnit.value?.resourceId !== unit.resourceId
+        if (switchedResource && status.value === 'running') {
+          const switchedAt = Date.now()
+          accrueTrackedUnit(switchedAt)
+          trackedUnitSinceMs = switchedAt
+        }
         pushVisitedUnit(unit)
       }
     },

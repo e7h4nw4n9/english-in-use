@@ -1,6 +1,16 @@
 use tauri::State;
 
 #[tauri::command]
+/// 按日期范围分页读取记录；state 为数据库状态，query 为日期和筛选条件。
+pub async fn get_study_session_page(
+    state: State<'_, crate::database::DbState>,
+    query: crate::services::study_session::StudySessionQuery,
+) -> Result<crate::services::study_session::StudySessionPage, String> {
+    let db = state.get().await?;
+    crate::services::study_session::get_study_session_page(db.as_ref(), query).await
+}
+
+#[tauri::command]
 /// 保存一次学习会话。
 ///
 /// # 参数

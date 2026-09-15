@@ -17,8 +17,8 @@ const session = {
   entryResourceId: 'RE_1',
   entryUnitName: 'Unit 1',
   visitedUnits: [
-    { resourceId: 'RE_1', unitName: 'Unit 1' },
-    { resourceId: 'RE_2', unitName: 'Unit 2' },
+    { resourceId: 'RE_1', unitName: 'Describing character' },
+    { resourceId: 'RE_2', unitName: 'Work and study' },
   ],
   startAt: '2026-08-10T10:00:00Z',
   endAt: '2026-08-10T10:01:01Z',
@@ -34,8 +34,15 @@ describe('StudySessionEditModal', () => {
           'a-modal': {
             template: '<button class="submit" @click="$emit(\'ok\')"><slot /></button>',
           },
-          'a-select': { template: '<div><slot /></div>' },
-          'a-select-option': { template: '<span><slot /></span>' },
+          'a-select': {
+            props: ['value'],
+            template:
+              '<select :value="value" @change="$emit(\'update:value\', $event.target.value)"><slot /></select>',
+          },
+          'a-select-option': {
+            props: ['value'],
+            template: '<option :value="value"><slot /></option>',
+          },
           'a-input-number': { template: '<input />' },
         },
       },
@@ -47,5 +54,12 @@ describe('StudySessionEditModal', () => {
       { sessionId: 7, duration: 61, assignedResourceId: 'RE_1' },
     ])
     expect(wrapper.text()).toContain('studyStats.newEndTime')
+    expect(wrapper.text()).toContain('Unit 1 Describing character')
+    expect(wrapper.text()).toContain('Unit 2 Work and study')
+    await wrapper.get('select').setValue('RE_2')
+    await wrapper.find('.submit').trigger('click')
+    expect(wrapper.emitted('confirm')?.[1]).toEqual([
+      { sessionId: 7, duration: 61, assignedResourceId: 'RE_2' },
+    ])
   })
 })

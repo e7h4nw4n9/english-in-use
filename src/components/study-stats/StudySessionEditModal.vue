@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatIsoToLocalMinute } from '@/lib/datetime'
 import type { StudySessionListItem, UpdateStudySessionPayload } from '@/types'
+import { formatUnitTitle } from '@/lib/unitTitle'
 
 const props = defineProps<{
   open: boolean
@@ -86,7 +87,7 @@ function submit() {
           :key="unit.resourceId"
           :value="unit.resourceId"
         >
-          {{ unit.unitName }}
+          {{ formatUnitTitle(unit.resourceId, unit.unitName) }}
         </a-select-option>
       </a-select>
 

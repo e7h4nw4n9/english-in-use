@@ -8,7 +8,11 @@ import { useReaderAudio } from '../composables/useReaderAudio'
 import { useReaderMetadata } from '../composables/useReaderMetadata'
 import { useReaderShortcuts } from '../composables/reader/useReaderShortcuts'
 import { useReaderTocContext } from '../composables/reader/useReaderTocContext'
-import { useStudyTimer, type StudyTimerStopContext } from '../composables/reader/useStudyTimer'
+import {
+  resolveLongestUsedUnit,
+  useStudyTimer,
+  type StudyTimerStopContext,
+} from '../composables/reader/useStudyTimer'
 import { useReaderExerciseLoader } from '../composables/reader/useReaderExerciseLoader'
 import { useReaderViewportMode } from '../composables/reader/useReaderViewportMode'
 import { useReaderOverlayActions } from '../composables/reader/useReaderOverlayActions'
@@ -254,14 +258,14 @@ async function requestStopAndSaveTimer() {
 
   pendingStopContext.value = context
   pendingFlow.value = 'manual'
-  pendingAssignedResourceId.value = context.entryUnit.resourceId
+  pendingAssignedResourceId.value = resolveLongestUsedUnit(context).resourceId
 
   if (shouldShowAssignUnitPicker.value) {
     saveTimerPromptVisible.value = true
     return
   }
 
-  await persistTimerContext(context, context.entryUnit, false)
+  await persistTimerContext(context, resolveLongestUsedUnit(context), false)
 }
 
 /** 在关闭阅读器前完成必要的计时保存确认。 */
@@ -274,7 +278,7 @@ async function handleRequestCloseReader() {
 
   pendingStopContext.value = context
   pendingFlow.value = 'exit'
-  pendingAssignedResourceId.value = context.entryUnit.resourceId
+  pendingAssignedResourceId.value = resolveLongestUsedUnit(context).resourceId
   saveTimerPromptVisible.value = true
 }
 

@@ -61,18 +61,35 @@ pub async fn upsert_study_plan_on_date(
 
     let completed_stages = json_completed_stages(&existing_row);
     let all_stages = json_all_stages(&existing_row);
-    let restart_all = existing_status == Some(2) && completed_stages.len() == TOTAL_STAGES as usize;
+    // 动态计划恢复时保留所有完成和评估历史，只安排一次新的待办。
+    if existing_status == Some(2) && completed_stages.len() >= TOTAL_STAGES as usize {
+        let plan_id = json_i64(&existing_row, "plan_unit_id").ok_or("PLAN_NOT_FOUND")?;
+        let operation = format!("reactivate:{}", uuid::Uuid::new_v4());
+        let results = db.query_write_batch(vec![
+            SqlStatement::new("UPDATE study_plan_units SET plan_status = 0, updated_at = ? WHERE id = ? AND plan_status = 2 RETURNING id", vec![SqlValue::Text(operation.clone()), SqlValue::Integer(plan_id)]),
+            SqlStatement::new("DELETE FROM study_tasks WHERE plan_unit_id = ? AND task_status = 0 AND EXISTS (SELECT 1 FROM study_plan_units WHERE id = ? AND updated_at = ?)", vec![SqlValue::Integer(plan_id), SqlValue::Integer(plan_id), SqlValue::Text(operation.clone())]),
+            SqlStatement::new("INSERT INTO study_tasks (plan_unit_id, scheduled_date, review_stage) SELECT ?, date(?, '+1 day'), (SELECT MAX(review_stage) + 1 FROM study_tasks WHERE plan_unit_id = ?) WHERE EXISTS (SELECT 1 FROM study_plan_units WHERE id = ? AND updated_at = ?)", vec![SqlValue::Integer(plan_id), SqlValue::Text(local_date.into()), SqlValue::Integer(plan_id), SqlValue::Integer(plan_id), SqlValue::Text(operation.clone())]),
+            SqlStatement::new("UPDATE study_plan_units SET updated_at = CURRENT_TIMESTAMP WHERE id = ? AND updated_at = ?", vec![SqlValue::Integer(plan_id), SqlValue::Text(operation)]),
+        ]).await.map_err(|e| e.to_string())?;
+        let row = query_plan_status_row(db, product_code, resource_id, local_date)
+            .await?
+            .ok_or("PLAN_NOT_FOUND")?;
+        let outcome = if results.first().is_some_and(|rows| !rows.is_empty()) {
+            StudyPlanUpsertOutcome::Reactivated
+        } else {
+            StudyPlanUpsertOutcome::AlreadyActive
+        };
+        return build_upsert_response(&row, outcome);
+    }
     let outcome = if existing_status.is_none() {
         StudyPlanUpsertOutcome::Created
-    } else if restart_all {
-        StudyPlanUpsertOutcome::Restarted
     } else {
         StudyPlanUpsertOutcome::Reactivated
     };
 
     // updated_at 在事务内部临时充当本次状态转换标识，批次末尾会恢复为合法时间。
     let operation_token = format!("operation:{}", uuid::Uuid::new_v4());
-    let reset_last_review = restart_all || completed_stages.is_empty();
+    let reset_last_review = completed_stages.is_empty();
     let mut statements = vec![SqlStatement::new(
         "INSERT INTO study_plan_units \
          (book_id, resource_id, unit_name, plan_status, created_at, updated_at) \
@@ -92,10 +109,10 @@ pub async fn upsert_study_plan_on_date(
         ],
     )];
 
-    let pending_stages: Vec<i32> = if restart_all || existing_status.is_none() {
+    let pending_stages: Vec<i32> = if existing_status.is_none() {
         (1..=TOTAL_STAGES).collect()
     } else {
-        (1..=TOTAL_STAGES)
+        (1..=TOTAL_STAGES.max(all_stages.iter().copied().max().unwrap_or(0)))
             .filter(|stage| !completed_stages.contains(stage))
             .collect()
     };
@@ -132,14 +149,9 @@ pub async fn upsert_study_plan_on_date(
     if existing_status == Some(2) {
         for (index, stage) in pending_stages.iter().enumerate() {
             let offset = REVIEW_DAY_OFFSETS[index];
-            let reset_columns = if restart_all {
-                ", task_status = 0, completed_at = NULL"
-            } else {
-                ""
-            };
             statements.push(SqlStatement::new(
                 format!(
-                    "UPDATE study_tasks SET scheduled_date = date(?, '+{offset} day'){reset_columns}, \
+                    "UPDATE study_tasks SET scheduled_date = date(?, '+{offset} day'), \
                      updated_at = CURRENT_TIMESTAMP \
                      WHERE plan_unit_id = (\
                        SELECT u.id FROM study_plan_units u \

@@ -8,11 +8,13 @@ import {
   HomeOutlined,
   DownloadOutlined,
   UploadOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons-vue'
 import SystemSettings from './config/SystemSettings.vue'
 import BookSourceSettings from './config/BookSourceSettings.vue'
 import DatabaseSettings from './config/DatabaseSettings.vue'
 import DictionarySettings from './config/DictionarySettings.vue'
+import StudyPlanRules from './config/StudyPlanRules.vue'
 import { useConfigPage } from '../composables/config/useConfigPage'
 
 const props = withDefaults(defineProps<{ initialConfig?: AppConfig; allowBack?: boolean }>(), {
@@ -141,6 +143,10 @@ const {
           <template #icon><ReadOutlined /></template>
           <span>词典</span>
         </a-menu-item>
+        <a-menu-item key="study-plan">
+          <template #icon><CalendarOutlined /></template>
+          <span>{{ t('studyPlanRules.tab') }}</span>
+        </a-menu-item>
       </a-menu>
     </div>
 
@@ -210,6 +216,7 @@ const {
           v-model:saveResultsOffline="saveDictionaryResultsOffline"
           v-model:searchResultLimit="dictionarySearchResultLimit"
         />
+        <StudyPlanRules v-else-if="currentTab === 'study-plan'" />
       </div>
     </div>
   </div>

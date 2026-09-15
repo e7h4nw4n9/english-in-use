@@ -42,6 +42,7 @@ export function useStudyPlanPage() {
   const summaryByDate = ref<Record<string, StudyTaskSummaryDay>>({})
   const loadingSummary = ref(false)
   const completingTaskId = ref<number | null>(null)
+  const assessmentTask = ref<StudyTaskItem | null>(null)
   const openingTask = ref(false)
   const shiftingPlanUnitId = ref<number | null>(null)
   const shiftModalOpen = ref(false)
@@ -287,12 +288,41 @@ export function useStudyPlanPage() {
    */
   async function markTaskDone(task: StudyTaskItem) {
     if (task.taskStatus === 1 || completingTaskId.value !== null) return
+    if (task.assessmentRequired) {
+      assessmentTask.value = task
+      return
+    }
+    await saveTaskCompletion(task)
+  }
 
+  /** 提交评估；取消弹窗不会完成任务。 */
+  async function submitAssessment(
+    rating: 'forgotten' | 'hard' | 'good' | 'mastered',
+    finishPlan?: boolean,
+    expectedRevision?: string,
+  ) {
+    if (!assessmentTask.value || completingTaskId.value !== null) return
+    await saveTaskCompletion(assessmentTask.value, rating, finishPlan, expectedRevision)
+  }
+
+  /** 完成记录与后续排期由后端原子提交，然后清理所有日期缓存。 */
+  async function saveTaskCompletion(
+    task: StudyTaskItem,
+    rating?: 'forgotten' | 'hard' | 'good' | 'mastered',
+    finishPlan?: boolean,
+    expectedRevision?: string,
+  ) {
     completingTaskId.value = task.taskId
     try {
       await appStore.runGlobalLoadingAction(async () => {
-        await completeStudyTask(task.taskId)
-        const datesToRefresh = new Set([task.scheduledDate, selectedDate.value])
+        await completeStudyTask(task.taskId, rating, finishPlan, expectedRevision)
+        assessmentTask.value = null
+        const datesToRefresh = new Set([
+          ...Object.keys(tasksByDateCache.value),
+          task.scheduledDate,
+          selectedDate.value,
+        ])
+        tasksByDateCache.value = {}
         await Promise.all([
           refreshSummary(),
           ...Array.from(datesToRefresh, (date) => ensureDateTasks(date, true)),
@@ -301,6 +331,25 @@ export function useStudyPlanPage() {
       }, t('studyPlan.completingTask'))
     } catch (error) {
       const errorText = error instanceof Error ? error.message : String(error)
+      // 另一设备可能已完成上一阶段，刷新任务元数据后重新展示必要的评估。
+      if (
+        [
+          'ASSESSMENT_REQUIRED',
+          'FINISH_DECISION_REQUIRED',
+          'PLAN_STATE_CHANGED',
+          'ASSESSMENT_PREVIEW_CHANGED',
+          'TASK_NOT_FOUND',
+        ].includes(errorText)
+      ) {
+        await ensureDateTasks(task.scheduledDate, true)
+        const current = tasksByDateCache.value[task.scheduledDate]?.find(
+          (item) => item.taskId === task.taskId,
+        )
+        assessmentTask.value =
+          current?.taskStatus === 0 && current.assessmentRequired ? { ...current } : null
+        message.info('学习计划已更新，请根据最新任务状态重新提交。')
+        return
+      }
       message.error(t('studyPlan.actionFailed', { error: errorText }))
     } finally {
       completingTaskId.value = null
@@ -436,6 +485,8 @@ export function useStudyPlanPage() {
     shiftingPlanUnitId,
     jumpToStudy,
     markTaskDone,
+    assessmentTask,
+    submitAssessment,
     openShiftPlan,
     submitShiftPlan,
     shiftModalOpen,

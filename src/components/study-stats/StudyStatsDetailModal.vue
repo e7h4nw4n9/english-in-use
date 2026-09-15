@@ -5,6 +5,7 @@ import { DeleteOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { formatIsoToLocalMinute } from '@/lib/datetime'
 import type { StudySessionListItem } from '@/types'
+import { formatUnitTitle } from '@/lib/unitTitle'
 
 const props = defineProps<{
   open: boolean
@@ -65,7 +66,7 @@ function formatFullSeconds(duration: number): string {
             <tbody>
               <tr v-for="session in sessions" :key="session.id">
                 <td>{{ session.bookTitle }}</td>
-                <td>{{ session.unitName }}</td>
+                <td>{{ formatUnitTitle(session.resourceId, session.unitName) }}</td>
                 <td>{{ formatFullSeconds(session.duration) }}</td>
                 <td>{{ formatIsoToLocalMinute(session.startAt).split(' ')[1] }}</td>
                 <td>

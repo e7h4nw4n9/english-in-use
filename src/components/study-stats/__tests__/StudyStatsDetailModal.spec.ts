@@ -15,7 +15,7 @@ describe('StudyStatsDetailModal', () => {
       productCode: 'book',
       bookTitle: 'Book',
       resourceId: 'RE_1',
-      unitName: 'Unit 1',
+      unitName: 'Describing character',
       entryResourceId: 'RE_1',
       entryUnitName: 'Unit 1',
       visitedUnits: [],
@@ -41,6 +41,12 @@ describe('StudyStatsDetailModal', () => {
     })
 
     const buttons = wrapper.findAll('.row-actions button')
+    expect(wrapper.findAll('tbody td')[1].text()).toBe('Unit 1 Describing character')
+    await wrapper.setProps({
+      sessions: [{ ...session, resourceId: 'RE_2', unitName: 'Work and study' }],
+    })
+    expect(wrapper.findAll('tbody td')[1].text()).toBe('Unit 2 Work and study')
+    await wrapper.setProps({ sessions: [session] })
     expect(wrapper.findAll('.row-actions .operation-button')).toHaveLength(2)
     await buttons[0].trigger('click')
     await buttons[1].trigger('click')

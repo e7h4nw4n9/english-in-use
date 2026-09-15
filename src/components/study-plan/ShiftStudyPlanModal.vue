@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { theme } from 'ant-design-vue'
 import type { StudyTaskItem } from '@/types'
+import { formatUnitTitle } from '@/lib/unitTitle'
 import { addDays, formatDate, parseDate } from '@/composables/study-plan/studyPlanCalendar'
 
 const props = defineProps<{
@@ -61,7 +62,7 @@ function submit() {
     @update:open="emit('update:open', $event)"
   >
     <div v-if="task" class="shift-form">
-      <div class="shift-unit">{{ task.unitName }}</div>
+      <div class="shift-unit">{{ formatUnitTitle(task.resourceId, task.unitName) }}</div>
 
       <label class="field-label">{{ t('studyPlan.shiftDirection') }}</label>
       <a-radio-group v-model:value="direction" button-style="solid">

@@ -24,8 +24,8 @@ describe('DailyTaskPanel', () => {
                     taskId: 1,
                     planUnitId: 1,
                     productCode: 'internal-product-code',
-                    resourceId: 'unit-1',
-                    unitName: 'Unit 1',
+                    resourceId: 'RE_00012',
+                    unitName: 'Describing character',
                     reviewStage: 1,
                     scheduledDate: '2026-08-13',
                     isOverdue: false,
@@ -52,6 +52,7 @@ describe('DailyTaskPanel', () => {
     })
 
     expect(wrapper.text()).toContain('书籍简称')
+    expect(wrapper.get('.task-unit-name').text()).toBe('Unit 12 Describing character')
     expect(wrapper.text()).not.toContain('internal-product-code')
     expect(wrapper.find('.book-code-tag').exists()).toBe(false)
     expect(wrapper.text()).toContain('studyPlan.adjustPlan')

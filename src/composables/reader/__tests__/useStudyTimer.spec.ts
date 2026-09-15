@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref, type Ref } from 'vue'
 import { mount } from '@vue/test-utils'
 import { saveStudySession } from '@/lib/api/studyTimer'
-import { useStudyTimer } from '../useStudyTimer'
+import { resolveLongestUsedUnit, useStudyTimer } from '../useStudyTimer'
 
 vi.mock('@/lib/api/studyTimer', () => ({
   saveStudySession: vi.fn(),
@@ -118,6 +118,45 @@ describe('useStudyTimer', () => {
     expect(harness.api.autoPausedByBackground.value).toBe(true)
 
     harness.wrapper.unmount()
+  })
+
+  it('按实际运行时间累计各单元并选择使用时间最长的单元', async () => {
+    const harness = createHarness()
+    expect(harness.api.start()).toBe(true)
+
+    vi.setSystemTime(new Date('2026-03-01T00:00:40.000Z'))
+    harness.currentResourceId.value = 'RE_U2'
+    harness.currentUnitName.value = 'Unit 2'
+    await nextTick()
+    vi.setSystemTime(new Date('2026-03-01T00:01:00.000Z'))
+    expect(harness.api.pause()).toBe(true)
+    vi.setSystemTime(new Date('2026-03-01T00:01:30.000Z'))
+    expect(harness.api.resume()).toBe(true)
+    vi.setSystemTime(new Date('2026-03-01T00:01:40.000Z'))
+    harness.currentResourceId.value = 'RE_U1'
+    harness.currentUnitName.value = 'Unit 1'
+    await nextTick()
+    vi.setSystemTime(new Date('2026-03-01T00:01:45.000Z'))
+
+    const context = harness.api.buildStopContext()
+    expect(context?.unitDurations).toEqual({ RE_U1: 45, RE_U2: 30 })
+    expect(context && resolveLongestUsedUnit(context).resourceId).toBe('RE_U1')
+    harness.wrapper.unmount()
+  })
+
+  it('单元使用时长相同时选择最早访问的单元', () => {
+    const entryUnit = { resourceId: 'RE_U1', unitName: 'Unit 1' }
+    expect(
+      resolveLongestUsedUnit({
+        productCode: 'book',
+        entryUnit,
+        visitedUnits: [entryUnit, { resourceId: 'RE_U2', unitName: 'Unit 2' }],
+        unitDurations: { RE_U1: 10, RE_U2: 10 },
+        startAt: '2026-03-01T00:00:00.000Z',
+        endAt: '2026-03-01T00:00:20.000Z',
+        duration: 20,
+      }).resourceId,
+    ).toBe('RE_U1')
   })
 
   it('saves with assigned unit and resets timer state', async () => {

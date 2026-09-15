@@ -55,6 +55,24 @@ pub struct StudyStatsFilters {
     pub book_group: Option<i32>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StudySessionQuery {
+    pub book_id: Option<i64>,
+    pub book_group: Option<i32>,
+    pub range_start: String,
+    pub range_end: String,
+    pub page: i64,
+    pub page_size: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StudySessionPage {
+    pub items: Vec<StudySessionListItem>,
+    pub total: i64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StudyStatsTrendItem {

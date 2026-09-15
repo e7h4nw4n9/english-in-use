@@ -60,4 +60,14 @@ pub const MIGRATIONS: &[Migration] = &[
         up: concat!(include_str!("../../migrations/0.8.0/up/wordbook.sql")),
         down: concat!(include_str!("../../migrations/0.8.0/down/down.sql")),
     },
+    Migration {
+        version: "0.9.0",
+        up: include_str!("../../migrations/0.9.0/up/adaptive_study_plan.sql"),
+        down: include_str!("../../migrations/0.9.0/down/down.sql"),
+    },
+    Migration {
+        version: "0.10.0",
+        up: include_str!("../../migrations/0.10.0/up/assessment_intervals.sql"),
+        down: include_str!("../../migrations/0.10.0/down/down.sql"),
+    },
 ];

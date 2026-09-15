@@ -2,8 +2,29 @@
 
 use serde::Serialize;
 
+// 后两项仅用于兼容旧计划的恢复；新计划只创建前五次。
 pub(super) const REVIEW_DAY_OFFSETS: [i32; 7] = [1, 2, 4, 7, 15, 30, 60];
-pub(super) const TOTAL_STAGES: i32 = 7;
+pub(super) const TOTAL_STAGES: i32 = 5;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StudyAssessmentOption {
+    pub rating: String,
+    pub interval_days: i32,
+    pub scheduled_date: String,
+    pub mastered_streak: i32,
+    pub requires_finish_decision: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StudyAssessmentPreview {
+    pub local_date: String,
+    pub revision: String,
+    pub same_day: bool,
+    pub legacy_date: bool,
+    pub options: Vec<StudyAssessmentOption>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -75,6 +96,8 @@ pub struct StudyTaskSummaryResponse {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StudyTaskItem {
+    pub assessment_required: bool,
+    pub mastered_streak: i32,
     pub task_id: i64,
     pub plan_unit_id: i64,
     pub product_code: String,

@@ -3,6 +3,99 @@
 use super::*;
 use crate::database::{Database, SqliteDatabase};
 
+#[tokio::test]
+async fn session_page_filters_inclusive_dates_book_series_and_paginates() {
+    let db = setup_test_db().await;
+    for (product, date) in [
+        ("timerbooka", "2026-08-31"),
+        ("timerbooka", "2026-09-01"),
+        ("timerbooka", "2026-09-30"),
+        ("timerbooka", "2026-10-01"),
+        ("timerbookb", "2026-09-15"),
+    ] {
+        save_study_session(
+            &db,
+            SaveStudySessionPayload {
+                product_code: product.into(),
+                entry_resource_id: "RE_1".into(),
+                entry_unit_name: "Unit 1".into(),
+                assigned_resource_id: "RE_1".into(),
+                assigned_unit_name: "Unit 1".into(),
+                visited_units: vec![],
+                start_at: format!("{date}T10:00:00Z"),
+                end_at: format!("{date}T10:01:00Z"),
+                duration: 60,
+                local_date: date.into(),
+                timezone_offset_minutes: 0,
+            },
+        )
+        .await
+        .unwrap();
+    }
+    // 起止日均包含，日期范围内的另一个系列不计入。
+    for (page, expected_date) in [(1, "2026-09-30"), (2, "2026-09-01")] {
+        let result = get_study_session_page(
+            &db,
+            StudySessionQuery {
+                book_id: Some(3001),
+                book_group: Some(1),
+                range_start: "2026-09-01".into(),
+                range_end: "2026-09-30".into(),
+                page,
+                page_size: 1,
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(result.total, 2);
+        assert_eq!(result.items.len(), 1);
+        assert!(result.items[0].start_at.starts_with(expected_date));
+    }
+    let result = get_study_session_page(
+        &db,
+        StudySessionQuery {
+            book_id: Some(3001),
+            book_group: Some(2),
+            range_start: "2026-09-01".into(),
+            range_end: "2026-09-30".into(),
+            page: 1,
+            page_size: 10,
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(result.total, 0);
+    assert!(result.items.is_empty());
+}
+
+#[tokio::test]
+async fn session_page_rejects_invalid_dates_and_paging() {
+    let db = setup_test_db().await;
+    for (start, end, page, size) in [
+        ("2026-02-30", "2026-03-01", 1, 10),
+        ("2026-09-30", "2026-09-01", 1, 10),
+        ("2026-09-01", "2026-09-30", 0, 10),
+        ("2026-09-01", "2026-09-30", 1, 101),
+        ("2026-09-01", "2026-09-30", i64::MAX, 100),
+    ] {
+        assert!(
+            get_study_session_page(
+                &db,
+                StudySessionQuery {
+                    book_id: None,
+                    book_group: None,
+                    range_start: start.into(),
+                    range_end: end.into(),
+                    page,
+                    page_size: size,
+                }
+            )
+            .await
+            .is_err()
+        );
+    }
+}
+
 async fn setup_test_db() -> SqliteDatabase {
     let db_path =
         std::env::temp_dir().join(format!("study_session_test_{}.db", uuid::Uuid::new_v4()));

@@ -6,6 +6,8 @@ import {
   getStudyTasksSummary,
   shiftStudyPlan,
   upsertStudyPlan,
+  getStudyAssessmentPreview,
+  completeStudyTask,
 } from '../studyPlan'
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -22,6 +24,22 @@ describe('study plan API local date', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('评估预览和提交传递本地日期与预览版本', async () => {
+    await getStudyAssessmentPreview(5)
+    await completeStudyTask(5, 'good', undefined, 'revision')
+    expect(invoke).toHaveBeenNthCalledWith(1, 'get_study_assessment_preview', {
+      taskId: 5,
+      localDate: '2026-08-10',
+    })
+    expect(invoke).toHaveBeenNthCalledWith(2, 'complete_study_task', {
+      taskId: 5,
+      localDate: '2026-08-10',
+      rating: 'good',
+      finishPlan: undefined,
+      expectedRevision: 'revision',
+    })
   })
 
   it('passes the current local date to plan creation and status queries', async () => {

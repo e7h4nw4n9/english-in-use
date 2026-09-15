@@ -133,7 +133,9 @@ pub async fn get_tasks_by_date_on_date(
             t.review_stage AS review_stage, \
             t.scheduled_date AS scheduled_date, \
             t.task_status AS task_status, \
-            t.completed_at AS completed_at \
+            t.completed_at AS completed_at, \
+            (SELECT COUNT(*) FROM study_tasks done WHERE done.plan_unit_id = u.id AND done.task_status = 1) AS completed_count, \
+            COALESCE((SELECT done.mastered_streak FROM study_tasks done WHERE done.plan_unit_id = u.id AND done.task_status = 1 AND done.mastery_rating IS NOT NULL ORDER BY done.review_stage DESC LIMIT 1), 0) AS mastered_streak \
         FROM study_tasks t \
         JOIN study_plan_units u ON t.plan_unit_id = u.id \
         JOIN books b ON u.book_id = b.id \
@@ -158,6 +160,8 @@ pub async fn get_tasks_by_date_on_date(
                 && scheduled_date.as_str() < date_raw.as_str();
 
             StudyTaskItem {
+                assessment_required: json_i64(row, "completed_count").unwrap_or(0) >= 4,
+                mastered_streak: json_i32(row, "mastered_streak").unwrap_or(0),
                 task_id: json_i64(row, "task_id").unwrap_or_default(),
                 plan_unit_id: json_i64(row, "plan_unit_id").unwrap_or_default(),
                 product_code: json_string(row, "product_code").unwrap_or_default(),
@@ -256,97 +260,5 @@ pub async fn shift_study_plan_on_date(
         offset_days,
         first_stage_date: target_date,
         affected_tasks: i64::try_from(shifted_rows.len()).unwrap_or(i64::MAX),
-    })
-}
-
-/// 完成指定任务并创建下一复习阶段或结束计划。
-///
-/// # 参数
-/// - `db`：目标数据库实现。
-/// - `task_id`：学习任务数据库标识。
-pub async fn complete_study_task(
-    db: &dyn Database,
-    task_id: i64,
-) -> Result<CompleteStudyTaskResponse, String> {
-    let task_sql = format!(
-        "SELECT t.id AS task_id, t.plan_unit_id AS plan_unit_id, t.task_status AS task_status, u.plan_status AS plan_status \
-         FROM study_tasks t \
-         JOIN study_plan_units u ON t.plan_unit_id = u.id \
-         WHERE t.id = {} LIMIT 1",
-        task_id
-    );
-
-    let task_rows = db.query(task_sql).await.map_err(|e| e.to_string())?;
-    let task_row = task_rows.first().ok_or("TASK_NOT_FOUND")?;
-
-    let plan_unit_id = json_i64(task_row, "plan_unit_id").ok_or("TASK_NOT_FOUND")?;
-    let mut task_status = json_i32(task_row, "task_status").ok_or("TASK_NOT_FOUND")?;
-    let plan_status_before = json_i32(task_row, "plan_status").ok_or("TASK_NOT_FOUND")?;
-
-    if task_status == 1 {
-        let completed_stages = get_completed_stages(db, plan_unit_id).await?;
-        return Ok(CompleteStudyTaskResponse {
-            task_id,
-            task_status,
-            plan_status: plan_status_before,
-            completed_stages,
-        });
-    }
-
-    if plan_status_before != 0 {
-        return Err(if plan_status_before == 1 {
-            "PLAN_ALREADY_MASTERED".to_string()
-        } else {
-            "PLAN_NOT_ACTIVE".to_string()
-        });
-    }
-
-    db.execute_batch(vec![
-        SqlStatement::new(
-            "UPDATE study_tasks SET task_status = 1, completed_at = CURRENT_TIMESTAMP, \
-             updated_at = CURRENT_TIMESTAMP WHERE id = ? AND task_status = 0",
-            vec![SqlValue::Integer(task_id)],
-        ),
-        SqlStatement::new(
-            "UPDATE study_plan_units SET last_review_at = CURRENT_TIMESTAMP, \
-             updated_at = CURRENT_TIMESTAMP WHERE id = ? AND plan_status = 0",
-            vec![SqlValue::Integer(plan_unit_id)],
-        ),
-        SqlStatement::new(
-            "UPDATE study_plan_units SET plan_status = 1, updated_at = CURRENT_TIMESTAMP \
-             WHERE id = ? AND plan_status = 0 AND NOT EXISTS (\
-               SELECT 1 FROM study_tasks WHERE plan_unit_id = ? AND task_status = 0\
-             )",
-            vec![
-                SqlValue::Integer(plan_unit_id),
-                SqlValue::Integer(plan_unit_id),
-            ],
-        ),
-    ])
-    .await
-    .map_err(|e| e.to_string())?;
-    task_status = 1;
-
-    let result_rows = db
-        .query_statement(SqlStatement::new(
-            "SELECT u.plan_status AS plan_status, \
-                    COALESCE((SELECT json_group_array(review_stage) FROM (\
-                        SELECT review_stage FROM study_tasks \
-                        WHERE plan_unit_id = u.id AND task_status = 1 ORDER BY review_stage\
-                    )), '[]') AS completed_stages_json \
-             FROM study_plan_units u WHERE u.id = ? LIMIT 1",
-            vec![SqlValue::Integer(plan_unit_id)],
-        ))
-        .await
-        .map_err(|e| e.to_string())?;
-    let result_row = result_rows.first().ok_or("PLAN_NOT_FOUND")?;
-    let plan_status = json_i32(result_row, "plan_status").ok_or("PLAN_NOT_FOUND")?;
-    let completed_stages = json_completed_stages(result_row);
-
-    Ok(CompleteStudyTaskResponse {
-        task_id,
-        task_status,
-        plan_status,
-        completed_stages,
     })
 }

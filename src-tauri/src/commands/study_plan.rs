@@ -1,6 +1,26 @@
 use tauri::State;
 
 #[tauri::command]
+/// 按书籍、状态和分页查询学习安排；query 为列表筛选参数。
+pub async fn get_study_arrangements(
+    state: State<'_, crate::database::DbState>,
+    query: crate::services::study_plan::StudyArrangementQuery,
+) -> Result<crate::services::study_plan::StudyArrangementList, String> {
+    let db = state.get().await?;
+    crate::services::study_plan::get_study_arrangements(db.as_ref(), query).await
+}
+
+#[tauri::command]
+/// 查询单元全部现存复习安排；plan_unit_id 为计划标识。
+pub async fn get_study_arrangement_reviews(
+    state: State<'_, crate::database::DbState>,
+    plan_unit_id: i64,
+) -> Result<Vec<crate::services::study_plan::StudyArrangementReview>, String> {
+    let db = state.get().await?;
+    crate::services::study_plan::get_study_arrangement_reviews(db.as_ref(), plan_unit_id).await
+}
+
+#[tauri::command]
 /// 创建或更新当前单元的学习计划。
 ///
 /// # 参数
@@ -140,10 +160,37 @@ pub async fn shift_study_plan(
 /// # 参数
 /// - `state`：对应命令使用的共享状态。
 /// - `task_id`：学习任务数据库标识。
+/// - `local_date`：本次实际完成的本地日期。
+/// - `rating`：第五次及以后任务的掌握评价。
+/// - `finish_plan`：连续完成三次巩固后的结束选择。
+/// - `expected_revision`：用户确认的预览版本，用于拒绝跨日或过期的安排。
 pub async fn complete_study_task(
     state: State<'_, crate::database::DbState>,
     task_id: i64,
+    local_date: String,
+    rating: Option<String>,
+    finish_plan: Option<bool>,
+    expected_revision: Option<String>,
 ) -> Result<crate::services::study_plan::CompleteStudyTaskResponse, String> {
     let db = state.get().await?;
-    crate::services::study_plan::complete_study_task(db.as_ref(), task_id).await
+    crate::services::study_plan::complete_assessed_task_with_preview(
+        db.as_ref(),
+        task_id,
+        &local_date,
+        rating.as_deref(),
+        finish_plan,
+        expected_revision.as_deref(),
+    )
+    .await
+}
+
+#[tauri::command]
+/// 获取四种掌握评价的安排预览；参数为共享状态、任务标识和本地日期。
+pub async fn get_study_assessment_preview(
+    state: State<'_, crate::database::DbState>,
+    task_id: i64,
+    local_date: String,
+) -> Result<crate::services::study_plan::StudyAssessmentPreview, String> {
+    let db = state.get().await?;
+    crate::services::study_plan::get_assessment_preview(db.as_ref(), task_id, &local_date).await
 }

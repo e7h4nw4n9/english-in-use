@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import ReaderTOC from '../ReaderTOC.vue'
 import { useReaderStore } from '../../../stores/reader'
 import type { BookMetadata } from '../../../types'
+import { formatUnitTitle } from '@/lib/unitTitle'
 
 // Partial mock for vue-i18n
 vi.mock('vue-i18n', async (importOriginal) => {
@@ -33,8 +34,8 @@ const mockMetadata: BookMetadata = {
       startPage: '1',
       endPage: '10',
       children: [
-        { title: 'Section A', key: 's1.1', unitNumber: 1, startPage: '1', endPage: '5' },
-        { title: 'Section B', key: 's1.2', unitNumber: 2, startPage: '6', endPage: '10' },
+        { title: 'Section A', key: 'RE_0001', unitNumber: 1, startPage: '1', endPage: '5' },
+        { title: 'Section B', key: 'RE_0002', unitNumber: 2, startPage: '6', endPage: '10' },
       ],
     },
     {
@@ -142,6 +143,9 @@ describe('ReaderTOC', () => {
       'Unit 2',
     ])
     expect(wrapper.find('.panel-header').text()).not.toContain('Unit')
+    const firstUnit = wrapper.findAll('.toc-item')[0]
+    const directoryTitle = `${firstUnit.get('.toc-unit-number').text()} ${firstUnit.get('.toc-title').text()}`
+    expect(directoryTitle).toBe(formatUnitTitle('RE_0001', 'Section A'))
     const unnumberedItem = wrapper
       .findAll('.toc-item')
       .find((item) => item.text().includes('Second Chapter'))

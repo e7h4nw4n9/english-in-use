@@ -4,6 +4,69 @@ use super::common::*;
 use super::types::*;
 use super::*;
 
+/// 分页查询学习记录；db 为数据库，query 为本地日期范围及筛选条件。
+pub async fn get_study_session_page(
+    db: &dyn Database,
+    query: StudySessionQuery,
+) -> Result<StudySessionPage, String> {
+    crate::services::study_plan::validate_local_date_for_payload(&query.range_start)?;
+    crate::services::study_plan::validate_local_date_for_payload(&query.range_end)?;
+    if query.range_start > query.range_end
+        || query.page < 1
+        || !(1..=100).contains(&query.page_size)
+        || query.book_id.is_some_and(|id| id <= 0)
+        || query.book_group.is_some_and(|group| group <= 0)
+    {
+        return Err("INVALID_SESSION_QUERY".into());
+    }
+    let offset = (query.page - 1)
+        .checked_mul(query.page_size)
+        .ok_or("INVALID_SESSION_QUERY")?;
+    let mut conditions = "FROM study_sessions s JOIN books b ON b.id = s.book_id WHERE s.local_date >= ? AND s.local_date <= ?".to_string();
+    let mut params = vec![
+        SqlValue::Text(query.range_start),
+        SqlValue::Text(query.range_end),
+    ];
+    if let Some(id) = query.book_id {
+        conditions.push_str(" AND s.book_id = ?");
+        params.push(SqlValue::Integer(id));
+    }
+    if let Some(group) = query.book_group {
+        conditions.push_str(" AND b.book_group = ?");
+        params.push(SqlValue::Integer(i64::from(group)));
+    }
+    let count = SqlStatement::new(
+        format!("SELECT COUNT(*) AS total {conditions}"),
+        params.clone(),
+    );
+    params.push(SqlValue::Integer(query.page_size));
+    params.push(SqlValue::Integer(offset));
+    let rows = SqlStatement::new(
+        format!(
+            "SELECT s.id AS session_id, s.book_id, b.book_group, b.product_code, b.short_title, b.title, s.resource_id, s.unit_name, s.entry_resource_id, s.entry_unit_name, s.visited_units_json, s.start_at, s.end_at, s.duration {conditions} ORDER BY s.start_at DESC, s.id DESC LIMIT ? OFFSET ?"
+        ),
+        params,
+    );
+    let mut results = db
+        .query_batch(vec![count, rows])
+        .await
+        .map_err(|error| error.to_string())?
+        .into_iter();
+    let total = results
+        .next()
+        .unwrap_or_default()
+        .first()
+        .and_then(|row| json_i64(row, "total"))
+        .unwrap_or(0);
+    let items = results
+        .next()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(row_to_session)
+        .collect();
+    Ok(StudySessionPage { items, total })
+}
+
 /// 按显式本地日期查询分页学习统计。
 ///
 /// # 参数

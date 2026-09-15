@@ -40,6 +40,8 @@ vi.mock('../../../composables/study-plan/useStudyPlanPage', () => ({
     shiftingPlanUnitId: null,
     jumpToStudy: vi.fn(),
     markTaskDone: vi.fn(),
+    assessmentTask: null,
+    submitAssessment: vi.fn(),
     openShiftPlan: vi.fn(),
     submitShiftPlan: vi.fn(),
     shiftModalOpen: false,
@@ -58,6 +60,7 @@ function mountStudyPlanPage() {
         'a-drawer': { template: '<div><slot /></div>' },
         DailyTaskPanel: true,
         ShiftStudyPlanModal: true,
+        StudyAssessmentModal: true,
       },
     },
   })

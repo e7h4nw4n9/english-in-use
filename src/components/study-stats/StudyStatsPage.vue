@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { message, Modal, theme } from 'ant-design-vue'
+import {
+  message,
+  Modal,
+  theme,
+  Tabs as ATabs,
+  TabPane as ATabPane,
+  Pagination as APagination,
+} from 'ant-design-vue'
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type {
@@ -21,24 +28,86 @@ import {
 } from '@/lib/api/studyTimer'
 import { formatIsoToLocalMinute, generateDateRange, generateMonthRange } from '@/lib/datetime'
 import { useAppStore } from '@/stores/app'
+import { formatUnitTitle } from '@/lib/unitTitle'
+import type { StudyArrangementQuery } from '@/lib/api/studyArrangements'
 import StudyStatsDetailModal from './StudyStatsDetailModal.vue'
 import StudyStatsToolbar from './StudyStatsToolbar.vue'
 import StudySessionEditModal from './StudySessionEditModal.vue'
 import StudyTrendCard from './StudyTrendCard.vue'
+import StudyArrangements from './StudyArrangements.vue'
+import StudyListFilters from './StudyListFilters.vue'
+import { recentStudyDateRange, useStudySessionList } from '@/composables/useStudySessionList'
 
 const { t } = useI18n()
 const { useToken } = theme
 const { token } = useToken()
 const appStore = useAppStore()
+const activeTab = ref('trend')
+const arrangementsVisited = ref(false)
+watch(activeTab, (tab) => {
+  if (tab === 'arrangements') arrangementsVisited.value = true
+})
 
 const periodType = ref<StudyStatsPeriodType>('week')
 const selectedBookId = ref<string>('all')
 const selectedSeries = ref<string>('all')
-const page = ref(1)
-const pageSize = ref(10)
 const loading = ref(false)
 const stats = ref<StudyStatsResponse | null>(null)
 const books = ref<Book[]>([])
+const listSeries = ref('all')
+const listBookId = ref('all')
+const arrangementStatus = ref<StudyArrangementQuery['status']>('all')
+const listFilters = computed<StudyStatsFilters>(() => ({
+  bookId: listBookId.value === 'all' ? undefined : Number(listBookId.value),
+  bookGroup: listSeries.value === 'all' ? undefined : Number(listSeries.value),
+}))
+const recordsActive = computed(() => activeTab.value === 'records')
+const arrangementsActive = computed(() => activeTab.value === 'arrangements')
+const {
+  dateRange,
+  page,
+  pageSize,
+  items: recentSessions,
+  total: totalRecords,
+  loading: recordsLoading,
+  error: recordsError,
+  refresh: refreshRecords,
+  invalidate: invalidateRecords,
+} = useStudySessionList(listFilters, recordsActive)
+const arrangementsRef = ref<InstanceType<typeof StudyArrangements> | null>(null)
+
+/** 重置下方公共筛选；记录页同时恢复最近三十天。 */
+function resetListFilters() {
+  listSeries.value = 'all'
+  listBookId.value = 'all'
+  if (recordsActive.value) {
+    dateRange.value = recentStudyDateRange()
+  } else {
+    arrangementStatus.value = 'all'
+  }
+}
+
+watch(listSeries, () => {
+  if (
+    listSeries.value !== 'all' &&
+    !books.value.some(
+      (book) =>
+        String(book.id) === listBookId.value && book.book_group === Number(listSeries.value),
+    )
+  ) {
+    listBookId.value = 'all'
+  }
+})
+
+/** 学习记录变化后刷新两个区域，隐藏的记录页延迟加载。 */
+async function refreshAfterMutation() {
+  await Promise.all([
+    refreshStats(),
+    refreshDateDetails(),
+    invalidateRecords(),
+    arrangementsActive.value ? arrangementsRef.value?.refresh() : undefined,
+  ])
+}
 
 // 详情弹窗
 const detailModalVisible = ref(false)
@@ -85,7 +154,6 @@ const trendData = computed<StudyStatsTrendItem[]>(() => {
 
 const bookBreakdown = computed(() => stats.value?.bookBreakdown || [])
 const seriesBreakdown = computed(() => stats.value?.seriesBreakdown || [])
-const recentSessions = computed(() => stats.value?.recentSessions || [])
 
 const totalDuration = computed(() => {
   return bookBreakdown.value.reduce((sum, item) => sum + item.duration, 0)
@@ -96,7 +164,6 @@ const trendTotalDuration = computed(() => {
 })
 
 const totalRecent = computed(() => stats.value?.totalRecent || 0)
-const totalPages = computed(() => Math.max(1, Math.ceil(totalRecent.value / pageSize.value)))
 
 function formatFullSeconds(duration: number): string {
   const safe = Math.max(0, Math.floor(duration))
@@ -131,23 +198,13 @@ function buildFilters(): StudyStatsFilters | undefined {
   return filters
 }
 
-/** 刷新当前周期和分页下的学习统计。 */
+/** 刷新上方当前周期的学习统计。 */
 async function refreshStats() {
   const requestVersion = ++statsRequestVersion
   loading.value = true
   try {
-    const response = await getStudyStats(
-      periodType.value,
-      buildFilters(),
-      page.value,
-      pageSize.value,
-    )
+    const response = await getStudyStats(periodType.value, buildFilters(), 1, 10)
     if (requestVersion === statsRequestVersion) {
-      const responseTotalPages = Math.max(1, Math.ceil(response.totalRecent / pageSize.value))
-      if (page.value > responseTotalPages) {
-        page.value = responseTotalPages
-        return
-      }
       stats.value = response
     }
   } catch (error) {
@@ -185,7 +242,7 @@ async function saveSessionEdit(payload: UpdateStudySessionPayload) {
     await updateStudySession(payload)
     editModalVisible.value = false
     editingSession.value = null
-    await Promise.all([refreshStats(), refreshDateDetails()])
+    await refreshAfterMutation()
     message.success(t('studyStats.updateSuccess'))
   } catch (error) {
     message.error(t('studyStats.actionFailed', { error: String(error) }))
@@ -202,7 +259,7 @@ function confirmDeleteSession(session: StudySessionListItem) {
     title: t('studyStats.deleteConfirmTitle'),
     content: t('studyStats.deleteConfirmDescription', {
       book: session.bookTitle,
-      unit: session.unitName,
+      unit: formatUnitTitle(session.resourceId, session.unitName),
     }),
     okText: t('studyStats.delete'),
     okType: 'danger',
@@ -212,7 +269,7 @@ function confirmDeleteSession(session: StudySessionListItem) {
       mutatingSessionId.value = session.id
       try {
         await deleteStudySession(session.id)
-        await Promise.all([refreshStats(), refreshDateDetails()])
+        await refreshAfterMutation()
         message.success(t('studyStats.deleteSuccess'))
       } catch (error) {
         message.error(t('studyStats.actionFailed', { error: String(error) }))
@@ -247,16 +304,6 @@ async function showDateDetails(item: StudyStatsTrendItem) {
   }
 }
 
-function goPrevPage() {
-  if (page.value <= 1 || loading.value) return
-  page.value -= 1
-}
-
-function goNextPage() {
-  if (page.value >= totalPages.value || loading.value) return
-  page.value += 1
-}
-
 watch(selectedSeries, () => {
   if (selectedBookId.value === 'all') return
   const group = Number(selectedSeries.value)
@@ -269,11 +316,6 @@ watch(selectedSeries, () => {
 })
 
 watch([periodType, selectedBookId, selectedSeries], () => {
-  page.value = 1
-  void refreshStats()
-})
-
-watch(page, () => {
   void refreshStats()
 })
 
@@ -289,64 +331,106 @@ onMounted(async () => {
 
 <template>
   <section class="study-stats-page h-full w-full">
-    <a-spin :spinning="loading" wrapper-class-name="h-full">
-      <div class="stats-shell">
-        <StudyStatsToolbar
-          v-model:period-type="periodType"
-          v-model:selected-series="selectedSeries"
-          v-model:selected-book-id="selectedBookId"
-          :books="books"
-          :duration-text="formatFullSeconds(trendTotalDuration)"
-          :total-recent="totalRecent"
-        />
+    <a-tabs v-model:active-key="activeTab" centered>
+      <a-tab-pane key="trend" :tab="t('studyStats.trendOverview')" />
+      <a-tab-pane key="records" :tab="t('studyStats.recordDetails')" />
+      <a-tab-pane key="arrangements" :tab="t('studyStats.unitReviewPlans')" />
+    </a-tabs>
 
-        <div
-          class="stats-grid"
-          :class="{ 'is-wide-trend-view': periodType === 'month' || periodType === 'year' }"
-        >
-          <StudyTrendCard
-            class="trend-card"
-            :period-type="periodType"
-            :trend="trendData"
-            @select="showDateDetails"
+    <div v-show="activeTab === 'trend'" class="tab-content trend-section">
+      <a-spin :spinning="loading">
+        <div class="stats-shell">
+          <StudyStatsToolbar
+            v-model:period-type="periodType"
+            v-model:selected-series="selectedSeries"
+            v-model:selected-book-id="selectedBookId"
+            :books="books"
+            :duration-text="formatFullSeconds(trendTotalDuration)"
+            :total-recent="totalRecent"
           />
 
-          <article class="stats-card">
-            <header class="card-title">{{ t('studyStats.bookBreakdown') }}</header>
-            <div v-if="bookBreakdown.length === 0" class="empty-state">
-              {{ t('studyStats.empty') }}
-            </div>
-            <ul v-else class="breakdown-list">
-              <li v-for="item in bookBreakdown" :key="item.bookId" class="breakdown-item">
-                <span class="breakdown-name">{{ item.bookTitle }}</span>
-                <span class="breakdown-percent">
-                  {{
-                    totalDuration > 0 ? ((item.duration / totalDuration) * 100).toFixed(1) : '0.0'
-                  }}%
-                </span>
-                <span class="breakdown-value">{{ formatFullSeconds(item.duration) }}</span>
-              </li>
-            </ul>
-          </article>
+          <div
+            class="stats-grid"
+            :class="{ 'is-wide-trend-view': periodType === 'month' || periodType === 'year' }"
+          >
+            <StudyTrendCard
+              class="trend-card"
+              :period-type="periodType"
+              :trend="trendData"
+              @select="showDateDetails"
+            />
 
-          <article class="stats-card">
-            <header class="card-title">{{ t('studyStats.seriesBreakdown') }}</header>
-            <div v-if="seriesBreakdown.length === 0" class="empty-state">
-              {{ t('studyStats.empty') }}
-            </div>
-            <ul v-else class="breakdown-list">
-              <li v-for="item in seriesBreakdown" :key="item.seriesKey" class="breakdown-item">
-                <span class="breakdown-name">{{ resolveSeriesLabel(item.seriesKey) }}</span>
-                <span class="breakdown-value">{{ formatFullSeconds(item.duration) }}</span>
-              </li>
-            </ul>
-          </article>
+            <article class="stats-card">
+              <header class="card-title">{{ t('studyStats.bookBreakdown') }}</header>
+              <div v-if="bookBreakdown.length === 0" class="empty-state">
+                {{ t('studyStats.empty') }}
+              </div>
+              <ul v-else class="breakdown-list">
+                <li v-for="item in bookBreakdown" :key="item.bookId" class="breakdown-item">
+                  <span class="breakdown-name">{{ item.bookTitle }}</span>
+                  <span class="breakdown-percent">
+                    {{
+                      totalDuration > 0
+                        ? ((item.duration / totalDuration) * 100).toFixed(1)
+                        : '0.0'
+                    }}%
+                  </span>
+                  <span class="breakdown-value">{{ formatFullSeconds(item.duration) }}</span>
+                </li>
+              </ul>
+            </article>
+
+            <article class="stats-card">
+              <header class="card-title">{{ t('studyStats.seriesBreakdown') }}</header>
+              <div v-if="seriesBreakdown.length === 0" class="empty-state">
+                {{ t('studyStats.empty') }}
+              </div>
+              <ul v-else class="breakdown-list">
+                <li v-for="item in seriesBreakdown" :key="item.seriesKey" class="breakdown-item">
+                  <span class="breakdown-name">{{ resolveSeriesLabel(item.seriesKey) }}</span>
+                  <span class="breakdown-value">{{ formatFullSeconds(item.duration) }}</span>
+                </li>
+              </ul>
+            </article>
+          </div>
         </div>
+      </a-spin>
+    </div>
+    <div v-show="activeTab !== 'trend'" class="tab-content records-section">
+      <StudyListFilters
+        v-model:series="listSeries"
+        v-model:book-id="listBookId"
+        v-model:date-range="dateRange"
+        v-model:status="arrangementStatus"
+        :books="books"
+        :show-dates="recordsActive"
+        :show-status="arrangementsActive"
+        @reset="resetListFilters"
+      />
+      <StudyArrangements
+        v-if="arrangementsVisited"
+        v-show="arrangementsActive"
+        ref="arrangementsRef"
+        :active="arrangementsActive"
+        :filters="listFilters"
+        v-model:status="arrangementStatus"
+      />
+      <a-spin v-show="recordsActive" :spinning="recordsLoading">
+        <article class="recent-card">
+          <a-alert
+            v-if="recordsError"
+            type="error"
+            :message="t('studyStats.recordsLoadFailed')"
+            show-icon
+          >
+            <template #action
+              ><a-button @click="refreshRecords">{{
+                t('studyArrangements.retry')
+              }}</a-button></template
+            >
+          </a-alert>
 
-        <article class="stats-card recent-card">
-          <header class="card-title">{{ t('studyStats.recentSessions') }}</header>
-
-          <div v-if="recentSessions.length === 0" class="empty-state">
+          <div v-else-if="recentSessions.length === 0" class="empty-state">
             {{ t('studyStats.empty') }}
           </div>
           <template v-else>
@@ -364,7 +448,7 @@ onMounted(async () => {
                 <tbody>
                   <tr v-for="session in recentSessions" :key="session.id">
                     <td>{{ session.bookTitle }}</td>
-                    <td>{{ session.unitName }}</td>
+                    <td>{{ formatUnitTitle(session.resourceId, session.unitName) }}</td>
                     <td>{{ formatFullSeconds(session.duration) }}</td>
                     <td>{{ formatIsoToLocalMinute(session.startAt) }}</td>
                     <td>
@@ -397,20 +481,18 @@ onMounted(async () => {
             </div>
 
             <div class="recent-pagination">
-              <a-button size="small" :disabled="page <= 1 || loading" @click="goPrevPage">
-                {{ t('reader.prevPage') }}
-              </a-button>
-              <span class="page-indicator">
-                {{ t('studyStats.page') }} {{ page }} / {{ totalPages }}
-              </span>
-              <a-button size="small" :disabled="page >= totalPages || loading" @click="goNextPage">
-                {{ t('reader.nextPage') }}
-              </a-button>
+              <a-pagination
+                v-model:current="page"
+                :total="totalRecords"
+                :page-size="pageSize"
+                :show-size-changer="false"
+                :disabled="recordsLoading"
+              />
             </div>
           </template>
         </article>
-      </div>
-    </a-spin>
+      </a-spin>
+    </div>
 
     <StudyStatsDetailModal
       v-model:open="detailModalVisible"
@@ -531,6 +613,7 @@ onMounted(async () => {
 
 .recent-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
 }
 
@@ -567,9 +650,8 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.page-indicator {
-  font-size: 12px;
-  color: v-bind('token.colorTextSecondary');
+.tab-content {
+  min-width: 0;
 }
 
 @media (max-width: 1100px) {

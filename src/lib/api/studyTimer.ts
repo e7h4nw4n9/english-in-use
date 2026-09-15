@@ -7,9 +7,16 @@ import type {
   StudyStatsResponse,
   StudySessionListItem,
   StudySessionActionResponse,
+  StudySessionQuery,
+  StudySessionPage,
   UpdateStudySessionPayload,
 } from '../../types'
 import { formatLocalDate } from '../datetime'
+
+/** 按本地日期范围、书籍和系列分页查询学习记录；query 为查询条件。 */
+export function getStudySessionPage(query: StudySessionQuery): Promise<StudySessionPage> {
+  return invoke('get_study_session_page', { query })
+}
 
 /**
  * 保存一次学习会话。

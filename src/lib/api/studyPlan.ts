@@ -8,6 +8,7 @@ import type {
   StudyTaskSummaryResponse,
   StudyViewMode,
   ShiftStudyPlanResponse,
+  StudyAssessmentPreview,
 } from '../../types'
 import { formatLocalDate } from '../datetime'
 
@@ -104,7 +105,25 @@ export async function shiftStudyPlan(
 /**
  * 完成学习任务并推进计划。
  * @param taskId - 学习任务标识。
+ * @param rating - 第五次及以后任务的掌握评价。
+ * @param finishPlan - 连续三次巩固后的结束选择。
  */
-export async function completeStudyTask(taskId: number): Promise<CompleteStudyTaskResponse> {
-  return await invoke('complete_study_task', { taskId })
+export async function completeStudyTask(
+  taskId: number,
+  rating?: 'forgotten' | 'hard' | 'good' | 'mastered',
+  finishPlan?: boolean,
+  expectedRevision?: string,
+): Promise<CompleteStudyTaskResponse> {
+  return await invoke('complete_study_task', {
+    taskId,
+    localDate: formatLocalDate(),
+    rating,
+    finishPlan,
+    expectedRevision,
+  })
+}
+
+/** 获取当前日期的评估预览；taskId 为未完成任务标识。 */
+export async function getStudyAssessmentPreview(taskId: number): Promise<StudyAssessmentPreview> {
+  return await invoke('get_study_assessment_preview', { taskId, localDate: formatLocalDate() })
 }

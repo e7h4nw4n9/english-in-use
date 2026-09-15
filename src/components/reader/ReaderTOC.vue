@@ -6,6 +6,7 @@ import { useReaderTOC } from '../../composables/useReaderTOC'
 import type { BookMetadata, TocNode } from '../../types'
 import { CloseOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import { useI18n } from 'vue-i18n'
+import { getUnitPrefix } from '@/lib/unitTitle'
 
 const props = defineProps<{
   metadata: BookMetadata | null
@@ -134,10 +135,10 @@ async function handleItemClick(node: TocNode) {
                   >
                     <div class="flex min-w-0 flex-1 items-start gap-2">
                       <span
-                        v-if="child.unitNumber"
+                        v-if="getUnitPrefix(child.key, child.title, child.unitNumber)"
                         class="toc-unit-number w-14 shrink-0 font-mono text-[11px] font-semibold text-slate-500 dark:text-slate-400"
                       >
-                        Unit {{ child.unitNumber }}
+                        {{ getUnitPrefix(child.key, child.title, child.unitNumber) }}
                       </span>
                       <span
                         class="toc-title min-w-0 flex-1 whitespace-normal text-[13px]"
@@ -179,10 +180,10 @@ async function handleItemClick(node: TocNode) {
             >
               <div class="flex min-w-0 flex-1 items-start gap-2">
                 <span
-                  v-if="item.unitNumber"
+                  v-if="getUnitPrefix(item.key, item.title, item.unitNumber)"
                   class="toc-unit-number w-14 shrink-0 font-mono text-[11px] font-semibold text-slate-500 dark:text-slate-400"
                 >
-                  Unit {{ item.unitNumber }}
+                  {{ getUnitPrefix(item.key, item.title, item.unitNumber) }}
                 </span>
                 <span
                   class="toc-title min-w-0 flex-1 whitespace-normal text-[13px]"

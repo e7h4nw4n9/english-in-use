@@ -140,6 +140,23 @@ describe('ConfigPage.vue Core Logic', () => {
     vi.clearAllMocks()
   })
 
+  it('学习计划使用独立的只读 Tab', async () => {
+    const wrapper = mount(ConfigPage, {
+      global: {
+        stubs: {
+          ...commonStubs,
+          'a-menu': { name: 'SettingsMenu', template: '<div><slot /></div>' },
+        },
+      },
+    })
+    expect(wrapper.text()).toContain('studyPlanRules.tab')
+    wrapper.findComponent({ name: 'SettingsMenu' }).vm.$emit('update:selectedKeys', ['study-plan'])
+    await flushPromises()
+    expect(wrapper.find('.study-plan-rules').exists()).toBe(true)
+    expect(wrapper.find('.system-settings-stub').exists()).toBe(false)
+    expect(wrapper.emitted('config-saved')).toBeUndefined()
+  })
+
   it('renders initial state correctly', async () => {
     const wrapper = mount(ConfigPage, {
       global: { stubs: commonStubs },

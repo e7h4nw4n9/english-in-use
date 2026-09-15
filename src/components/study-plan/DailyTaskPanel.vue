@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons-vue'
 import type { StudyTaskItem } from '../../types'
 import type { GroupedSeriesTasks } from './taskGroups'
+import { formatUnitTitle } from '@/lib/unitTitle'
 
 const props = defineProps<{
   groupedTasks: GroupedSeriesTasks[]
@@ -138,7 +139,9 @@ function onAdjustPlan(task: StudyTaskItem) {
                 >
                   <div class="task-card-body">
                     <div class="task-info">
-                      <h4 class="task-unit-name">{{ task.unitName }}</h4>
+                      <h4 class="task-unit-name">
+                        {{ formatUnitTitle(task.resourceId, task.unitName) }}
+                      </h4>
                       <div class="task-meta-row">
                         <span class="meta-tag stage-tag">
                           {{ t('studyPlan.stage') }} {{ task.reviewStage }}

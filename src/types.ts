@@ -215,6 +215,8 @@ export interface StudyTaskSummaryResponse {
 }
 
 export interface StudyTaskItem {
+  assessmentRequired?: boolean
+  masteredStreak?: number
   taskId: number
   planUnitId: number
   productCode: string
@@ -232,6 +234,22 @@ export interface CompleteStudyTaskResponse {
   taskStatus: 0 | 1
   planStatus: 0 | 1 | 2
   completedStages: number[]
+}
+
+export type StudyMasteryRating = 'forgotten' | 'hard' | 'good' | 'mastered'
+
+export interface StudyAssessmentPreview {
+  localDate: string
+  revision: string
+  sameDay: boolean
+  legacyDate: boolean
+  options: {
+    rating: StudyMasteryRating
+    intervalDays: number
+    scheduledDate: string
+    masteredStreak: number
+    requiresFinishDecision: boolean
+  }[]
 }
 
 export interface ShiftStudyPlanResponse {
@@ -282,6 +300,18 @@ export interface StudySessionActionResponse {
 export interface StudyStatsFilters {
   bookId?: number
   bookGroup?: number
+}
+
+export interface StudySessionQuery extends StudyStatsFilters {
+  rangeStart: string
+  rangeEnd: string
+  page: number
+  pageSize: number
+}
+
+export interface StudySessionPage {
+  items: StudySessionListItem[]
+  total: number
 }
 
 export interface StudyStatsTrendItem {

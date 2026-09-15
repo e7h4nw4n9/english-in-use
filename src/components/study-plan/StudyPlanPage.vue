@@ -2,6 +2,7 @@
 import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
 import DailyTaskPanel from './DailyTaskPanel.vue'
 import ShiftStudyPlanModal from './ShiftStudyPlanModal.vue'
+import StudyAssessmentModal from './StudyAssessmentModal.vue'
 import { useStudyPlanPage } from '../../composables/study-plan/useStudyPlanPage'
 
 const {
@@ -34,6 +35,8 @@ const {
   shiftingPlanUnitId,
   jumpToStudy,
   markTaskDone,
+  assessmentTask,
+  submitAssessment,
   openShiftPlan,
   submitShiftPlan,
   shiftModalOpen,
@@ -45,6 +48,12 @@ const {
 
 <template>
   <section class="study-plan-page h-full w-full">
+    <StudyAssessmentModal
+      :task="assessmentTask"
+      :loading="completingTaskId !== null"
+      @cancel="assessmentTask = null"
+      @submit="submitAssessment"
+    />
     <div class="study-plan-shell">
       <div class="study-card study-toolbar">
         <div class="mode-switch" role="tablist" :aria-label="t('app.homeTabs.studyPlan')">
