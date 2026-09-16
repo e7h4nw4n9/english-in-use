@@ -9,13 +9,18 @@ import type { DictionarySearchResult, ParsedDictionaryEntry } from '@/features/d
 import DictionaryEntryView from './DictionaryEntryView.vue'
 import DictionaryLoginModal from './DictionaryLoginModal.vue'
 
-const props = withDefaults(defineProps<{ initialQuery?: string; compact?: boolean }>(), {
-  initialQuery: '',
-  compact: false,
-})
+const props = withDefaults(
+  defineProps<{ initialQuery?: string; compact?: boolean; presentation?: 'full' | 'reader' }>(),
+  {
+    initialQuery: '',
+    compact: false,
+    presentation: 'full',
+  },
+)
 const emit = defineEmits<{
   (event: 'before-audio'): void
   (event: 'detail-mode-change', visible: boolean): void
+  (event: 'login-change', visible: boolean): void
 }>()
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -114,6 +119,12 @@ async function runSearch(requestedQuery: string, allowLogin = true) {
     lastCompletedQuery.value = normalized
     dropdownOpen.value = nextResults.length > 0
     activeResultIndex.value = nextResults.length > 0 ? 0 : -1
+    if (props.presentation === 'reader') {
+      const exact = nextResults.filter(
+        (result) => result.word.trim().toLocaleLowerCase() === normalized.toLocaleLowerCase(),
+      )
+      if (exact.length === 1) await openResult(exact[0], allowLogin)
+    }
   } catch (error) {
     if (requestVersion !== searchRequestVersion || query.value.trim() !== normalized) return
     handleRequestError(error, () => runSearch(normalized, false), allowLogin)
@@ -247,6 +258,10 @@ watch(query, () => {
 })
 
 watch(viewMode, (mode) => emit('detail-mode-change', mode === 'detail'), { immediate: true })
+watch(loginOpen, (open) => {
+  emit('login-change', open)
+  if (!open) pendingRetry = null
+})
 
 watch(
   () => props.initialQuery,
@@ -275,11 +290,15 @@ onUnmounted(() => {
   clearSearchTimer()
   searchRequestVersion += 1
   detailRequestVersion += 1
+  pendingRetry = null
 })
 </script>
 
 <template>
-  <section class="dictionary-lookup" :class="{ compact }">
+  <section
+    class="dictionary-lookup"
+    :class="{ compact, 'reader-presentation': presentation === 'reader' }"
+  >
     <div v-if="viewMode === 'search'" class="search-view">
       <div class="search-control">
         <a-input-search
@@ -354,7 +373,12 @@ onUnmounted(() => {
     </div>
 
     <div v-else class="detail-view">
-      <a-button class="operation-button detail-back" type="text" @click="backToSearch">
+      <a-button
+        v-if="loadingDetail || !entry"
+        class="operation-button detail-back"
+        type="text"
+        @click="backToSearch"
+      >
         <template #icon><ArrowLeftOutlined /></template>
         返回查询
       </a-button>
@@ -368,7 +392,19 @@ onUnmounted(() => {
       <div v-if="loadingDetail" class="detail-loading">
         <a-spin size="large" tip="正在加载词条…" />
       </div>
-      <DictionaryEntryView v-else-if="entry" :entry="entry" @before-audio="emit('before-audio')" />
+      <DictionaryEntryView
+        v-else-if="entry"
+        :entry="entry"
+        :presentation="presentation"
+        @before-audio="emit('before-audio')"
+      >
+        <template #actions>
+          <a-button class="operation-button detail-back" type="text" @click="backToSearch">
+            <template #icon><ArrowLeftOutlined /></template>
+            返回查询
+          </a-button>
+        </template>
+      </DictionaryEntryView>
     </div>
 
     <DictionaryLoginModal
@@ -411,6 +447,12 @@ onUnmounted(() => {
   border-radius: 10px;
   padding: 4px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+/* 阅读器弹窗需要候选列表撑开内容高度，避免绝对定位列表被滚动容器裁剪。 */
+.reader-presentation .search-results {
+  position: relative;
+  top: auto;
+  margin-top: 6px;
 }
 .result-option {
   display: grid;
@@ -465,6 +507,9 @@ onUnmounted(() => {
 }
 .detail-back {
   margin: 0 0 14px -10px;
+}
+:deep(.entry-actions) .detail-back {
+  margin: 0;
 }
 .detail-back:focus-visible {
   outline: 2px solid var(--ant-color-primary);

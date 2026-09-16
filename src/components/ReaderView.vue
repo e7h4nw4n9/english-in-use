@@ -26,12 +26,15 @@ import ReaderFooter from './reader/ReaderFooter.vue'
 import ReaderAudioPlayer from './reader/ReaderAudioPlayer.vue'
 import ReaderExerciseModal from './reader/ReaderExerciseModal.vue'
 import ReaderDebugModal from './reader/ReaderDebugModal.vue'
+import ReaderDictionaryDialog from './reader/ReaderDictionaryDialog.vue'
 
 const appStore = useAppStore()
 const readerStore = useReaderStore()
 const { t } = useI18n()
 const { currentBook, config } = storeToRefs(appStore)
 const readerRef = ref<HTMLElement | null>(null)
+const dictionaryWord = ref('')
+const wordSelectionActive = ref(false)
 const {
   currentPageLabel,
   viewMode,
@@ -62,7 +65,13 @@ const {
   goForward,
 } = useReaderMetadata()
 
-const { toggleAudio, togglePlay, stopAndResetAudio, cleanup: audioCleanup } = useReaderAudio()
+const {
+  toggleAudio,
+  togglePlay,
+  pauseAudio,
+  stopAndResetAudio,
+  cleanup: audioCleanup,
+} = useReaderAudio()
 const fallbackUnitTitle = computed(() => currentBook.value?.title || '')
 const effectiveDebugEnabled = computed(
   () => __DEBUG_FEATURES__ && Boolean(config.value?.system.enable_debug_tools),
@@ -313,6 +322,13 @@ async function handleConfirmSaveTimerPrompt() {
 }
 
 useReaderShortcuts({
+  isBlocked: () =>
+    Boolean(
+      dictionaryWord.value ||
+      wordSelectionActive.value ||
+      exerciseVisible.value ||
+      saveTimerPromptVisible.value,
+    ),
   goBack,
   goForward,
   togglePlayback: togglePlay,
@@ -345,6 +361,8 @@ onUnmounted(() => {
       </Transition>
 
       <ReaderCanvas
+        :product-code="currentBook?.product_code"
+        :selection-disabled="Boolean(dictionaryWord || exerciseVisible || saveTimerPromptVisible)"
         :metadata="metadata"
         :loading="loading"
         :leftPageUrl="leftPageUrl"
@@ -357,6 +375,8 @@ onUnmounted(() => {
         @overlayClick="handleOverlayClick"
         @goBack="goBack"
         @goForward="goForward"
+        @queryWord="dictionaryWord = $event"
+        @selectionChange="wordSelectionActive = $event"
       />
     </div>
 
@@ -384,6 +404,13 @@ onUnmounted(() => {
       />
     </Transition>
 
+    <ReaderDictionaryDialog
+      v-if="dictionaryWord"
+      :key="dictionaryWord"
+      :word="dictionaryWord"
+      @close="dictionaryWord = ''"
+      @before-audio="pauseAudio"
+    />
     <a-modal
       :open="saveTimerPromptVisible"
       :title="

@@ -12,6 +12,31 @@ const dictionaryApi = vi.hoisted(() => ({
 vi.mock('@/lib/api', () => dictionaryApi)
 
 describe('DictionaryLoginModal', () => {
+  it('取消弹窗后忽略迟到的登录结果', async () => {
+    let finish!: () => void
+    dictionaryApi.loginDictionary.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve
+      }),
+    )
+    const wrapper = mount(DictionaryLoginModal, {
+      props: { open: true },
+      attachTo: document.body,
+      global: { plugins: [Antd] },
+    })
+    await flushPromises()
+    const inputs = document.body.querySelectorAll<HTMLInputElement>('.ant-modal input')
+    inputs[1].value = '123456'
+    inputs[1].dispatchEvent(new Event('input', { bubbles: true }))
+    document.body.querySelector<HTMLButtonElement>('.ant-modal .ant-btn-primary')?.click()
+    await flushPromises()
+    await wrapper.setProps({ open: false })
+    finish()
+    await flushPromises()
+    expect(wrapper.emitted('success')).toBeUndefined()
+    wrapper.unmount()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     dictionaryApi.getDictionaryAuthStatus.mockResolvedValue({

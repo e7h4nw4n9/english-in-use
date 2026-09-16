@@ -5,7 +5,20 @@ import { SoundOutlined } from '@ant-design/icons-vue'
 import { getDictionaryAudio } from '@/lib/api'
 import type { ParsedDictionaryEntry } from '@/features/dictionary/types'
 
-const props = defineProps<{ entry: ParsedDictionaryEntry }>()
+const props = withDefaults(
+  defineProps<{ entry: ParsedDictionaryEntry; presentation?: 'full' | 'reader' }>(),
+  { presentation: 'full' },
+)
+const showExamples = ref(props.presentation === 'full')
+const hasExamples = computed(() =>
+  props.entry.partOfSpeechGroups.some((group) =>
+    group.sections
+      .filter((section) => section.key === 'definitions')
+      .some((section) =>
+        section.items.some((item) => item.senses.some((sense) => sense.examples.length)),
+      ),
+  ),
+)
 const emit = defineEmits<{ (event: 'before-audio'): void }>()
 const playingKey = ref('')
 const activeGroupKey = ref('')
@@ -13,6 +26,17 @@ const { token } = theme.useToken()
 const tabTextColor = computed(() => token.value.colorText)
 let audio: HTMLAudioElement | null = null
 let objectUrl = ''
+let audioRequestVersion = 0
+
+/** 停止旧词条的播放并淘汰尚未完成的音频请求。 */
+function stopAudio() {
+  audioRequestVersion++
+  audio?.pause()
+  audio = null
+  if (objectUrl) URL.revokeObjectURL(objectUrl)
+  objectUrl = ''
+  playingKey.value = ''
+}
 
 const activeGroup = computed(
   () =>
@@ -22,6 +46,8 @@ const activeGroup = computed(
 watch(
   () => props.entry.id,
   () => {
+    stopAudio()
+    showExamples.value = props.presentation === 'full'
     activeGroupKey.value = props.entry.partOfSpeechGroups[0]?.key || ''
   },
   { immediate: true },
@@ -78,12 +104,13 @@ function hasDefinitionText(english: string, chinese: string) {
 /** 播放由后端白名单代理取得的词典音频。 */
 async function playAudio(kind: 'word' | 'example', name: string, key: string) {
   if (!name) return
+  stopAudio()
+  const requestVersion = audioRequestVersion
   emit('before-audio')
-  if (audio) audio.pause()
-  if (objectUrl) URL.revokeObjectURL(objectUrl)
   playingKey.value = key
   try {
     const response = await getDictionaryAudio(kind, name)
+    if (requestVersion !== audioRequestVersion) return
     objectUrl = URL.createObjectURL(
       new Blob([new Uint8Array(response.bytes)], { type: response.mimeType }),
     )
@@ -91,19 +118,32 @@ async function playAudio(kind: 'word' | 'example', name: string, key: string) {
     audio.addEventListener('ended', () => (playingKey.value = ''), { once: true })
     await audio.play()
   } catch (error) {
+    if (requestVersion !== audioRequestVersion) return
     playingKey.value = ''
     message.error(String(error))
   }
 }
 
-onUnmounted(() => {
-  audio?.pause()
-  if (objectUrl) URL.revokeObjectURL(objectUrl)
+watch(activeGroupKey, stopAudio)
+watch(showExamples, (visible) => {
+  if (!visible) stopAudio()
 })
+onUnmounted(stopAudio)
 </script>
 
 <template>
   <article class="dictionary-entry">
+    <div v-if="$slots.actions || (presentation === 'reader' && hasExamples)" class="entry-actions">
+      <slot name="actions" />
+      <a-button
+        v-if="presentation === 'reader' && hasExamples"
+        class="examples-toggle"
+        :aria-pressed="showExamples"
+        @click="showExamples = !showExamples"
+      >
+        {{ showExamples ? '隐藏例句' : '显示例句' }}
+      </a-button>
+    </div>
     <header class="entry-header">
       <div class="headword-row">
         <h1>{{ entry.word }}</h1>
@@ -142,7 +182,13 @@ onUnmounted(() => {
         <div class="entry-content-layout">
           <div class="entry-sections">
             <a-tag class="part-of-speech-tag">{{ group.label }}</a-tag>
-            <div v-for="section in group.sections" :key="section.key" class="content-section">
+            <div
+              v-for="section in group.sections.filter(
+                (section) => presentation === 'full' || section.key === 'definitions',
+              )"
+              :key="section.key"
+              class="content-section"
+            >
               <h2 v-if="section.key !== 'definitions'" class="content-section-title">
                 {{ section.title }}
               </h2>
@@ -188,9 +234,11 @@ onUnmounted(() => {
                     <span class="definition-text">{{ sense.english }}</span>
                     <span class="definition-text chinese">{{ sense.chinese }}</span>
                   </div>
-                  <aside v-if="sense.notes" class="sense-notes">{{ sense.notes }}</aside>
+                  <aside v-if="sense.notes && presentation === 'full'" class="sense-notes">
+                    {{ sense.notes }}
+                  </aside>
                   <div
-                    v-for="(example, exampleIndex) in sense.examples"
+                    v-for="(example, exampleIndex) in showExamples ? sense.examples : []"
                     :key="exampleIndex"
                     class="example"
                   >
@@ -229,6 +277,13 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
 .dictionary-entry {
   color: var(--ant-color-text);
   font-family: Georgia, 'Times New Roman', serif;

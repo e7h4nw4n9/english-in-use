@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { getDictionaryAuthStatus, loginDictionary, sendDictionaryVerifyCode } from '@/lib/api'
 import { getReadableCommandError } from '@/lib/error'
@@ -14,13 +14,17 @@ const phone = ref('')
 const code = ref('')
 const sending = ref(false)
 const loggingIn = ref(false)
+let requestVersion = 0
 
 /** 加载上次成功登录的手机号，减少重复输入。 */
 async function loadCachedPhone() {
+  const version = requestVersion
   try {
     const status = await getDictionaryAuthStatus()
+    if (version !== requestVersion) return
     phone.value = status.cachedPhone || ''
   } catch (error) {
+    if (version !== requestVersion) return
     message.error(getReadableCommandError(error))
   }
 }
@@ -29,13 +33,16 @@ async function loadCachedPhone() {
 async function sendCode() {
   if (!phone.value.trim() || sending.value) return
   sending.value = true
+  const version = requestVersion
   try {
     await sendDictionaryVerifyCode(phone.value)
+    if (version !== requestVersion) return
     message.success('验证码已发送')
   } catch (error) {
+    if (version !== requestVersion) return
     message.error(getReadableCommandError(error))
   } finally {
-    sending.value = false
+    if (version === requestVersion) sending.value = false
   }
 }
 
@@ -43,25 +50,34 @@ async function sendCode() {
 async function login() {
   if (!phone.value.trim() || !code.value.trim() || loggingIn.value) return
   loggingIn.value = true
+  const version = requestVersion
   try {
     await loginDictionary(phone.value, code.value)
+    if (version !== requestVersion) return
     code.value = ''
     message.success('词典登录成功')
     emit('success')
   } catch (error) {
+    if (version !== requestVersion) return
     message.error(getReadableCommandError(error))
   } finally {
-    loggingIn.value = false
+    if (version === requestVersion) loggingIn.value = false
   }
 }
 
 watch(
   () => props.open,
   (open) => {
+    requestVersion++
+    sending.value = false
+    loggingIn.value = false
     if (open) void loadCachedPhone()
   },
   { immediate: true },
 )
+onUnmounted(() => {
+  requestVersion++
+})
 </script>
 
 <template>

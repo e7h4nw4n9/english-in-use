@@ -16,6 +16,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+cc = "1.2"
 
 [dependencies]
 tauri = { version = "2", features = ["test", "protocol-asset"] }
@@ -41,3 +42,8 @@ tauri-plugin-fs = "2"
 [dev-dependencies]
 tempfile = "3.24.0"
 mockito = "1.4.0"
+
+# macOS 27 会拒绝加载 strip 后 LINKEDIT 字符串表未按 8 字节对齐的过程宏。
+# 构建依赖和过程宏不会进入最终应用包，因此仅对它们关闭 strip。
+[profile.release.build-override]
+strip = false

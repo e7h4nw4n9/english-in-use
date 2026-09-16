@@ -168,6 +168,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::reader_ocr::recognize_reader_page,
+            commands::reader_ocr::copy_reader_word,
             commands::config::load_config,
             commands::config::save_config,
             commands::config::export_config,

@@ -143,6 +143,56 @@ const entry: ParsedDictionaryEntry = {
 }
 
 describe('DictionaryEntryView', () => {
+  it('阅读器默认隐藏例句和附加分区，切换不请求 API，新词条重置', async () => {
+    const withExamples = structuredClone(entry)
+    withExamples.partOfSpeechGroups[0].sections[0].items[0].senses[0].examples = [
+      {
+        english: [{ text: 'He is a patient.', bold: false, italic: true }],
+        chinese: '他是一位病人。',
+        audios: [],
+      },
+    ]
+    const wrapper = mount(DictionaryEntryView, {
+      props: { entry: withExamples, presentation: 'reader' },
+      global: { plugins: [Antd] },
+    })
+    expect(wrapper.text()).not.toContain('He is a patient.')
+    expect(wrapper.text()).not.toContain('be patient with sb')
+    await wrapper.get('.examples-toggle').trigger('click')
+    expect(wrapper.text()).toContain('He is a patient.')
+    expect(wrapper.get('.examples-toggle').text()).toBe('隐藏例句')
+    await wrapper.findAll('.ant-tabs-tab')[1].trigger('click')
+    await flushPromises()
+    expect(wrapper.get('.examples-toggle').text()).toBe('隐藏例句')
+    expect(wrapper.text()).not.toContain('Everyone waited patiently')
+    await wrapper.setProps({ entry: { ...withExamples, id: 'new-word' } })
+    expect(wrapper.text()).not.toContain('He is a patient.')
+    expect(wrapper.get('.examples-toggle').text()).toBe('显示例句')
+    expect(dictionaryApi.getDictionaryAudio).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('卸载后到达的音频响应不会创建或播放音频', async () => {
+    let finish!: (value: unknown) => void
+    dictionaryApi.getDictionaryAudio.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const createUrl = vi.fn()
+    vi.stubGlobal(
+      'URL',
+      Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: vi.fn() }),
+    )
+    const wrapper = mount(DictionaryEntryView, { props: { entry }, global: { plugins: [Antd] } })
+    await wrapper.get('.pronunciation').trigger('click')
+    wrapper.unmount()
+    finish({ bytes: [1], mimeType: 'audio/mpeg' })
+    await flushPromises()
+    expect(createUrl).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

@@ -1,6 +1,7 @@
 import { onMounted, onUnmounted } from 'vue'
 
 interface UseReaderShortcutsOptions {
+  isBlocked?: () => boolean
   goBack: () => void
   goForward: () => void
   togglePlayback: () => void
@@ -15,6 +16,7 @@ interface UseReaderShortcutsOptions {
  * @param options - 快捷键对应的动作回调。
  */
 export function useReaderShortcuts({
+  isBlocked,
   goBack,
   goForward,
   togglePlayback,
@@ -24,6 +26,20 @@ export function useReaderShortcuts({
   resetZoom,
 }: UseReaderShortcutsOptions) {
   const handleKeyDown = (event: KeyboardEvent) => {
+    const target = event.target
+    if (
+      Array.from(document.querySelectorAll('[role="dialog"]')).some(
+        (dialog) => dialog.getClientRects().length > 0,
+      )
+    )
+      return
+    if (
+      event.defaultPrevented ||
+      isBlocked?.() ||
+      (target instanceof Element &&
+        target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]'))
+    )
+      return
     if (event.key === 'ArrowLeft') goBack()
     if (event.key === 'ArrowRight') goForward()
     if (event.key === ' ') {

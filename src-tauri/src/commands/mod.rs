@@ -3,6 +3,7 @@ pub mod config;
 pub mod db;
 pub mod dictionary;
 pub mod r2;
+pub mod reader_ocr;
 pub mod study_plan;
 pub mod study_session;
 pub mod wordbook;

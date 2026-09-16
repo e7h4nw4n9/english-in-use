@@ -201,6 +201,8 @@ export function useReaderAudio() {
   }
 
   function pauseAudio() {
+    runtime.playRequestVersion++
+    isAudioLoading.value = false
     audioPlayer.pause()
   }
 

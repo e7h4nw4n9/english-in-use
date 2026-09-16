@@ -34,6 +34,8 @@
     "active": true,
     "targets": "all",
     "iOS": {
+      "minimumSystemVersion": "15.0",
+      "frameworks": ["Foundation", "Vision", "ImageIO"],
       "developmentTeam": "7F55A5M7G5",
       "template": "src-tauri/ios/project.yml"
     },

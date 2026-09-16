@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useReaderStore } from '../../stores/reader'
 import type { BookMetadata } from '../../types'
 import LoadingOverlay from '../common/loading/LoadingOverlay.vue'
+import ReaderWordSelection from './ReaderWordSelection.vue'
 import { CustomerServiceOutlined, LinkOutlined, KeyOutlined } from '@ant-design/icons-vue'
 
 const props = defineProps<{
@@ -17,17 +18,35 @@ const props = defineProps<{
   showHotspots: boolean
   canGoBack: boolean
   canGoForward: boolean
+  productCode?: string
+  selectionDisabled?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'overlayClick', overlay: any): void
   (e: 'goBack'): void
   (e: 'goForward'): void
+  (e: 'queryWord', word: string): void
+  (e: 'selectionChange', selected: boolean): void
 }>()
 const { t } = useI18n()
 
 const readerStore = useReaderStore()
 const { viewMode, zoomLevel } = storeToRefs(readerStore)
+const wordSelected = ref(false)
+const wordPages = computed(() => [
+  { label: props.leftPageLabel, url: props.leftPageUrl },
+  ...(viewMode.value === 'spread'
+    ? [{ label: props.rightPageLabel, url: props.rightPageUrl }]
+    : []),
+])
+
+/** 同步选词状态，让已经成立的长按不再触发翻页。 */
+function updateSelection(selected: boolean) {
+  wordSelected.value = selected
+  if (selected) resetSwipeState()
+  emit('selectionChange', selected)
+}
 const scrollContainerRef = ref<HTMLElement | null>(null)
 const pinchStartDistance = ref<number | null>(null)
 const pinchStartZoom = ref(1)
@@ -158,6 +177,10 @@ function handleTouchStart(e: TouchEvent) {
  * @param e - 触摸移动事件。
  */
 function handleTouchMove(e: TouchEvent) {
+  if (wordSelected.value && e.touches.length === 1) {
+    if (e.cancelable) e.preventDefault()
+    return
+  }
   if (e.touches.length === 1 && swipeStartPoint.value && !pinchStartDistance.value) {
     if (!shouldHandleSwipeNavigation()) return
 
@@ -310,6 +333,7 @@ function getOverlayStyle(overlay: any) {
         <!-- 左页 -->
         <div
           v-if="leftPageLabel"
+          :data-page-label="leftPageLabel"
           class="page-surface relative overflow-hidden bg-white shadow-xl dark:bg-black"
           :style="pageSurfaceStyle"
         >
@@ -357,6 +381,7 @@ function getOverlayStyle(overlay: any) {
         <!-- 右页 -->
         <div
           v-if="viewMode === 'spread' && rightPageLabel"
+          :data-page-label="rightPageLabel"
           class="page-surface relative overflow-hidden bg-white shadow-xl dark:bg-black"
           :style="pageSurfaceStyle"
         >
@@ -395,6 +420,16 @@ function getOverlayStyle(overlay: any) {
         </div>
       </div>
     </div>
+    <ReaderWordSelection
+      v-if="productCode"
+      :product-code="productCode"
+      :pages="wordPages"
+      :metadata="metadata"
+      :zoom="zoomLevel"
+      :disabled="Boolean(selectionDisabled)"
+      @query="emit('queryWord', $event)"
+      @selection-change="updateSelection"
+    />
   </div>
 </template>
 

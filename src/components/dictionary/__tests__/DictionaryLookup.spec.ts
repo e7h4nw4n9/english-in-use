@@ -31,6 +31,40 @@ function mountLookup() {
 }
 
 describe('DictionaryLookup', () => {
+  it('阅读器模式唯一精确匹配直接显示详情', async () => {
+    const wrapper = mount(DictionaryLookup, {
+      props: { initialQuery: 'analogy', presentation: 'reader' },
+      global: { plugins: [Antd], stubs: { Teleport: true } },
+    })
+    await flushPromises()
+    expect(dictionaryApi.getDictionaryWordDetail).toHaveBeenCalledExactlyOnceWith('word-id')
+    expect(wrapper.find('.dictionary-entry').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('阅读器模式存在同名候选时不擅自打开首个词条', async () => {
+    dictionaryApi.searchDictionary.mockResolvedValueOnce([
+      searchResult,
+      { ...searchResult, wordId: 'another' },
+    ])
+    const wrapper = mount(DictionaryLookup, {
+      props: { initialQuery: 'analogy', presentation: 'reader' },
+      global: { plugins: [Antd], stubs: { Teleport: true } },
+    })
+    await flushPromises()
+    expect(wrapper.findAll('.result-option')).toHaveLength(2)
+    expect(dictionaryApi.getDictionaryWordDetail).not.toHaveBeenCalled()
+    expect(wrapper.classes()).toContain('reader-presentation')
+    await wrapper.findAll('.result-option')[1].trigger('click')
+    await flushPromises()
+    expect(dictionaryApi.getDictionaryWordDetail).toHaveBeenCalledExactlyOnceWith('another')
+    expect(wrapper.find('.dictionary-entry').exists()).toBe(true)
+    await wrapper.get('.detail-back').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('.result-option')).toHaveLength(2)
+    wrapper.unmount()
+  })
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
