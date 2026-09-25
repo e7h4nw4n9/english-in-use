@@ -88,6 +88,20 @@ pub async fn get_study_plan_status(
 }
 
 #[tauri::command]
+/// 批量查询一本书内已有学习计划的单元状态。
+///
+/// # 参数
+/// - `state`：对应命令使用的共享状态。
+/// - `product_code`：图书产品码。
+pub async fn get_book_study_plan_statuses(
+    state: State<'_, crate::database::DbState>,
+    product_code: String,
+) -> Result<Vec<crate::services::study_plan::BookStudyPlanStatusItem>, String> {
+    let db = state.get().await?;
+    crate::services::study_plan::get_book_study_plan_statuses(db.as_ref(), &product_code).await
+}
+
+#[tauri::command]
 /// 查询日期范围内的学习任务汇总。
 ///
 /// # 参数

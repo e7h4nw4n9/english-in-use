@@ -8,6 +8,7 @@ import {
   upsertStudyPlan,
   getStudyAssessmentPreview,
   completeStudyTask,
+  getBookStudyPlanStatuses,
 } from '../studyPlan'
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -56,6 +57,14 @@ describe('study plan API local date', () => {
       productCode: 'book',
       resourceId: 'RE_1',
       localDate: '2026-08-10',
+    })
+  })
+
+  it('queries all study plan statuses for one book in a single request', async () => {
+    await getBookStudyPlanStatuses('book')
+
+    expect(invoke).toHaveBeenCalledWith('get_book_study_plan_statuses', {
+      productCode: 'book',
     })
   })
 

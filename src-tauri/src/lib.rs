@@ -198,6 +198,7 @@ pub fn run() {
             commands::study_plan::upsert_study_plan,
             commands::study_plan::abandon_study_plan,
             commands::study_plan::get_study_plan_status,
+            commands::study_plan::get_book_study_plan_statuses,
             commands::study_plan::get_study_tasks_summary,
             commands::study_plan::get_tasks_by_date,
             commands::study_plan::shift_study_plan,

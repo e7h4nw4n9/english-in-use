@@ -33,6 +33,7 @@ interface UseStudyTimerOptions {
   currentResourceId: Ref<string | null>
   currentUnitName: Ref<string>
   autoStart: Ref<boolean>
+  continueInBackground: Ref<boolean>
 }
 
 /** 将当前资源信息规范化为可保存的计时单元。
@@ -67,6 +68,7 @@ export function useStudyTimer({
   currentResourceId,
   currentUnitName,
   autoStart,
+  continueInBackground,
 }: UseStudyTimerOptions) {
   const status = ref<StudyTimerStatus>('idle')
   const sessionStartMs = ref<number | null>(null)
@@ -297,9 +299,13 @@ export function useStudyTimer({
     reset(true)
   }
 
-  /** 页面进入后台时自动暂停，返回前台时恢复自动暂停的会话。 */
+  /** 根据配置处理前后台切换，并在返回前台时立即校准显示时间。 */
   function handleVisibilityChange() {
-    if (!document.hidden) return
+    if (!document.hidden) {
+      updateNow()
+      return
+    }
+    if (continueInBackground.value) return
     if (status.value !== 'running') return
     const paused = pause()
     if (paused) {

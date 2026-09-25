@@ -42,6 +42,7 @@ export interface SystemConfig {
   enable_auto_check: boolean
   check_interval_mins: number
   auto_start_study_timer?: boolean
+  continue_study_timer_in_background?: boolean
 }
 
 export interface AppConfig {
@@ -193,6 +194,13 @@ export interface StudyPlanStatusResponse {
   completedStages: number[]
   nextReviewDate: string | null
   overdueCount: number
+}
+
+export type StudyPlanUnitStatus = 'unplanned' | 'scheduled' | 'active' | 'ended' | 'abandoned'
+
+export interface BookStudyPlanStatusItem {
+  resourceId: string
+  status: Exclude<StudyPlanUnitStatus, 'unplanned'>
 }
 
 export interface StudyPlanActionResponse {

@@ -8,6 +8,41 @@ use std::sync::Arc;
 const TEST_DATE: &str = "2026-08-03";
 
 #[tokio::test]
+async fn book_plan_statuses_include_every_existing_plan_state() {
+    let db = create_db().await;
+    for resource in ["RE_1", "RE_2", "RE_3", "RE_4"] {
+        upsert_study_plan_on_date(&db, "studytestbook", resource, resource, TEST_DATE)
+            .await
+            .unwrap();
+    }
+    db.execute("UPDATE study_tasks SET task_status = 1 WHERE review_stage = 1 AND plan_unit_id = (SELECT id FROM study_plan_units WHERE resource_id = 'RE_2')".into()).await.unwrap();
+    db.execute("UPDATE study_plan_units SET plan_status = 1 WHERE resource_id = 'RE_3'".into())
+        .await
+        .unwrap();
+    abandon_study_plan(&db, "studytestbook", "RE_4")
+        .await
+        .unwrap();
+
+    let statuses = get_book_study_plan_statuses(&db, "studytestbook")
+        .await
+        .unwrap();
+    let by_resource: std::collections::HashMap<_, _> = statuses
+        .into_iter()
+        .map(|item| (item.resource_id, item.status))
+        .collect();
+    assert_eq!(
+        by_resource.get("RE_1").map(String::as_str),
+        Some("scheduled")
+    );
+    assert_eq!(by_resource.get("RE_2").map(String::as_str), Some("active"));
+    assert_eq!(by_resource.get("RE_3").map(String::as_str), Some("ended"));
+    assert_eq!(
+        by_resource.get("RE_4").map(String::as_str),
+        Some("abandoned")
+    );
+}
+
+#[tokio::test]
 async fn arrangement_duration_counts_assigned_history_once_and_tracks_changes() {
     let db = create_db().await;
     for resource in ["RE_1", "RE_2"] {

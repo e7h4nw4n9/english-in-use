@@ -54,6 +54,7 @@ const emit = defineEmits<{
   (e: 'timerResume'): void
   (e: 'timerRestart'): void
   (e: 'timerStopSave'): void
+  (e: 'studyPlanChanged'): void
 }>()
 
 const appStore = useAppStore()
@@ -258,6 +259,7 @@ async function toggleStudyPlan() {
         }
         message.success(t('studyPlan.abandoned'))
       }
+      emit('studyPlanChanged')
       queueRefreshStudyPlanStatus(240, false)
     }, loadingMessage)
   } catch (error) {

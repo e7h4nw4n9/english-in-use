@@ -38,6 +38,7 @@ const {
   logLevel,
   enableDebugTools,
   autoStartStudyTimer,
+  continueStudyTimerInBackground,
   isCloudConfigured,
   enableAutoCheck,
   checkIntervalMins,
@@ -181,6 +182,7 @@ const {
           v-model:logLevel="logLevel"
           v-model:enableDebugTools="enableDebugTools"
           v-model:autoStartStudyTimer="autoStartStudyTimer"
+          v-model:continueStudyTimerInBackground="continueStudyTimerInBackground"
           v-model:enableAutoCheck="enableAutoCheck"
           v-model:checkIntervalMins="checkIntervalMins"
           :debug-features-available="debugFeaturesAvailable"

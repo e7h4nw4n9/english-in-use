@@ -72,6 +72,8 @@ pub struct SystemConfig {
     pub check_interval_mins: u32,
     #[serde(default = "default_auto_start_study_timer")]
     pub auto_start_study_timer: bool,
+    #[serde(default = "default_continue_study_timer_in_background")]
+    pub continue_study_timer_in_background: bool,
 }
 
 fn default_language() -> String {
@@ -95,6 +97,9 @@ fn default_check_interval() -> u32 {
 fn default_auto_start_study_timer() -> bool {
     false
 }
+fn default_continue_study_timer_in_background() -> bool {
+    false
+}
 
 impl Default for SystemConfig {
     fn default() -> Self {
@@ -106,6 +111,7 @@ impl Default for SystemConfig {
             enable_auto_check: true,
             check_interval_mins: 5,
             auto_start_study_timer: false,
+            continue_study_timer_in_background: false,
         }
     }
 }
@@ -257,6 +263,7 @@ mod tests {
         assert_eq!(config.system.log_level, "info");
         assert!(!config.system.enable_debug_tools);
         assert!(!config.system.auto_start_study_timer);
+        assert!(!config.system.continue_study_timer_in_background);
         assert!(!config.dictionary.save_query_results_offline);
         assert_eq!(config.dictionary.search_result_limit, 5);
     }
@@ -299,6 +306,7 @@ mod tests {
         assert!(!config.system.enable_debug_tools);
         assert_eq!(config.system.check_interval_mins, 5);
         assert!(!config.system.auto_start_study_timer);
+        assert!(!config.system.continue_study_timer_in_background);
         assert_eq!(config.dictionary.search_result_limit, 5);
     }
 

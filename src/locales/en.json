@@ -77,6 +77,7 @@
     "logLevel": "Log Level",
     "enableDebugTools": "Enable Debug Tools",
     "autoStartStudyTimer": "Auto start study timer in reader",
+    "continueStudyTimerInBackground": "Keep study timer running in background",
     "debugToolsDisabledByBuild": "Disabled in this build",
     "enableAutoCheck": "Auto Connection Test",
     "checkInterval": "Test Interval (mins)",
@@ -212,7 +213,14 @@
     "loadingExerciseDeps": "Downloading shared engine",
     "loadingExercisePackage": "Downloading exercise package",
     "audioLoading": "Loading audio...",
-    "audioLoadFailed": "Unable to play audio"
+    "audioLoadFailed": "Unable to play audio",
+    "studyStatus": {
+      "unplanned": "No study plan",
+      "scheduled": "Scheduled, not reviewed yet",
+      "active": "Review in progress",
+      "ended": "Mastered",
+      "abandoned": "Study plan abandoned"
+    }
   },
   "studyPlan": {
     "unavailable": "No schedulable unit on this page",

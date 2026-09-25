@@ -58,6 +58,13 @@ pub struct StudyPlanStatusResponse {
     pub overdue_count: i64,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BookStudyPlanStatusItem {
+    pub resource_id: String,
+    pub status: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StudyPlanActionResponse {

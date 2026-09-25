@@ -9,6 +9,7 @@ import type {
   StudyViewMode,
   ShiftStudyPlanResponse,
   StudyAssessmentPreview,
+  BookStudyPlanStatusItem,
 } from '../../types'
 import { formatLocalDate } from '../datetime'
 
@@ -57,6 +58,13 @@ export async function getStudyPlanStatus(
     resourceId,
     localDate: formatLocalDate(),
   })
+}
+
+/** 批量查询一本书内已有学习计划的单元状态。 */
+export async function getBookStudyPlanStatuses(
+  productCode: string,
+): Promise<BookStudyPlanStatusItem[]> {
+  return await invoke('get_book_study_plan_statuses', { productCode })
 }
 
 /**

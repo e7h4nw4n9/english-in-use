@@ -48,6 +48,9 @@ export function createConfigPageContext(
   const logLevel = ref(initialConfig?.system?.log_level || 'info')
   const enableDebugTools = ref(initialConfig?.system?.enable_debug_tools ?? false)
   const autoStartStudyTimer = ref(initialConfig?.system?.auto_start_study_timer ?? false)
+  const continueStudyTimerInBackground = ref(
+    initialConfig?.system?.continue_study_timer_in_background ?? false,
+  )
   const isCloudConfigured = computed(
     () => sourceType.value === 'CloudflareGateway' || dbType.value === 'CloudflareGateway',
   )
@@ -148,6 +151,8 @@ export function createConfigPageContext(
       logLevel.value = config.system.log_level
       enableDebugTools.value = config.system.enable_debug_tools ?? false
       autoStartStudyTimer.value = config.system.auto_start_study_timer ?? false
+      continueStudyTimerInBackground.value =
+        config.system.continue_study_timer_in_background ?? false
       enableAutoCheck.value = config.system.enable_auto_check
       checkIntervalMins.value = config.system.check_interval_mins
     }
@@ -228,6 +233,7 @@ export function createConfigPageContext(
         log_level: logLevel.value as any,
         enable_debug_tools: enableDebugTools.value,
         auto_start_study_timer: autoStartStudyTimer.value,
+        continue_study_timer_in_background: continueStudyTimerInBackground.value,
         enable_auto_check: enableAutoCheck.value,
         check_interval_mins: checkIntervalMins.value,
       },
@@ -293,6 +299,7 @@ export function createConfigPageContext(
     logLevel,
     enableDebugTools,
     autoStartStudyTimer,
+    continueStudyTimerInBackground,
     isCloudConfigured,
     enableAutoCheck,
     checkIntervalMins,

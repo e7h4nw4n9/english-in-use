@@ -333,6 +333,8 @@ export function useConfigPersistenceOperations(
         const config: AppConfig = await withTimeout(importConfig(selected), 15_000, '读取配置文件')
         config.system.enable_debug_tools = config.system.enable_debug_tools ?? false
         config.system.auto_start_study_timer = config.system.auto_start_study_timer ?? false
+        config.system.continue_study_timer_in_background =
+          config.system.continue_study_timer_in_background ?? false
         appStore.setGlobalLoadingProgress(loadingToken, 25)
         appendOperationDiagnostic('导入配置读取完成')
 

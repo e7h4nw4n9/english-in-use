@@ -19,13 +19,16 @@ interface Props {
   logLevel: string
   enableDebugTools: boolean
   autoStartStudyTimer: boolean
+  continueStudyTimerInBackground?: boolean
   debugFeaturesAvailable: boolean
   enableAutoCheck: boolean
   checkIntervalMins: number
   isCloudConfigured: boolean
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  continueStudyTimerInBackground: false,
+})
 
 const emit = defineEmits<{
   (e: 'update:language', value: string): void
@@ -33,6 +36,7 @@ const emit = defineEmits<{
   (e: 'update:logLevel', value: string): void
   (e: 'update:enableDebugTools', value: boolean): void
   (e: 'update:autoStartStudyTimer', value: boolean): void
+  (e: 'update:continueStudyTimerInBackground', value: boolean): void
   (e: 'update:enableAutoCheck', value: boolean): void
   (e: 'update:checkIntervalMins', value: number): void
 }>()
@@ -136,6 +140,13 @@ onMounted(() => {
         <a-switch
           :checked="autoStartStudyTimer"
           @update:checked="emit('update:autoStartStudyTimer', $event)"
+        />
+      </a-form-item>
+
+      <a-form-item :label="t('config.continueStudyTimerInBackground')">
+        <a-switch
+          :checked="continueStudyTimerInBackground"
+          @update:checked="emit('update:continueStudyTimerInBackground', $event)"
         />
       </a-form-item>
 

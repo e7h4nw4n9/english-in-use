@@ -16,6 +16,7 @@ import {
 import { useReaderExerciseLoader } from '../composables/reader/useReaderExerciseLoader'
 import { useReaderViewportMode } from '../composables/reader/useReaderViewportMode'
 import { useReaderOverlayActions } from '../composables/reader/useReaderOverlayActions'
+import { useReaderStudyPlanStatuses } from '../composables/reader/useReaderStudyPlanStatuses'
 import { useI18n } from 'vue-i18n'
 import type { StudySessionUnitRef } from '../types'
 
@@ -77,6 +78,7 @@ const effectiveDebugEnabled = computed(
   () => __DEBUG_FEATURES__ && Boolean(config.value?.system.enable_debug_tools),
 )
 const exerciseDebugPanelEnabled = computed(() => effectiveDebugEnabled.value)
+const studyPlanStatusRefreshVersion = ref(0)
 const {
   currentUnitName,
   currentStudyPlanUnitName,
@@ -90,6 +92,11 @@ const {
   viewMode,
   sortedPageLabels,
   fallbackUnitTitle,
+})
+const { unitStatuses: tocUnitStatuses } = useReaderStudyPlanStatuses({
+  productCode: computed(() => currentBook.value?.product_code),
+  metadata,
+  refreshVersion: studyPlanStatusRefreshVersion,
 })
 const { openExercise } = useReaderExerciseLoader({
   currentBook,
@@ -119,6 +126,9 @@ const { isNarrow, observe, disconnect } = useReaderViewportMode({
 })
 
 const autoStartStudyTimer = computed(() => Boolean(config.value?.system.auto_start_study_timer))
+const continueStudyTimerInBackground = computed(() =>
+  Boolean(config.value?.system.continue_study_timer_in_background),
+)
 const {
   status: studyTimerStatus,
   isRunning: studyTimerIsRunning,
@@ -137,6 +147,7 @@ const {
   currentResourceId: currentStudyPlanResourceId,
   currentUnitName: currentStudyPlanUnitName,
   autoStart: autoStartStudyTimer,
+  continueInBackground: continueStudyTimerInBackground,
 })
 
 const saveTimerPromptVisible = ref(false)
@@ -357,7 +368,11 @@ onUnmounted(() => {
   <div ref="readerRef" class="reader-view" :class="{ 'reader-ui-hidden': !isUiVisible }">
     <div class="relative flex flex-1 overflow-hidden">
       <Transition name="slide-left">
-        <ReaderTOC v-show="isUiVisible && !isSidebarCollapsed" :metadata="metadata" />
+        <ReaderTOC
+          v-show="isUiVisible && !isSidebarCollapsed"
+          :metadata="metadata"
+          :unit-statuses="tocUnitStatuses"
+        />
       </Transition>
 
       <ReaderCanvas
@@ -401,6 +416,7 @@ onUnmounted(() => {
         @timerResume="resumeStudyTimer"
         @timerRestart="restartStudyTimer"
         @timerStopSave="requestStopAndSaveTimer"
+        @studyPlanChanged="studyPlanStatusRefreshVersion += 1"
       />
     </Transition>
 

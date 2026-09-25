@@ -152,6 +152,43 @@ describe('ReaderTOC', () => {
     expect(unnumberedItem?.find('.toc-unit-number').exists()).toBe(false)
   })
 
+  it('shows plan status icons for every resolvable unit', () => {
+    const metadata: BookMetadata = {
+      ...mockMetadata,
+      pages: {
+        '1': { label: '1', image_path: '1.jpg', resource_id: 'RE_0001' },
+        '6': { label: '6', image_path: '6.jpg', resource_id: 'RE_0002' },
+        '11': { label: '11', image_path: '11.jpg', resource_id: 'RE_0011' },
+      },
+    }
+    const wrapper = mount(ReaderTOC, {
+      props: {
+        metadata,
+        unitStatuses: {
+          RE_0001: 'ended',
+          RE_0002: 'active',
+        },
+      },
+      global: {
+        stubs: {
+          'a-input': true,
+          'a-collapse': {
+            template: '<div class="a-collapse-stub"><slot /></div>',
+          },
+          'a-collapse-panel': {
+            template: '<div class="a-collapse-panel-stub"><slot name="header" /><slot /></div>',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.findAll('.toc-status-icon').map((icon) => icon.attributes('title'))).toEqual([
+      'reader.studyStatus.ended',
+      'reader.studyStatus.active',
+      'reader.studyStatus.unplanned',
+    ])
+  })
+
   it('parent nodes do not show page numbers', () => {
     const wrapper = mount(ReaderTOC, {
       props: {

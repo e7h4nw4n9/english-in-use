@@ -89,6 +89,8 @@ pnpm tauri:icon
 
 本项目已使用 Tauri 2，支持 iOS（含 iPad）开发与测试。
 
+最低支持 iOS/iPadOS 15.0，版本由 `src-tauri/tauri.conf.json` 的 `bundle.iOS.minimumSystemVersion` 统一配置。修改最低版本后需重新执行 `pnpm tauri:ios:init`，同步生成的 Xcode 工程。
+
 0. 确认 Xcode Developer Directory 已指向 Xcode（而非 CommandLineTools）：
 
    ```shell
@@ -131,13 +133,13 @@ pnpm tauri:icon
 
 4. iPad/iPhone 真机测试：
 
-   由于真机无法访问 `localhost`，请把 `TAURI_DEV_HOST` 设为开发机局域网 IP（例如 `192.168.1.10`）：
+   先完全退出已运行的 Xcode，再执行以下命令。命令会选择开发机局域网地址、启动 Tauri CLI 服务并打开 Xcode：
 
    ```shell
-   TAURI_DEV_HOST=192.168.1.10 pnpm tauri:ios:dev
+   pnpm tauri:ios:xcode
    ```
 
-   同时在 Xcode 中完成 Team/Signing 配置后，切换到真机运行。
+   保持终端命令运行，在 Xcode 中完成 Team/Signing 配置，选择连接的 iPad 或 iPhone 后点击 Run。直接打开 `.xcodeproj` 会缺少 Build Phase 所需的 Tauri CLI 服务。
 
 5. 生成 iOS 发布产物（可选）：
 

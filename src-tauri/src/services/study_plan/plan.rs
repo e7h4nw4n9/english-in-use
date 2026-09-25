@@ -275,6 +275,53 @@ pub async fn get_study_plan_status_on_date(
     })
 }
 
+/// 批量查询一本书内已有计划的单元状态。
+///
+/// # 参数
+/// - `db`：目标数据库实现。
+/// - `product_code`：图书产品码。
+pub async fn get_book_study_plan_statuses(
+    db: &dyn Database,
+    product_code: &str,
+) -> Result<Vec<BookStudyPlanStatusItem>, String> {
+    if product_code.trim().is_empty() {
+        return Err("INVALID_PRODUCT_CODE".to_string());
+    }
+
+    let rows = db
+        .query_statement(SqlStatement::new(
+            "SELECT u.resource_id, u.plan_status, \
+                    COUNT(CASE WHEN t.task_status = 1 THEN 1 END) AS completed_count \
+             FROM study_plan_units u \
+             JOIN books b ON b.id = u.book_id \
+             LEFT JOIN study_tasks t ON t.plan_unit_id = u.id \
+             WHERE b.product_code = ? \
+             GROUP BY u.id, u.resource_id, u.plan_status",
+            vec![SqlValue::Text(product_code.to_string())],
+        ))
+        .await
+        .map_err(|error| error.to_string())?;
+
+    rows.iter()
+        .map(|row| {
+            let resource_id = json_string(row, "resource_id").ok_or("INVALID_RESOURCE_ID")?;
+            let plan_status = json_i32(row, "plan_status").ok_or("INVALID_PLAN_STATUS")?;
+            let completed_count = json_i64(row, "completed_count").unwrap_or_default();
+            let status = match plan_status {
+                0 if completed_count == 0 => "scheduled",
+                0 => "active",
+                1 => "ended",
+                2 => "abandoned",
+                _ => return Err("INVALID_PLAN_STATUS".to_string()),
+            };
+            Ok(BookStudyPlanStatusItem {
+                resource_id,
+                status: status.to_string(),
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod request_count_tests {
     use super::*;

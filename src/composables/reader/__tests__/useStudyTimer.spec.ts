@@ -15,6 +15,7 @@ interface TimerHarness {
   currentResourceId: Ref<string | null>
   currentUnitName: Ref<string>
   autoStart: Ref<boolean>
+  continueInBackground: Ref<boolean>
 }
 
 const saveStudySessionMock = vi.mocked(saveStudySession)
@@ -31,11 +32,13 @@ function createHarness(options?: {
   currentResourceId?: string | null
   currentUnitName?: string
   autoStart?: boolean
+  continueInBackground?: boolean
 }): TimerHarness {
   const productCode = ref<string | null>(options?.productCode ?? 'essgiuebk')
   const currentResourceId = ref<string | null>(options?.currentResourceId ?? 'RE_U1')
   const currentUnitName = ref<string>(options?.currentUnitName ?? 'Unit 1')
   const autoStart = ref<boolean>(options?.autoStart ?? false)
+  const continueInBackground = ref<boolean>(options?.continueInBackground ?? false)
 
   let api: ReturnType<typeof useStudyTimer> | null = null
   const Harness = defineComponent({
@@ -45,6 +48,7 @@ function createHarness(options?: {
         currentResourceId,
         currentUnitName,
         autoStart,
+        continueInBackground,
       })
       return () => h('div')
     },
@@ -62,6 +66,7 @@ function createHarness(options?: {
     currentResourceId,
     currentUnitName,
     autoStart,
+    continueInBackground,
   }
 }
 
@@ -116,6 +121,23 @@ describe('useStudyTimer', () => {
 
     expect(harness.api.status.value).toBe('paused')
     expect(harness.api.autoPausedByBackground.value).toBe(true)
+
+    harness.wrapper.unmount()
+  })
+
+  it('keeps running and counts wall time in background when enabled', () => {
+    const harness = createHarness({ continueInBackground: true })
+    expect(harness.api.start()).toBe(true)
+
+    setDocumentHidden(true)
+    document.dispatchEvent(new Event('visibilitychange'))
+    vi.setSystemTime(new Date('2026-03-01T00:01:00.000Z'))
+    setDocumentHidden(false)
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    expect(harness.api.status.value).toBe('running')
+    expect(harness.api.autoPausedByBackground.value).toBe(false)
+    expect(harness.api.elapsedSeconds.value).toBe(60)
 
     harness.wrapper.unmount()
   })

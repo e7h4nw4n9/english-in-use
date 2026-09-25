@@ -73,6 +73,7 @@ describe('SystemSettings.vue', () => {
         logLevel: 'info',
         enableDebugTools: true,
         autoStartStudyTimer: false,
+        continueStudyTimerInBackground: false,
         debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,
@@ -85,6 +86,7 @@ describe('SystemSettings.vue', () => {
     expect(wrapper.text()).toContain('config.theme')
     expect(wrapper.text()).toContain('config.logLevel')
     expect(wrapper.text()).toContain('config.enableDebugTools')
+    expect(wrapper.text()).toContain('config.continueStudyTimerInBackground')
     expect(wrapper.text()).toContain('config.enableAutoCheck')
     expect(wrapper.text()).toContain('config.checkInterval')
   })
@@ -97,6 +99,7 @@ describe('SystemSettings.vue', () => {
         logLevel: 'info',
         enableDebugTools: true,
         autoStartStudyTimer: false,
+        continueStudyTimerInBackground: false,
         debugFeaturesAvailable: false,
         enableAutoCheck: true,
         checkIntervalMins: 5,
@@ -107,7 +110,7 @@ describe('SystemSettings.vue', () => {
 
     expect(wrapper.text()).not.toContain('config.enableDebugTools')
     const switchInputs = wrapper.findAll('.switch-stub')
-    expect(switchInputs).toHaveLength(2)
+    expect(switchInputs).toHaveLength(3)
   })
 
   it('disables auto check switch when cloud is not configured', () => {
@@ -118,6 +121,7 @@ describe('SystemSettings.vue', () => {
         logLevel: 'info',
         enableDebugTools: false,
         autoStartStudyTimer: false,
+        continueStudyTimerInBackground: false,
         debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,
@@ -127,7 +131,7 @@ describe('SystemSettings.vue', () => {
     })
 
     const switchInputs = wrapper.findAll('.switch-stub')
-    expect((switchInputs[2].element as HTMLInputElement).disabled).toBe(true)
+    expect((switchInputs[3].element as HTMLInputElement).disabled).toBe(true)
   })
 
   it('emits updates when values change', async () => {
@@ -138,6 +142,7 @@ describe('SystemSettings.vue', () => {
         logLevel: 'info',
         enableDebugTools: false,
         autoStartStudyTimer: false,
+        continueStudyTimerInBackground: false,
         debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,
@@ -155,6 +160,9 @@ describe('SystemSettings.vue', () => {
     await switchInputs[0].setValue(true)
     expect(wrapper.emitted()).toHaveProperty('update:enableDebugTools')
     expect(wrapper.emitted()['update:enableDebugTools'][0]).toEqual([true])
+
+    await switchInputs[2].setValue(true)
+    expect(wrapper.emitted()['update:continueStudyTimerInBackground'][0]).toEqual([true])
   })
 
   it('uses operation-specific loading messages for database migrations', async () => {
@@ -166,6 +174,7 @@ describe('SystemSettings.vue', () => {
         logLevel: 'info',
         enableDebugTools: true,
         autoStartStudyTimer: false,
+        continueStudyTimerInBackground: false,
         debugFeaturesAvailable: true,
         enableAutoCheck: true,
         checkIntervalMins: 5,

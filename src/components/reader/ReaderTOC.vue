@@ -3,14 +3,19 @@ import { computed, watch, ref, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useReaderStore } from '../../stores/reader'
 import { useReaderTOC } from '../../composables/useReaderTOC'
-import type { BookMetadata, TocNode } from '../../types'
+import type { BookMetadata, StudyPlanUnitStatus, TocNode } from '../../types'
 import { CloseOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { getUnitPrefix } from '@/lib/unitTitle'
+import ReaderTocStatusIcon from './ReaderTocStatusIcon.vue'
 
-const props = defineProps<{
-  metadata: BookMetadata | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    metadata: BookMetadata | null
+    unitStatuses?: Record<string, StudyPlanUnitStatus>
+  }>(),
+  { unitStatuses: () => ({}) },
+)
 
 const { t } = useI18n()
 const readerStore = useReaderStore()
@@ -51,6 +56,14 @@ async function handleItemClick(node: TocNode) {
       }
     }
   }
+}
+
+/** 解析目录单元对应的学习计划状态。 */
+function resolveNodeStatus(node: TocNode): StudyPlanUnitStatus | null {
+  if (!node.startPage || !props.metadata) return null
+  const resourceId = props.metadata.pages[node.startPage]?.resource_id
+  if (!resourceId) return null
+  return props.unitStatuses[resourceId] ?? 'unplanned'
 }
 </script>
 
@@ -152,6 +165,10 @@ async function handleItemClick(node: TocNode) {
                       </span>
                     </div>
                     <div class="ml-2 flex shrink-0 items-start gap-2">
+                      <ReaderTocStatusIcon
+                        v-if="resolveNodeStatus(child)"
+                        :status="resolveNodeStatus(child) ?? 'unplanned'"
+                      />
                       <span
                         v-if="child.startPage"
                         class="font-mono text-[10px] text-slate-400"
@@ -197,6 +214,10 @@ async function handleItemClick(node: TocNode) {
                 </span>
               </div>
               <div class="ml-2 flex shrink-0 items-start gap-2">
+                <ReaderTocStatusIcon
+                  v-if="resolveNodeStatus(item)"
+                  :status="resolveNodeStatus(item) ?? 'unplanned'"
+                />
                 <span
                   v-if="item.startPage"
                   class="font-mono text-[10px] text-slate-400"
